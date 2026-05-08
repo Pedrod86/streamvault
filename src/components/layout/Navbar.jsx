@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User } from 'lucide-react';
+import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { base44 } from '@/api/base44Client';
@@ -23,6 +23,7 @@ export default function Navbar() {
     { to: '/movies', label: 'Movies', icon: Film },
     { to: '/shows', label: 'TV Shows', icon: Tv },
     { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
+    { to: '/connect-server', label: 'Servers', icon: Server },
   ];
 
   const handleSearch = (e) => {

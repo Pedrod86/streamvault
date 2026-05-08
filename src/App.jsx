@@ -18,6 +18,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AppLayout from './components/layout/AppLayout';
+import ConnectServer from './pages/ConnectServer';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -56,6 +57,7 @@ const AuthenticatedApp = () => {
           <Route path="/media/:id" element={<MediaDetail />} />
           <Route path="/watchlist" element={<WatchlistPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/connect-server" element={<ConnectServer />} />
         </Route>
       </Route>
 
