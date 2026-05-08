@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LOGO_URL = 'https://media.base44.com/images/public/69fe35055df988e0955e5c11/471cf7e17_generated_image.png';
+const LOGO_URL = 'https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvault.png?rlkey=png0dj93b0c1m3ksls5t5b7wn&st=4nd7duli&dl=1';
 
 export default function StreamVaultLogo({ size = 'md', showName = true }) {
   const sizes = {

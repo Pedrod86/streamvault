@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus } from 'lucide-react';
 
-const LOGO_URL = 'https://media.base44.com/images/public/69fe35055df988e0955e5c11/471cf7e17_generated_image.png';
+const LOGO_URL = 'https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvault.png?rlkey=png0dj93b0c1m3ksls5t5b7wn&st=4nd7duli&dl=1';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { base44 } from '@/api/base44Client';
