@@ -86,6 +86,12 @@ export default function Navbar() {
               </Button>
             )}
 
+            <Link to="/add-media">
+              <Button size="sm" className="hidden sm:flex bg-primary hover:bg-primary/90 rounded-lg gap-1.5 h-8 px-3 text-xs font-semibold">
+                <Plus className="w-3.5 h-3.5" /> Add Media
+              </Button>
+            </Link>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
