@@ -16,7 +16,6 @@ const SERVERS = [
     color: 'from-yellow-500 to-orange-500',
     bg: 'bg-yellow-500/10 border-yellow-500/30',
     text: 'text-yellow-400',
-    logo: '🟡',
     description: 'Connect your Plex Media Server',
     tokenUrl: 'https://www.plex.tv/claim/',
     tokenLabel: 'Plex Token',
@@ -28,7 +27,6 @@ const SERVERS = [
     color: 'from-green-500 to-emerald-600',
     bg: 'bg-green-500/10 border-green-500/30',
     text: 'text-green-400',
-    logo: '🟢',
     description: 'Connect your Emby Media Server',
     tokenUrl: 'https://emby.media/community/index.php?/topic/30935-how-to-obtain-an-api-key/',
     tokenLabel: 'API Key',
@@ -40,13 +38,21 @@ const SERVERS = [
     color: 'from-blue-500 to-violet-600',
     bg: 'bg-blue-500/10 border-blue-500/30',
     text: 'text-blue-400',
-    logo: '🔵',
     description: 'Connect your Jellyfin Media Server',
     tokenUrl: 'https://jellyfin.org/docs/general/server/api/',
     tokenLabel: 'API Key',
     tokenHelp: 'Generate an API key in Jellyfin Dashboard → Administration → API Keys',
   },
 ];
+
+const TRAKT = {
+  id: 'trakt',
+  name: 'Trakt',
+  color: 'from-red-500 to-rose-600',
+  bg: 'bg-red-500/10 border-red-500/30',
+  text: 'text-red-400',
+  description: 'Sync watch history, ratings & lists',
+};
 
 export default function ConnectServer() {
   const navigate = useNavigate();
@@ -86,6 +92,16 @@ export default function ConnectServer() {
     );
   }
 
+  if (adding && selectedServer === 'trakt') {
+    return (
+      <TraktForm
+        onBack={() => setSelectedServer(null)}
+        onSave={(data) => saveMutation.mutate({ ...data, server_type: 'trakt' })}
+        isSaving={saveMutation.isPending}
+      />
+    );
+  }
+
   if (adding && selectedServer) {
     return (
       <ServerForm
@@ -101,81 +117,120 @@ export default function ConnectServer() {
     return <ServerPicker onSelect={setSelectedServer} onBack={() => setAdding(false)} />;
   }
 
+  const mediaServers = connectedServers.filter(s => s.server_type !== 'trakt');
+  const traktConnections = connectedServers.filter(s => s.server_type === 'trakt');
+
   // Main servers list view
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
+      {/* Media Servers Section */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground">Media Servers</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage your Plex, Emby & Jellyfin connections</p>
+          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground">Connections</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage Plex, Emby, Jellyfin & Trakt connections</p>
         </div>
-        <Button
-          className="bg-primary hover:bg-primary/90 rounded-xl gap-2"
-          onClick={() => setAdding(true)}
-        >
+        <Button className="bg-primary hover:bg-primary/90 rounded-xl gap-2" onClick={() => setAdding(true)}>
           <Plus className="w-4 h-4" /> Add Server
         </Button>
       </div>
 
-      {connectedServers.length === 0 ? (
-        <div className="text-center py-20">
-          <Server className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-foreground font-semibold text-lg mb-1">No servers connected</p>
-          <p className="text-muted-foreground text-sm mb-6">Add your Plex, Emby, or Jellyfin server to get started</p>
-          <Button className="bg-primary hover:bg-primary/90 rounded-xl gap-2" onClick={() => setAdding(true)}>
-            <Plus className="w-4 h-4" /> Connect a Server
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {connectedServers.map((srv) => {
-            const meta = SERVERS.find(s => s.id === srv.server_type) || SERVERS[0];
-            return (
-              <motion.div
-                key={srv.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex items-center gap-4 p-4 rounded-xl border ${meta.bg}`}
-              >
-                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-md shrink-0`}>
-                  <Server className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`font-heading font-semibold ${meta.text}`}>{srv.server_name || `${meta.name} Server`}</p>
-                  <p className="text-muted-foreground text-xs truncate">{srv.server_url || 'No URL set'}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="flex items-center gap-1 text-xs text-green-400">
-                      <Wifi className="w-3 h-3" /> Connected
-                    </span>
-                    <span className="text-xs text-muted-foreground">·</span>
-                    <span className="text-xs text-muted-foreground capitalize">{srv.auth_method === 'token' ? 'API Token' : 'Credentials'}</span>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                  onClick={() => deleteMutation.mutate(srv.id)}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </motion.div>
-            );
-          })}
-
-          <div className="pt-4">
-            <p className="text-xs text-muted-foreground text-center">
-              Note: This app stores your server credentials. StreamVault does not currently proxy media — use your server's native app for playback.
-            </p>
+      {/* Media Servers */}
+      <div className="mb-8">
+        <h2 className="font-heading font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">Media Servers</h2>
+        {mediaServers.length === 0 ? (
+          <div className="flex items-center gap-4 p-5 rounded-xl border border-dashed border-border text-muted-foreground">
+            <Server className="w-8 h-8 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">No media servers</p>
+              <p className="text-xs mt-0.5">Connect Plex, Emby or Jellyfin</p>
+            </div>
+            <Button variant="outline" size="sm" className="ml-auto border-border rounded-lg gap-1.5" onClick={() => setAdding(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add
+            </Button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-3">
+            {mediaServers.map((srv) => <ServerCard key={srv.id} srv={srv} allMeta={[...SERVERS, TRAKT]} onDelete={() => deleteMutation.mutate(srv.id)} deleting={deleteMutation.isPending} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Trakt Section */}
+      <div>
+        <h2 className="font-heading font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">Tracking Services</h2>
+        {traktConnections.length === 0 ? (
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={() => { setSelectedServer('trakt'); setAdding(true); }}
+            className={`w-full flex items-center gap-4 p-5 rounded-xl border ${TRAKT.bg} text-left`}
+          >
+            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${TRAKT.color} flex items-center justify-center shadow-md shrink-0`}>
+              <ActivityIcon />
+            </div>
+            <div className="flex-1">
+              <p className={`font-heading font-bold ${TRAKT.text}`}>Trakt</p>
+              <p className="text-muted-foreground text-sm">{TRAKT.description}</p>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-lg px-2.5 py-1.5 bg-secondary">
+              <Plus className="w-3 h-3" /> Connect
+            </div>
+          </motion.button>
+        ) : (
+          <div className="space-y-3">
+            {traktConnections.map((srv) => <ServerCard key={srv.id} srv={srv} allMeta={[...SERVERS, TRAKT]} onDelete={() => deleteMutation.mutate(srv.id)} deleting={deleteMutation.isPending} />)}
+            <Button variant="outline" size="sm" className="border-border rounded-lg gap-1.5 text-muted-foreground" onClick={() => { setSelectedServer('trakt'); setAdding(true); }}>
+              <Plus className="w-3.5 h-3.5" /> Add Another Trakt Account
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
+function ActivityIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
+}
+
+function ServerCard({ srv, allMeta, onDelete, deleting }) {
+  const meta = allMeta.find(s => s.id === srv.server_type) || allMeta[0];
+  const isTrakt = srv.server_type === 'trakt';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex items-center gap-4 p-4 rounded-xl border ${meta.bg}`}
+    >
+      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-md shrink-0`}>
+        {isTrakt ? <ActivityIcon /> : <Server className="w-5 h-5 text-white" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`font-heading font-semibold ${meta.text}`}>{srv.server_name || `${meta.name}`}</p>
+        <p className="text-muted-foreground text-xs truncate">{srv.server_url || (isTrakt ? 'trakt.tv' : 'No URL set')}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="flex items-center gap-1 text-xs text-green-400">
+            <Wifi className="w-3 h-3" /> Connected
+          </span>
+          <span className="text-xs text-muted-foreground">·</span>
+          <span className="text-xs text-muted-foreground capitalize">
+            {srv.auth_method === 'oauth_pin' ? 'OAuth PIN' : srv.auth_method === 'api_key' ? 'API Key' : srv.auth_method === 'token' ? 'API Token' : 'Credentials'}
+          </span>
+        </div>
+      </div>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0" onClick={onDelete} disabled={deleting}>
+        <Trash2 className="w-4 h-4" />
+      </Button>
+    </motion.div>
+  );
+}
+
 function ServerPicker({ onSelect, onBack }) {
+  const allOptions = [...SERVERS, TRAKT];
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-lg">
@@ -184,25 +239,22 @@ function ServerPicker({ onSelect, onBack }) {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="font-heading font-bold text-2xl text-foreground">Connect a Server</h1>
-            <p className="text-muted-foreground text-sm">Choose your media server platform</p>
+            <h1 className="font-heading font-bold text-2xl text-foreground">Add Connection</h1>
+            <p className="text-muted-foreground text-sm">Choose a platform to connect</p>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Media Servers</p>
+        <div className="space-y-3 mb-6">
           {SERVERS.map((server) => (
-            <motion.button
-              key={server.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onSelect(server.id)}
-              className={`w-full flex items-center gap-4 p-5 rounded-xl border ${server.bg} hover:bg-opacity-20 transition-all text-left`}
+            <motion.button key={server.id} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => onSelect(server.id)}
+              className={`w-full flex items-center gap-4 p-5 rounded-xl border ${server.bg} transition-all text-left`}
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${server.color} flex items-center justify-center text-2xl shadow-lg`}>
-                <Server className="w-6 h-6 text-white" />
+              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${server.color} flex items-center justify-center shadow-lg`}>
+                <Server className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className={`font-heading font-bold text-lg ${server.text}`}>{server.name}</p>
+                <p className={`font-heading font-bold ${server.text}`}>{server.name}</p>
                 <p className="text-muted-foreground text-sm">{server.description}</p>
               </div>
               <ArrowLeft className="w-4 h-4 text-muted-foreground rotate-180" />
@@ -210,9 +262,144 @@ function ServerPicker({ onSelect, onBack }) {
           ))}
         </div>
 
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Tracking Services</p>
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => onSelect('trakt')}
+          className={`w-full flex items-center gap-4 p-5 rounded-xl border ${TRAKT.bg} transition-all text-left`}
+        >
+          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${TRAKT.color} flex items-center justify-center shadow-lg`}>
+            <ActivityIcon />
+          </div>
+          <div className="flex-1">
+            <p className={`font-heading font-bold ${TRAKT.text}`}>{TRAKT.name}</p>
+            <p className="text-muted-foreground text-sm">{TRAKT.description}</p>
+          </div>
+          <ArrowLeft className="w-4 h-4 text-muted-foreground rotate-180" />
+        </motion.button>
+
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Your credentials are stored securely and only used to connect to your server.
+          Your credentials are stored securely.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function TraktForm({ onBack, onSave, isSaving }) {
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [accessToken, setAccessToken] = useState('');
+  const [accountName, setAccountName] = useState('');
+
+  const handleApiKey = (e) => {
+    e.preventDefault();
+    onSave({
+      client_id: clientId,
+      client_secret: clientSecret,
+      server_name: accountName || 'My Trakt Account',
+      auth_method: 'api_key',
+    });
+  };
+
+  const handleOAuthPin = (e) => {
+    e.preventDefault();
+    onSave({
+      api_token: accessToken,
+      server_name: accountName || 'My Trakt Account',
+      auth_method: 'oauth_pin',
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="flex items-center gap-3 mb-8">
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg">
+              <ActivityIcon />
+            </div>
+            <div>
+              <h1 className="font-heading font-bold text-xl text-foreground">Connect to Trakt</h1>
+              <p className="text-muted-foreground text-xs">Sync your watch history & ratings</p>
+            </div>
+          </div>
+        </div>
+
+        <Tabs defaultValue="apikey">
+          <TabsList className="w-full bg-secondary mb-6">
+            <TabsTrigger value="apikey" className="flex-1 gap-2 data-[state=active]:bg-card">
+              <Key className="w-3.5 h-3.5" /> API Keys
+            </TabsTrigger>
+            <TabsTrigger value="oauth" className="flex-1 gap-2 data-[state=active]:bg-card">
+              <User className="w-3.5 h-3.5" /> OAuth Token
+            </TabsTrigger>
+          </TabsList>
+
+          {/* API Keys Tab */}
+          <TabsContent value="apikey">
+            <form onSubmit={handleApiKey} className="space-y-4">
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300 space-y-1">
+                <p className="font-semibold">How to get your API keys:</p>
+                <ol className="list-decimal list-inside space-y-0.5 text-red-300/80">
+                  <li>Go to <a href="https://trakt.tv/oauth/applications" target="_blank" rel="noopener noreferrer" className="underline">trakt.tv/oauth/applications</a></li>
+                  <li>Click "New Application"</li>
+                  <li>Copy your Client ID & Secret</li>
+                </ol>
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Account Name (optional)</Label>
+                <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="My Trakt Account" className="mt-1 bg-secondary border-border h-11" />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-muted-foreground" /> Client ID
+                </Label>
+                <Input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="Your Trakt Client ID" className="mt-1 bg-secondary border-border h-11 font-mono text-sm" required />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-muted-foreground" /> Client Secret
+                </Label>
+                <Input value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder="Your Trakt Client Secret" className="mt-1 bg-secondary border-border h-11 font-mono text-sm" required />
+              </div>
+              <Button type="submit" className="w-full h-11 rounded-xl font-semibold bg-gradient-to-r from-red-500 to-rose-600 text-white border-0" disabled={isSaving}>
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Connect Trakt'}
+              </Button>
+            </form>
+          </TabsContent>
+
+          {/* OAuth Token Tab */}
+          <TabsContent value="oauth">
+            <form onSubmit={handleOAuthPin} className="space-y-4">
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300 space-y-1">
+                <p className="font-semibold">How to get an OAuth access token:</p>
+                <ol className="list-decimal list-inside space-y-0.5 text-red-300/80">
+                  <li>Visit <a href="https://trakt.tv/oauth/authorize" target="_blank" rel="noopener noreferrer" className="underline">trakt.tv/oauth/authorize</a></li>
+                  <li>Authorize your app and copy the access token</li>
+                  <li>Paste it below</li>
+                </ol>
+                <a href="https://trakt.docs.apiary.io/#reference/authentication-oauth" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline mt-1">
+                  <ExternalLink className="w-3 h-3" /> Trakt OAuth docs
+                </a>
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Account Name (optional)</Label>
+                <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="My Trakt Account" className="mt-1 bg-secondary border-border h-11" />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-muted-foreground" /> Access Token
+                </Label>
+                <Input value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="Paste your OAuth access token..." className="mt-1 bg-secondary border-border h-11 font-mono text-sm" required />
+              </div>
+              <Button type="submit" className="w-full h-11 rounded-xl font-semibold bg-gradient-to-r from-red-500 to-rose-600 text-white border-0" disabled={isSaving}>
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Connect Trakt'}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
