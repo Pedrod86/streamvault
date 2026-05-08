@@ -16,6 +16,26 @@ export default function MediaDetail() {
   const queryClient = useQueryClient();
   const [showPlayer, setShowPlayer] = useState(false);
 
+  const saveProgress = useMutation({
+    mutationFn: async ({ progressSeconds, totalSeconds, completed }) => {
+      const existing = await base44.entities.WatchHistory.filter({ media_id: mediaId });
+      const entry = existing[0];
+      const data = {
+        media_id: mediaId,
+        progress_seconds: progressSeconds,
+        total_seconds: totalSeconds,
+        completed,
+        last_watched: new Date().toISOString(),
+      };
+      if (entry) {
+        return base44.entities.WatchHistory.update(entry.id, data);
+      } else {
+        return base44.entities.WatchHistory.create(data);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchHistory'] }),
+  });
+
   const { data: media, isLoading } = useQuery({
     queryKey: ['media', mediaId],
     queryFn: async () => {
@@ -99,6 +119,34 @@ export default function MediaDetail() {
               controls
               autoPlay
               className="w-full h-full"
+              onTimeUpdate={(e) => {
+                const v = e.target;
+                if (!v.duration || v.currentTime < 5) return;
+                // Save every 10 seconds
+                if (Math.round(v.currentTime) % 10 === 0) {
+                  saveProgress.mutate({
+                    progressSeconds: Math.round(v.currentTime),
+                    totalSeconds: Math.round(v.duration),
+                    completed: false,
+                  });
+                }
+              }}
+              onEnded={(e) => {
+                saveProgress.mutate({
+                  progressSeconds: Math.round(e.target.duration),
+                  totalSeconds: Math.round(e.target.duration),
+                  completed: true,
+                });
+              }}
+              onPause={(e) => {
+                const v = e.target;
+                if (!v.duration || v.currentTime < 5) return;
+                saveProgress.mutate({
+                  progressSeconds: Math.round(v.currentTime),
+                  totalSeconds: Math.round(v.duration),
+                  completed: v.currentTime / v.duration > 0.95,
+                });
+              }}
             />
             <Button
               variant="ghost"
