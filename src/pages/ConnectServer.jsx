@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Loader2, Server, Key, User, Globe, CheckCircle2, ExternalLink, Plus, Trash2, Wifi } from 'lucide-react';
 import { motion } from 'framer-motion';
+import SyncServerButton from '@/components/server/SyncServerButton';
 
 const SERVERS = [
   {
@@ -68,9 +69,22 @@ export default function ConnectServer() {
 
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.MediaServer.create(data),
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['mediaServers'] });
       setSaved(true);
+      // Auto-sync library for media servers (not Trakt)
+      if (created.server_type !== 'trakt') {
+        import('@/lib/serverSync').then(({ fetchServerLibrary }) => {
+          fetchServerLibrary(created).then(async (items) => {
+            if (!items.length) return;
+            const BATCH = 50;
+            for (let i = 0; i < items.length; i += BATCH) {
+              await base44.entities.Media.bulkCreate(items.slice(i, i + BATCH));
+            }
+            queryClient.invalidateQueries({ queryKey: ['media'] });
+          }).catch(() => {/* silent — user can manually sync later */});
+        });
+      }
       setTimeout(() => { setSaved(false); setAdding(false); setSelectedServer(null); }, 2000);
     },
   });
@@ -222,9 +236,12 @@ function ServerCard({ srv, allMeta, onDelete, deleting }) {
           </span>
         </div>
       </div>
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0" onClick={onDelete} disabled={deleting}>
-        <Trash2 className="w-4 h-4" />
-      </Button>
+      <div className="flex items-center gap-2 shrink-0">
+        {!isTrakt && <SyncServerButton server={srv} />}
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={onDelete} disabled={deleting}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
     </motion.div>
   );
 }
