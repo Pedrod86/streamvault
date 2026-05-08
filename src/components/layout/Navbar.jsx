@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus } from 'lucide-react';
+
+const LOGO_URL = 'https://media.base44.com/images/public/69fe35055df988e0955e5c11/471cf7e17_generated_image.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { base44 } from '@/api/base44Client';
@@ -41,10 +43,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Film className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-heading font-bold text-lg text-foreground hidden sm:block">StreamVault</span>
+            <img src={LOGO_URL} alt="StreamVault" className="w-8 h-8 rounded-lg object-cover" />
+            <span className="font-heading font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hidden sm:block">StreamVault</span>
           </Link>
 
           {/* Desktop Nav */}

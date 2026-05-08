@@ -4,7 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Film, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import StreamVaultLogo from '@/components/StreamVaultLogo';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 export default function Register() {
@@ -57,10 +58,10 @@ export default function Register() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-4">
-            <Film className="w-6 h-6 text-primary-foreground" />
+          <div className="flex justify-center mb-4">
+            <StreamVaultLogo size="lg" />
           </div>
-          <h1 className="font-heading font-bold text-2xl text-foreground">
+          <h1 className="font-heading font-bold text-2xl text-foreground mt-2">
             {showOtp ? 'Verify Email' : 'Create Account'}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
