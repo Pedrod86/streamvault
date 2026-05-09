@@ -429,8 +429,34 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
   const [token, setToken] = useState('');
   const [serverName, setServerName] = useState('');
 
-  const handleCredentials = (e) => {
+  const handleCredentials = async (e) => {
     e.preventDefault();
+    // For Emby/Jellyfin, authenticate first to obtain an API token
+    if (server.id === 'emby' || server.id === 'jellyfin') {
+      const base = url.replace(/\/$/, '');
+      const authRes = await fetch(`${base}/Users/AuthenticateByName`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Emby-Authorization': 'MediaBrowser Client="StreamVault", Device="Browser", DeviceId="streamvault", Version="1.0.0"',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ Username: username, Pw: password }),
+      });
+      if (!authRes.ok) {
+        alert('Authentication failed. Check your username/password and server URL.');
+        return;
+      }
+      const authData = await authRes.json();
+      onSave({
+        server_url: url,
+        username,
+        api_token: authData.AccessToken,
+        server_name: serverName || `${server.name} Server`,
+        auth_method: 'credentials',
+      });
+      return;
+    }
     onSave({
       server_url: url,
       username,
