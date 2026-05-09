@@ -208,6 +208,19 @@ function mapEmbyItem(item, base, token) {
 // ─── PUBLIC API ───────────────────────────────────────────────────────────────
 
 export async function fetchServerLibrary(server) {
+  // _pingOnly: just check reachability, don't return full library
+  if (server._pingOnly) {
+    const base = server.server_url?.replace(/\/$/, '');
+    if (!base) throw new Error('No server URL');
+    const token = server.api_token || server.plex_token;
+    const pingUrl = server.server_type === 'plex'
+      ? `${base}/identity?X-Plex-Token=${token}`
+      : `${base}/System/Info/Public`;
+    const res = await fetch(pingUrl, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error('Server returned error');
+    return [];
+  }
+
   switch (server.server_type) {
     case 'plex':
       return fetchPlexLibrary(server);

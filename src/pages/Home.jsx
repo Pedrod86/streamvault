@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
 import MediaRow from '../components/media/MediaRow';
+import ServerStatusBar from '../components/server/ServerStatusBar';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
@@ -64,6 +65,7 @@ export default function Home() {
       <HeroBanner featured={featured.length > 0 ? featured : recentlyAdded.slice(0, 5)} />
 
       <div className="mt-6 space-y-2">
+        <ServerStatusBar />
         {continueWatching.length > 0 && (
           <MediaRow
             title="Continue Watching"
