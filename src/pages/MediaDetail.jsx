@@ -59,7 +59,19 @@ export default function MediaDetail() {
 
   const addToWatchlist = useMutation({
     mutationFn: () => base44.entities.Watchlist.create({ media_id: mediaId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['watchlist'] });
+      const prev = queryClient.getQueryData(['watchlist']);
+      queryClient.setQueryData(['watchlist'], (old = []) => [
+        ...old,
+        { id: '__optimistic__', media_id: mediaId },
+      ]);
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['watchlist'], ctx.prev);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
   });
 
   const removeFromWatchlist = useMutation({
@@ -67,7 +79,18 @@ export default function MediaDetail() {
       const item = watchlist.find(w => w.media_id === mediaId);
       if (item) await base44.entities.Watchlist.delete(item.id);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['watchlist'] });
+      const prev = queryClient.getQueryData(['watchlist']);
+      queryClient.setQueryData(['watchlist'], (old = []) =>
+        old.filter(w => w.media_id !== mediaId)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['watchlist'], ctx.prev);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
   });
 
   if (isLoading || !media) {
@@ -100,11 +123,11 @@ export default function MediaDetail() {
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent" />
 
         {/* Back button */}
-        <div className="absolute top-4 left-4">
+        <div className="absolute top-4 left-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60"
+            className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 select-none"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft className="w-5 h-5" />
@@ -236,7 +259,7 @@ export default function MediaDetail() {
             {/* Actions */}
             <div className="flex gap-3 mb-8">
               <Button
-                className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-11 px-6 rounded-xl font-semibold"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-11 px-6 rounded-xl font-semibold select-none"
                 onClick={() => setShowPlayer(true)}
               >
                 <Play className="w-4 h-4 fill-current" />
@@ -244,7 +267,7 @@ export default function MediaDetail() {
               </Button>
               <Button
                 variant="outline"
-                className="border-border text-foreground hover:bg-secondary gap-2 h-11 px-5 rounded-xl"
+                className="border-border text-foreground hover:bg-secondary gap-2 h-11 px-5 rounded-xl select-none"
                 onClick={() => isInWatchlist ? removeFromWatchlist.mutate() : addToWatchlist.mutate()}
               >
                 {isInWatchlist ? (

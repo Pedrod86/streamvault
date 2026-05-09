@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus } from 'lucide-react';
+import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus, Trash2 } from 'lucide-react';
 
 const LOGO_URL = 'https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvault.png?rlkey=png0dj93b0c1m3ksls5t5b7wn&st=4nd7duli&dl=1';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import DeleteAccountDialog from './DeleteAccountDialog';
 
 export default function Navbar() {
   const location = useLocation();
@@ -19,6 +21,7 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const links = [
     { to: '/', label: 'Home', icon: Home },
@@ -94,17 +97,23 @@ export default function Navbar() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground select-none">
                   <User className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-card border-border">
-                <DropdownMenuItem onClick={() => base44.auth.logout()}>
+                <DropdownMenuItem className="select-none" onClick={() => base44.auth.logout()}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border" />
+                <DropdownMenuItem className="select-none text-destructive focus:text-destructive" onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Account
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <DeleteAccountDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} />
 
             {/* Mobile hamburger */}
             <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden text-muted-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
