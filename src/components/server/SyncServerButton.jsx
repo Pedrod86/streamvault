@@ -17,28 +17,53 @@ export default function SyncServerButton({ server }) {
       setErrorMsg('');
 
       // 1. Fetch all items from the media server
-      const items = await fetchServerLibrary(server);
+      let items;
+      try {
+        items = await fetchServerLibrary(server);
+      } catch (err) {
+        const isCors = err.message === 'Failed to fetch' || err.name === 'TypeError';
+        if (isCors) {
+          throw new Error('Cannot reach server. If it\'s on your local network, ensure CORS is enabled in your Emby/Jellyfin settings, or that the server URL is accessible from this browser.');
+        }
+        throw err;
+      }
 
       if (!items.length) {
         setCount(0);
         return 0;
       }
 
-      // 2. Get existing media titles to avoid duplicates
+      // 2. Get existing media to update video_url on existing items
       const existing = await base44.entities.Media.list('-created_date', 500);
-      const existingTitles = new Set(existing.map(m => m.title.toLowerCase().trim()));
+      const existingMap = new Map(existing.map(m => [m.title.toLowerCase().trim(), m]));
 
-      // 3. Filter out already-imported items
-      const newItems = items.filter(
-        item => !existingTitles.has(item.title.toLowerCase().trim())
-      );
-
-      if (!newItems.length) {
-        setCount(0);
-        return 0;
+      // 3. Split into new vs existing
+      const newItems = [];
+      const updatePromises = [];
+      for (const item of items) {
+        const key = item.title.toLowerCase().trim();
+        const existingItem = existingMap.get(key);
+        if (existingItem) {
+          // Update video_url if we now have one and it was missing
+          if (item.video_url && !existingItem.video_url) {
+            updatePromises.push(
+              base44.entities.Media.update(existingItem.id, { video_url: item.video_url })
+            );
+          }
+        } else {
+          newItems.push(item);
+        }
       }
 
-      // 4. Bulk create in batches of 50
+      // Run updates in parallel
+      if (updatePromises.length) await Promise.all(updatePromises);
+
+      if (!newItems.length) {
+        setCount(updatePromises.length > 0 ? -updatePromises.length : 0);
+        return updatePromises.length > 0 ? -updatePromises.length : 0;
+      }
+
+      // 4. Bulk create new items in batches of 50
       const BATCH = 50;
       let created = 0;
       for (let i = 0; i < newItems.length; i += BATCH) {
@@ -66,16 +91,19 @@ export default function SyncServerButton({ server }) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-green-400 font-medium">
         <CheckCircle2 className="w-3.5 h-3.5" />
-        {count > 0 ? `${count} items imported` : 'Already up to date'}
+        {count > 0 ? `${count} items imported` : count < 0 ? `${Math.abs(count)} items updated` : 'Already up to date'}
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-destructive font-medium max-w-[200px]">
-        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-        <span className="truncate">{errorMsg}</span>
+      <div className="flex flex-col gap-1 text-xs text-destructive font-medium max-w-[280px]">
+        <div className="flex items-center gap-1.5">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span className="font-semibold">Sync failed</span>
+        </div>
+        <span className="text-destructive/80 leading-snug">{errorMsg}</span>
       </div>
     );
   }
