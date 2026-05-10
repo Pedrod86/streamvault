@@ -60,6 +60,9 @@
     "auth_method"
   ],
   "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
     "read": {
       "created_by": "{{user.email}}"
     },
@@ -68,14 +71,6 @@
     },
     "delete": {
       "created_by": "{{user.email}}"
-    },
-    "write": {
-      "created_by": "{{user.email}}"
-    },
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
     }
   }
 }
