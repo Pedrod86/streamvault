@@ -1,12 +1,21 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
 import MediaRow from '../components/media/MediaRow';
 import ServerStatusBar from '../components/server/ServerStatusBar';
+import PullToRefresh from '../components/layout/PullToRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['media'] });
+    await queryClient.invalidateQueries({ queryKey: ['watchHistory'] });
+    await queryClient.invalidateQueries({ queryKey: ['mediaServers'] });
+  };
+
   const { data: allMedia = [], isLoading } = useQuery({
     queryKey: ['media'],
     queryFn: () => base44.entities.Media.list('-created_date', 100),
@@ -61,6 +70,7 @@ export default function Home() {
   }
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div>
       <HeroBanner featured={featured.length > 0 ? featured : recentlyAdded.slice(0, 5)} />
 
@@ -84,5 +94,6 @@ export default function Home() {
         ))}
       </div>
     </div>
+    </PullToRefresh>
   );
 }

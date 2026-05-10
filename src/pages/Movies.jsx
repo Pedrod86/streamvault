@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import MediaGrid from '../components/media/MediaGrid';
 import GenreFilter from '../components/media/GenreFilter';
+import PullToRefresh from '../components/layout/PullToRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function Movies() {
+  const queryClient = useQueryClient();
   const [genre, setGenre] = useState('All');
   const [sortBy, setSortBy] = useState('recent');
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['movies'] });
+    await queryClient.invalidateQueries({ queryKey: ['watchHistory'] });
+  };
 
   const { data: movies = [], isLoading } = useQuery({
     queryKey: ['movies'],
@@ -31,6 +38,7 @@ export default function Movies() {
   }
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground">Movies</h1>
@@ -61,5 +69,6 @@ export default function Movies() {
         )}
       </div>
     </div>
+    </PullToRefresh>
   );
 }
