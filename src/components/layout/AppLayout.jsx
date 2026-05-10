@@ -1,12 +1,33 @@
 import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import PageTransition from './PageTransition';
 
 export default function AppLayout() {
   const location = useLocation();
+
+  // Restore saved theme from settings
+  const { data: settingsList = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSettings.list(),
+  });
+  useEffect(() => {
+    const s = settingsList[0];
+    if (!s) return;
+    if (s.accent_color) {
+      document.documentElement.style.setProperty('--primary', s.accent_color);
+      document.documentElement.style.setProperty('--ring', s.accent_color);
+      document.documentElement.style.setProperty('--chart-1', s.accent_color);
+    }
+    if (s.secondary_color) {
+      document.documentElement.style.setProperty('--accent', s.secondary_color);
+      document.documentElement.style.setProperty('--chart-2', s.secondary_color);
+    }
+  }, [settingsList]);
 
   // Auto-apply dark mode based on OS preference
   useEffect(() => {

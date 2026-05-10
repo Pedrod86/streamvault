@@ -20,6 +20,7 @@ import ResetPassword from './pages/ResetPassword';
 import AppLayout from './components/layout/AppLayout';
 import ConnectServer from './pages/ConnectServer';
 import AddMedia from './pages/AddMedia';
+import Settings from './pages/Settings';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/connect-server" element={<ConnectServer />} />
           <Route path="/add-media" element={<AddMedia />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Route>
 

@@ -1,0 +1,22 @@
+{
+  "name": "AppSettings",
+  "type": "object",
+  "properties": {
+    "accent_color": {
+      "type": "string",
+      "description": "Primary accent color (HSL values only, e.g. '262 83% 58%')",
+      "default": "262 83% 58%"
+    },
+    "secondary_color": {
+      "type": "string",
+      "description": "Accent/secondary color (HSL)",
+      "default": "199 89% 48%"
+    },
+    "sync_interval_minutes": {
+      "type": "number",
+      "description": "Auto-sync interval in minutes (0 = disabled)",
+      "default": 0
+    }
+  },
+  "required": []
+}

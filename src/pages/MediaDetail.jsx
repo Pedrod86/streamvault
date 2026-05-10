@@ -8,6 +8,7 @@ import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clappe
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
+import TrailerPlayer from '../components/media/TrailerPlayer';
 
 export default function MediaDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -134,51 +135,9 @@ export default function MediaDetail() {
           </Button>
         </div>
 
-        {/* Video player overlay */}
-        {showPlayer && media.video_url && (
-          <div className="absolute inset-0 bg-black z-10 flex items-center justify-center">
-            <video
-              src={media.video_url}
-              controls
-              autoPlay
-              className="w-full h-full"
-              onTimeUpdate={(e) => {
-                const v = e.target;
-                if (!v.duration || v.currentTime < 5) return;
-                // Save every 10 seconds
-                if (Math.round(v.currentTime) % 10 === 0) {
-                  saveProgress.mutate({
-                    progressSeconds: Math.round(v.currentTime),
-                    totalSeconds: Math.round(v.duration),
-                    completed: false,
-                  });
-                }
-              }}
-              onEnded={(e) => {
-                saveProgress.mutate({
-                  progressSeconds: Math.round(e.target.duration),
-                  totalSeconds: Math.round(e.target.duration),
-                  completed: true,
-                });
-              }}
-              onPause={(e) => {
-                const v = e.target;
-                if (!v.duration || v.currentTime < 5) return;
-                saveProgress.mutate({
-                  progressSeconds: Math.round(v.currentTime),
-                  totalSeconds: Math.round(v.duration),
-                  completed: v.currentTime / v.duration > 0.95,
-                });
-              }}
-            />
-            <Button
-              variant="ghost"
-              className="absolute top-4 right-4 text-white"
-              onClick={() => setShowPlayer(false)}
-            >
-              Close
-            </Button>
-          </div>
+        {/* Trailer / video player overlay */}
+        {showPlayer && (
+          <TrailerPlayer media={media} onClose={() => setShowPlayer(false)} />
         )}
       </div>
 
@@ -263,7 +222,7 @@ export default function MediaDetail() {
                 onClick={() => setShowPlayer(true)}
               >
                 <Play className="w-4 h-4 fill-current" />
-                {media.video_url ? 'Play' : 'Preview'}
+                {media.video_url ? 'Play' : 'Watch Trailer'}
               </Button>
               <Button
                 variant="outline"
