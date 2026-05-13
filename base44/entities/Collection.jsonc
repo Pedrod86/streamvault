@@ -1,0 +1,34 @@
+{
+  "name": "Collection",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the collection e.g. 'Action Favorites'"
+    },
+    "media_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of media IDs in this collection"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

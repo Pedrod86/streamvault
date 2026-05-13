@@ -4,11 +4,12 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft } from 'lucide-react';
+import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
 import TrailerPlayer from '../components/media/TrailerPlayer';
+import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 
 export default function MediaDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -16,6 +17,7 @@ export default function MediaDetail() {
   const mediaId = window.location.pathname.split('/media/')[1];
   const queryClient = useQueryClient();
   const [showPlayer, setShowPlayer] = useState(false);
+  const [showCollections, setShowCollections] = useState(false);
 
   const saveProgress = useMutation({
     mutationFn: async ({ progressSeconds, totalSeconds, completed }) => {
@@ -235,7 +237,15 @@ export default function MediaDetail() {
                   <><BookmarkPlus className="w-4 h-4" /> Add to List</>
                 )}
               </Button>
+              <Button
+                variant="outline"
+                className="border-border text-foreground hover:bg-secondary gap-2 h-11 px-5 rounded-xl select-none"
+                onClick={() => setShowCollections(true)}
+              >
+                <FolderPlus className="w-4 h-4" /> Collections
+              </Button>
             </div>
+            <AddToCollectionDialog mediaId={mediaId} open={showCollections} onOpenChange={setShowCollections} />
 
             {/* Description */}
             {media.description && (
