@@ -104,7 +104,7 @@ function mapJellyfinItem(item, base, token) {
     media_type: item.Type === 'Series' ? 'tv_show' : 'movie',
     description: item.Overview || '',
     year: item.ProductionYear || undefined,
-    rating: item.CommunityRating ? parseFloat(item.CommunityRating.toFixed(1)) : undefined,
+    rating: item.CommunityRating != null ? parseFloat(Number(item.CommunityRating).toFixed(1)) : undefined,
     duration_minutes: item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : undefined,
     poster_url: posterUrl,
     backdrop_url: backdropUrl,
@@ -185,22 +185,24 @@ function mapEmbyItem(item, base, token) {
     videoUrl = `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true`;
   }
 
+  const communityRating = item.CommunityRating != null ? parseFloat(Number(item.CommunityRating).toFixed(1)) : undefined;
+
   return {
-    title: item.Name,
+    title: item.Name || '',
     media_type: item.Type === 'Series' ? 'tv_show' : 'movie',
     description: item.Overview || '',
-    year: item.ProductionYear || undefined,
-    rating: item.CommunityRating ? parseFloat(item.CommunityRating.toFixed(1)) : undefined,
+    year: item.ProductionYear ? Number(item.ProductionYear) : undefined,
+    rating: !isNaN(communityRating) ? communityRating : undefined,
     duration_minutes: item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : undefined,
     poster_url: posterUrl,
     backdrop_url: backdropUrl,
     video_url: videoUrl,
-    genre: item.Genres || [],
-    director: item.People?.find(p => p.Type === 'Director')?.Name,
+    genre: Array.isArray(item.Genres) ? item.Genres : [],
+    director: item.People?.find(p => p.Type === 'Director')?.Name || undefined,
     cast: item.People?.filter(p => p.Type === 'Actor').slice(0, 8).map(p => p.Name) || [],
-    studio: item.Studios?.[0]?.Name,
+    studio: item.Studios?.[0]?.Name || undefined,
     content_rating: item.OfficialRating || undefined,
-    season_count: item.ChildCount || undefined,
+    season_count: item.ChildCount ? Number(item.ChildCount) : undefined,
     tags: [],
   };
 }

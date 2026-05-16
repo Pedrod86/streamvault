@@ -21,6 +21,7 @@ import AppLayout from './components/layout/AppLayout';
 import ConnectServer from './pages/ConnectServer';
 import AddMedia from './pages/AddMedia';
 import Settings from './pages/Settings';
+import WatchHistory from './pages/WatchHistory';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -62,6 +63,7 @@ const AuthenticatedApp = () => {
           <Route path="/connect-server" element={<ConnectServer />} />
           <Route path="/add-media" element={<AddMedia />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/history" element={<WatchHistory />} />
         </Route>
       </Route>
 

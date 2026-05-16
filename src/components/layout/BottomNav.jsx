@@ -1,12 +1,13 @@
 import React, { useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Film, Tv, BookmarkPlus } from 'lucide-react';
+import { Home, Film, Tv, BookmarkPlus, History } from 'lucide-react';
 
 const links = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/movies', label: 'Movies', icon: Film },
   { to: '/shows', label: 'Shows', icon: Tv },
   { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
+  { to: '/history', label: 'History', icon: History },
 ];
 
 export default function BottomNav() {
