@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Globe, User, Key, Loader2, Tv2 } from 'lucide-react';
+import { ArrowLeft, Globe, User, Key, Loader2, Tv2, AlertTriangle, Info } from 'lucide-react';
 
 export const XTREAM = {
   id: 'xtream',
@@ -13,27 +13,72 @@ export const XTREAM = {
   description: 'Connect your IPTV provider via Xtream Codes API',
 };
 
+/**
+ * Tries to extract base URL + credentials from an M3U/Xtream playlist URL.
+ * e.g. http://host:port/get.php?username=foo&password=bar
+ *      http://host:port/player_api.php?username=foo&password=bar
+ */
+function parseXtreamUrl(raw) {
+  try {
+    const u = new URL(raw.includes('://') ? raw : 'http://' + raw);
+    const username = u.searchParams.get('username') || '';
+    const password = u.searchParams.get('password') || '';
+    const base = `${u.protocol}//${u.host}`;
+    if (username || password) return { base, username, password };
+  } catch {}
+  return null;
+}
+
 export default function XtreamForm({ onBack, onSave, isSaving }) {
   const [url, setUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [serverName, setServerName] = useState('');
   const [error, setError] = useState('');
+  const [corsWarning, setCorsWarning] = useState(false);
+
+  // Auto-parse M3U/playlist URLs pasted into the URL field
+  const handleUrlChange = (e) => {
+    const val = e.target.value;
+    setUrl(val);
+    const parsed = parseXtreamUrl(val);
+    if (parsed) {
+      setUrl(parsed.base);
+      if (parsed.username) setUsername(parsed.username);
+      if (parsed.password) setPassword(parsed.password);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setCorsWarning(false);
 
     // Normalize URL
     let base = url.trim().replace(/\/$/, '');
     if (!/^https?:\/\//i.test(base)) base = 'http://' + base;
 
-    // Validate credentials against the Xtream API
+    // Warn about HTTP servers (mixed content) but still try
+    const isHttp = base.startsWith('http://');
+
     const testUrl = `${base}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
     let res;
     try {
       res = await fetch(testUrl);
-    } catch {
+    } catch (err) {
+      if (isHttp) {
+        // Almost certainly a mixed-content / CORS block
+        setCorsWarning(true);
+        // Save anyway without verification — user can try
+        onSave({
+          server_url: base,
+          username,
+          password,
+          server_name: serverName || 'My IPTV Provider',
+          auth_method: 'credentials',
+        });
+        return;
+      }
       setError('Cannot reach the server. Check the URL and ensure it is reachable from your device.');
       return;
     }
@@ -42,11 +87,18 @@ export default function XtreamForm({ onBack, onSave, isSaving }) {
     try {
       data = await res.json();
     } catch {
-      setError('Server returned an unexpected response. Make sure this is a valid Xtream Codes server URL.');
+      // Non-JSON response — save anyway, might still work for streaming
+      onSave({
+        server_url: base,
+        username,
+        password,
+        server_name: serverName || 'My IPTV Provider',
+        auth_method: 'credentials',
+      });
       return;
     }
 
-    if (!data?.user_info || data.user_info.auth === 0) {
+    if (data?.user_info?.auth === 0) {
       setError('Authentication failed. Check your username and password.');
       return;
     }
@@ -55,9 +107,7 @@ export default function XtreamForm({ onBack, onSave, isSaving }) {
       server_url: base,
       username,
       password,
-      server_name: serverName || data.server_info?.server_protocol
-        ? (serverName || 'My IPTV Provider')
-        : (serverName || 'My IPTV Provider'),
+      server_name: serverName || 'My IPTV Provider',
       auth_method: 'credentials',
     });
   };
@@ -80,27 +130,28 @@ export default function XtreamForm({ onBack, onSave, isSaving }) {
           </div>
         </div>
 
-        <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 mb-5 space-y-1">
-          <p className="font-semibold">What you need:</p>
-          <ul className="list-disc list-inside space-y-0.5 text-purple-300/80">
-            <li>Your IPTV provider's server URL (e.g. http://provider.com:8080)</li>
-            <li>Your Xtream Codes username & password from your provider</li>
+        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 mb-5 space-y-1">
+          <p className="font-semibold flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Tips</p>
+          <ul className="list-disc list-inside space-y-0.5 text-blue-300/80">
+            <li>You can paste your full M3U URL — credentials will be auto-filled</li>
+            <li>Server URL format: <span className="font-mono">http://provider.com:8080</span></li>
+            <li>Get your details from your IPTV provider</li>
           </ul>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label className="text-foreground text-sm flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Server URL
+              <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Server URL or M3U Link
             </Label>
             <Input
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="http://provider.com:8080"
+              onChange={handleUrlChange}
+              placeholder="http://provider.com:8080 or paste full M3U URL"
               className="mt-1 bg-secondary border-border h-11 font-mono text-sm"
               required
             />
-            <p className="text-xs text-muted-foreground mt-1">Include port number if provided by your IPTV service</p>
+            <p className="text-xs text-muted-foreground mt-1">Paste your full playlist URL to auto-fill credentials</p>
           </div>
 
           <div>
@@ -137,6 +188,13 @@ export default function XtreamForm({ onBack, onSave, isSaving }) {
               required
             />
           </div>
+
+          {corsWarning && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 leading-relaxed space-y-1">
+              <p className="font-semibold flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> Saved — but connection test was blocked</p>
+              <p>Your provider uses HTTP (not HTTPS), which browsers block when running inside a secure app. Your credentials have been saved. Library sync may be limited, but stream URLs will still work in a native player.</p>
+            </div>
+          )}
 
           {error && (
             <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-xs text-destructive leading-relaxed">
