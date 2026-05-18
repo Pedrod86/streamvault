@@ -222,35 +222,77 @@ function mapEmbyItem(item, base, token) {
 
 // ─── XTREAM CODES ─────────────────────────────────────────────────────────────
 
+async function safeXtreamJson(res) {
+  try {
+    const text = await res.text();
+    const parsed = JSON.parse(text);
+    // Some providers wrap list in an object — unwrap to array
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.data)) return parsed.data;
+    if (parsed && Array.isArray(parsed.items)) return parsed.items;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 async function fetchXtreamLibrary(server) {
   const base = server.server_url.replace(/\/$/, '');
-  const u = encodeURIComponent(server.username);
-  const p = encodeURIComponent(server.password);
+  const username = server.username || '';
+  const password = server.password || '';
+  const u = encodeURIComponent(username);
+  const p = encodeURIComponent(password);
   const apiBase = `${base}/player_api.php?username=${u}&password=${p}`;
+
+  // First verify auth
+  let authRes;
+  try {
+    authRes = await fetch(apiBase);
+  } catch {
+    throw new Error('Cannot reach your Xtream server. Check the URL and your network connection.');
+  }
+  if (!authRes.ok) throw new Error(`Xtream server responded with status ${authRes.status}.`);
+
+  let authData;
+  try {
+    const text = await authRes.text();
+    authData = JSON.parse(text);
+  } catch {
+    throw new Error('Xtream server returned an invalid response. Ensure the URL and credentials are correct.');
+  }
+
+  const authVal = authData?.user_info?.auth;
+  if (authVal !== undefined && authVal !== null && Number(authVal) === 0) {
+    throw new Error('Xtream authentication failed. Check your username and password.');
+  }
 
   // Fetch VOD (movies) and Series in parallel
   const [vodRes, seriesRes] = await Promise.all([
-    fetch(`${apiBase}&action=get_vod_streams`),
-    fetch(`${apiBase}&action=get_series`),
+    fetch(`${apiBase}&action=get_vod_streams`).catch(() => null),
+    fetch(`${apiBase}&action=get_series`).catch(() => null),
   ]);
 
   const [vodList, seriesList] = await Promise.all([
-    vodRes.ok ? vodRes.json().catch(() => []) : [],
-    seriesRes.ok ? seriesRes.json().catch(() => []) : [],
+    vodRes ? safeXtreamJson(vodRes) : [],
+    seriesRes ? safeXtreamJson(seriesRes) : [],
   ]);
 
   const items = [];
 
-  for (const v of (Array.isArray(vodList) ? vodList : [])) {
-    const streamUrl = `${base}/movie/${server.username}/${server.password}/${v.stream_id}.${v.container_extension || 'mp4'}`;
+  for (const v of vodList) {
+    if (!v || typeof v !== 'object') continue;
+    const ext = v.container_extension || v.format || 'mp4';
+    const streamUrl = `${base}/movie/${username}/${password}/${v.stream_id}.${ext}`;
+    const rating = parseFloat(v.rating || v.rating_5based || 0);
     items.push({
-      title: v.name || v.stream_id,
+      title: v.name || String(v.stream_id),
       media_type: 'movie',
       description: v.plot || '',
       year: v.year ? Number(v.year) : undefined,
-      rating: v.rating ? parseFloat(v.rating) : undefined,
-      duration_minutes: v.duration_secs ? Math.round(v.duration_secs / 60) : undefined,
-      poster_url: v.stream_icon || undefined,
+      rating: rating > 0 ? rating : undefined,
+      duration_minutes: v.duration_secs ? Math.round(Number(v.duration_secs) / 60)
+        : v.duration ? Math.round(Number(v.duration) / 60) : undefined,
+      poster_url: v.stream_icon || v.cover || undefined,
       genre: v.genre ? v.genre.split(',').map(g => g.trim()).filter(Boolean) : [],
       director: v.director || undefined,
       cast: v.cast ? v.cast.split(',').map(c => c.trim()).filter(Boolean).slice(0, 8) : [],
@@ -259,17 +301,20 @@ async function fetchXtreamLibrary(server) {
     });
   }
 
-  for (const s of (Array.isArray(seriesList) ? seriesList : [])) {
+  for (const s of seriesList) {
+    if (!s || typeof s !== 'object') continue;
+    const rating = parseFloat(s.rating || s.rating_5based || 0);
     items.push({
-      title: s.name || s.series_id,
+      title: s.name || String(s.series_id),
       media_type: 'tv_show',
       description: s.plot || '',
       year: s.year ? Number(s.year) : undefined,
-      rating: s.rating ? parseFloat(s.rating) : undefined,
-      poster_url: s.cover || undefined,
+      rating: rating > 0 ? rating : undefined,
+      poster_url: s.cover || s.stream_icon || undefined,
       genre: s.genre ? s.genre.split(',').map(g => g.trim()).filter(Boolean) : [],
       director: s.director || undefined,
       cast: s.cast ? s.cast.split(',').map(c => c.trim()).filter(Boolean).slice(0, 8) : [],
+      season_count: s.num_seasons ? Number(s.num_seasons) : undefined,
       tags: ['xtream', 'iptv'],
     });
   }

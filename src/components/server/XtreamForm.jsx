@@ -85,29 +85,40 @@ export default function XtreamForm({ onBack, onSave, isSaving }) {
 
     let data;
     try {
-      data = await res.json();
+      const text = await res.text();
+      data = JSON.parse(text);
     } catch {
       // Non-JSON response — save anyway, might still work for streaming
       onSave({
         server_url: base,
         username,
         password,
-        server_name: serverName || 'My IPTV Provider',
+        server_name: serverName || data?.server_info?.server_name || 'My IPTV Provider',
         auth_method: 'credentials',
       });
       return;
     }
 
-    if (data?.user_info?.auth === 0) {
+    // Explicit auth failure: auth field is present AND equals 0
+    const authField = data?.user_info?.auth;
+    if (authField !== undefined && authField !== null && Number(authField) === 0) {
       setError('Authentication failed. Check your username and password.');
       return;
     }
+
+    // Some providers return an HTTP error status with a JSON error body
+    if (!res.ok && !data?.user_info) {
+      setError(`Server responded with status ${res.status}. Check your credentials.`);
+      return;
+    }
+
+    const detectedName = data?.server_info?.server_name || data?.user_info?.username || 'My IPTV Provider';
 
     onSave({
       server_url: base,
       username,
       password,
-      server_name: serverName || 'My IPTV Provider',
+      server_name: serverName || detectedName,
       auth_method: 'credentials',
     });
   };
