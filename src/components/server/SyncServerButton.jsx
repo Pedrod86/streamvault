@@ -23,7 +23,7 @@ export default function SyncServerButton({ server }) {
       } catch (err) {
         const isCors = err.message === 'Failed to fetch' || err.name === 'TypeError' || err instanceof TypeError;
         if (isCors) {
-          throw new Error('CORS_BLOCKED');
+          throw new Error(server.server_type === 'xtream' ? 'CORS_XTREAM' : 'CORS_BLOCKED');
         }
         throw err;
       }
@@ -98,29 +98,33 @@ export default function SyncServerButton({ server }) {
 
   if (status === 'error') {
     const isCors = errorMsg === 'CORS_BLOCKED';
+    const isXtreamCors = errorMsg === 'CORS_XTREAM';
     return (
       <div className="flex flex-col gap-1.5 text-xs font-medium max-w-[320px]">
         <div className="flex items-center gap-1.5 text-destructive">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span className="font-semibold">{isCors ? 'CORS / Network blocked' : 'Sync failed'}</span>
+          <span className="font-semibold">{(isCors || isXtreamCors) ? 'Network blocked by browser' : 'Sync failed'}</span>
         </div>
-        {isCors ? (
+        {isXtreamCors ? (
+          <div className="text-muted-foreground leading-snug space-y-1">
+            <p>Your IPTV provider uses <strong className="text-foreground">HTTP (not HTTPS)</strong>, which browsers block from secure pages (mixed content).</p>
+            <p className="font-medium text-foreground">To work around this:</p>
+            <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground/80">
+              <li>Open the app in <strong className="text-foreground">Chrome</strong>, click the lock/info icon in the address bar</li>
+              <li>Go to <strong className="text-foreground">Site settings → Insecure content</strong> and set to <strong className="text-foreground">Allow</strong></li>
+              <li>Reload the page and try syncing again</li>
+            </ol>
+            <p className="text-muted-foreground/70 mt-1">Alternatively, ask your provider if they support HTTPS.</p>
+          </div>
+        ) : isCors ? (
           <div className="text-muted-foreground leading-snug space-y-1">
             <p>Your browser is blocking requests to the media server. To fix this:</p>
             <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground/80">
               <li>Open your <strong className="text-foreground">Emby/Jellyfin Dashboard</strong></li>
               <li>Go to <strong className="text-foreground">Advanced → Networking</strong></li>
               <li>Add <code className="bg-secondary px-1 rounded text-foreground">https://streamvault-now.base44.app</code> to <strong className="text-foreground">Known Proxies / CORS Origins</strong></li>
-              <li>Make sure your server URL uses <strong className="text-foreground">https://</strong> if your server has SSL, or the app must be opened over <strong className="text-foreground">http://</strong></li>
+              <li>Make sure your server URL uses <strong className="text-foreground">https://</strong></li>
             </ol>
-            <a
-              href="https://jellyfin.org/docs/general/networking/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary hover:underline mt-1"
-            >
-              <ExternalLink className="w-3 h-3" /> Networking docs
-            </a>
           </div>
         ) : (
           <span className="text-destructive/80 leading-snug">{errorMsg}</span>
