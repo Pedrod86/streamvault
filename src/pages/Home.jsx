@@ -5,6 +5,7 @@ import HeroBanner from '../components/media/HeroBanner';
 import MediaRow from '../components/media/MediaRow';
 import ServerStatusBar from '../components/server/ServerStatusBar';
 import PullToRefresh from '../components/layout/PullToRefresh';
+import StatsWidget from '../components/dashboard/StatsWidget';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
@@ -77,6 +78,8 @@ export default function Home() {
     <PullToRefresh onRefresh={handleRefresh}>
     <div>
       <HeroBanner featured={featured.length > 0 ? featured : recentlyAdded.slice(0, 5)} />
+
+      <StatsWidget />
 
       <div className="mt-6 space-y-2">
         <ServerStatusBar />
