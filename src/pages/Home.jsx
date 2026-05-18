@@ -19,11 +19,15 @@ export default function Home() {
   const { data: allMedia = [], isLoading } = useQuery({
     queryKey: ['media'],
     queryFn: () => base44.entities.Media.list('-created_date', 100),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: watchHistory = [] } = useQuery({
     queryKey: ['watchHistory'],
     queryFn: () => base44.entities.WatchHistory.list('-updated_date', 50),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const featured = allMedia.filter(m => m.is_featured);

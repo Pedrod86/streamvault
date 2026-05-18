@@ -20,11 +20,15 @@ export default function Shows() {
   const { data: shows = [], isLoading } = useQuery({
     queryKey: ['shows'],
     queryFn: () => base44.entities.Media.filter({ media_type: 'tv_show' }, '-created_date', 200),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: watchHistory = [] } = useQuery({
     queryKey: ['watchHistory'],
     queryFn: () => base44.entities.WatchHistory.list('-updated_date', 200),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   let filtered = genre === 'All' ? shows : shows.filter(m => m.genre?.includes(genre));
