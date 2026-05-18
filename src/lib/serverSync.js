@@ -295,10 +295,17 @@ export async function fetchServerLibrary(server) {
   if (server._pingOnly) {
     const base = server.server_url?.replace(/\/$/, '');
     if (!base) throw new Error('No server URL');
-    const token = server.api_token || server.plex_token;
-    const pingUrl = server.server_type === 'plex'
-      ? `${base}/identity?X-Plex-Token=${token}`
-      : `${base}/System/Info/Public`;
+    let pingUrl;
+    if (server.server_type === 'plex') {
+      const token = server.api_token || server.plex_token;
+      pingUrl = `${base}/identity?X-Plex-Token=${token}`;
+    } else if (server.server_type === 'xtream') {
+      const u = encodeURIComponent(server.username);
+      const p = encodeURIComponent(server.password);
+      pingUrl = `${base}/player_api.php?username=${u}&password=${p}&action=get_server_info`;
+    } else {
+      pingUrl = `${base}/System/Info/Public`;
+    }
     const res = await fetch(pingUrl, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error('Server returned error');
     return [];
