@@ -82,11 +82,22 @@ async function fetchJellyfinLibrary(server) {
   const user = userList.find(u => u.Policy?.IsAdministrator) || userList[0];
   const userId = user.Id;
 
-  const json = await proxyFetch(
-    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500`,
-    authHeaders
-  );
-  return (json.Items || []).map(item => mapJellyfinItem(item, base, token));
+  const PAGE_SIZE = 500;
+  const allItems = [];
+  let startIndex = 0;
+
+  while (true) {
+    const json = await proxyFetch(
+      `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=${PAGE_SIZE}&StartIndex=${startIndex}`,
+      authHeaders
+    );
+    const items = json.Items || [];
+    allItems.push(...items.map(item => mapJellyfinItem(item, base, token)));
+    if (allItems.length >= (json.TotalRecordCount || 0) || items.length < PAGE_SIZE) break;
+    startIndex += PAGE_SIZE;
+  }
+
+  return allItems;
 }
 
 function mapJellyfinItem(item, base, token) {
@@ -127,15 +138,25 @@ async function fetchEmbyLibrary(server) {
   const users = await proxyFetch(`${base}/Users`, authHeaders);
   const userList = Array.isArray(users) ? users : (users?.Items || []);
   if (!userList.length) throw new Error('Could not retrieve users from Emby server. Check your API key.');
-  // Prefer admin user, fall back to first
   const user = userList.find(u => u.Policy?.IsAdministrator) || userList[0];
   const userId = user.Id;
 
-  const json = await proxyFetch(
-    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500`,
-    authHeaders
-  );
-  return (json.Items || []).map(item => mapEmbyItem(item, base, token));
+  const PAGE_SIZE = 500;
+  const allItems = [];
+  let startIndex = 0;
+
+  while (true) {
+    const json = await proxyFetch(
+      `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=${PAGE_SIZE}&StartIndex=${startIndex}`,
+      authHeaders
+    );
+    const items = json.Items || [];
+    allItems.push(...items.map(item => mapEmbyItem(item, base, token)));
+    if (allItems.length >= (json.TotalRecordCount || 0) || items.length < PAGE_SIZE) break;
+    startIndex += PAGE_SIZE;
+  }
+
+  return allItems;
 }
 
 function mapEmbyItem(item, base, token) {
