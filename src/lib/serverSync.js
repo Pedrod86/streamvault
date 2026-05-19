@@ -4,10 +4,10 @@ import { base44 } from '@/api/base44Client';
  * All fetches go through the server-side mediaProxy backend function
  * to avoid CORS issues with HTTP media servers.
  */
-async function proxyFetch(url) {
-  const res = await base44.functions.invoke('mediaProxy', { url });
+async function proxyFetch(url, headers = {}) {
+  const res = await base44.functions.invoke('mediaProxy', { url, headers });
   if (!res.data.ok && res.data.status !== 200) {
-    throw new Error(`Server responded with status ${res.data.status}`);
+    throw new Error(`Server responded with status ${res.data.status} for ${url}`);
   }
   return res.data.data;
 }
@@ -60,13 +60,15 @@ function mapPlexItem(item, base, token, sectionType) {
 async function fetchJellyfinLibrary(server) {
   const base = server.server_url.replace(/\/$/, '');
   const token = server.api_token;
+  const authHeaders = { 'X-Emby-Token': token, 'X-MediaBrowser-Token': token };
 
-  const user = await proxyFetch(`${base}/Users/Me`);
+  const user = await proxyFetch(`${base}/Users/Me`, authHeaders);
   if (!user?.Id) throw new Error(`Jellyfin auth failed. Check your API key and server URL.`);
   const userId = user.Id;
 
   const json = await proxyFetch(
-    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500&api_key=${token}`
+    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500`,
+    authHeaders
   );
   return (json.Items || []).map(item => mapJellyfinItem(item, base, token));
 }
@@ -103,12 +105,15 @@ async function fetchEmbyLibrary(server) {
 
   if (!token) throw new Error('No API token available for Emby. Please reconnect with an API key.');
 
-  const user = await proxyFetch(`${base}/Users/Me?api_key=${token}`);
+  const authHeaders = { 'X-Emby-Token': token };
+
+  const user = await proxyFetch(`${base}/Users/Me`, authHeaders);
   if (!user?.Id) throw new Error('Could not authenticate with Emby server.');
   const userId = user.Id;
 
   const json = await proxyFetch(
-    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500&api_key=${token}`
+    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500`,
+    authHeaders
   );
   return (json.Items || []).map(item => mapEmbyItem(item, base, token));
 }
