@@ -106,13 +106,15 @@ export default function SyncProgressBar() {
   if (status === 'idle') {
     return (
       <div className="mx-4 sm:mx-6 mt-4 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-card border border-border">
-        <span className="text-xs text-muted-foreground">Sync your media library</span>
+        <span className="text-xs text-muted-foreground">
+          Sync all {syncableServers.length} server{syncableServers.length !== 1 ? 's' : ''}
+        </span>
         <button
           onClick={runSync}
-          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          Sync Now
+          Sync All Libraries
         </button>
       </div>
     );
