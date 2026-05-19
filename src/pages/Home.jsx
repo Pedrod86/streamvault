@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
@@ -10,8 +10,11 @@ import SyncProgressBar from '../components/dashboard/SyncProgressBar';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const TABS = ['All', 'Emby'];
+
 export default function Home() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('All');
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['media'] });
@@ -33,10 +36,14 @@ export default function Home() {
     gcTime: 30 * 60 * 1000,
   });
 
-  const featured = allMedia.filter(m => m.is_featured);
-  const movies = allMedia.filter(m => m.media_type === 'movie');
-  const shows = allMedia.filter(m => m.media_type === 'tv_show');
-  const recentlyAdded = [...allMedia].slice(0, 20);
+  const visibleMedia = activeTab === 'Emby'
+    ? allMedia.filter(m => m.tags?.includes('emby'))
+    : allMedia;
+
+  const featured = visibleMedia.filter(m => m.is_featured);
+  const movies = visibleMedia.filter(m => m.media_type === 'movie');
+  const shows = visibleMedia.filter(m => m.media_type === 'tv_show');
+  const recentlyAdded = [...visibleMedia].slice(0, 20);
 
   // Continue watching: media with incomplete watch history
   const continueWatching = watchHistory
@@ -49,7 +56,7 @@ export default function Home() {
 
   // Get unique genres
   const genreMap = {};
-  allMedia.forEach(m => {
+  visibleMedia.forEach(m => {
     m.genre?.forEach(g => {
       if (!genreMap[g]) genreMap[g] = [];
       genreMap[g].push(m);
@@ -85,7 +92,24 @@ export default function Home() {
 
       <SyncProgressBar />
 
-      <LibraryCategories allMedia={allMedia} />
+      {/* Source tabs */}
+      <div className="px-4 sm:px-6 mt-5 flex gap-2">
+        {TABS.map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeTab === tab
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      <LibraryCategories allMedia={visibleMedia} />
 
       <div className="mt-6 space-y-2">
         <ServerStatusBar />
