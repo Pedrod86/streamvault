@@ -242,6 +242,7 @@ async function fetchXtreamLibrary(server) {
   const password = server.password || '';
   const u = encodeURIComponent(username);
   const p = encodeURIComponent(password);
+  // Support providers that use a path prefix like /api/ (e.g. base = http://host:port/api)
   const apiBase = `${base}/player_api.php?username=${u}&password=${p}`;
 
   // First verify auth
@@ -345,8 +346,8 @@ export async function fetchServerLibrary(server) {
       const token = server.api_token || server.plex_token;
       pingUrl = `${base}/identity?X-Plex-Token=${token}`;
     } else if (server.server_type === 'xtream') {
-      const u = encodeURIComponent(server.username);
-      const p = encodeURIComponent(server.password);
+      const u = encodeURIComponent(server.username || '');
+      const p = encodeURIComponent(server.password || '');
       pingUrl = `${base}/player_api.php?username=${u}&password=${p}&action=get_server_info`;
     } else {
       pingUrl = `${base}/System/Info/Public`;

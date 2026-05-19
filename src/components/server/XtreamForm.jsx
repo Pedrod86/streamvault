@@ -17,14 +17,22 @@ export const XTREAM = {
  * Tries to extract base URL + credentials from an M3U/Xtream playlist URL.
  * e.g. http://host:port/get.php?username=foo&password=bar
  *      http://host:port/player_api.php?username=foo&password=bar
+ *      http://host:port/api/player_api.php?username=foo&password=bar  (with /api/ prefix)
  */
 function parseXtreamUrl(raw) {
   try {
     const u = new URL(raw.includes('://') ? raw : 'http://' + raw);
     const username = u.searchParams.get('username') || '';
     const password = u.searchParams.get('password') || '';
-    const base = `${u.protocol}//${u.host}`;
-    if (username || password) return { base, username, password };
+    if (!username && !password) return null;
+
+    // Detect /api/ prefix path (e.g. /api/player_api.php or /api/get.php)
+    const apiPrefixMatch = u.pathname.match(/^(\/[^/]+)\/(player_api\.php|get\.php|xmltv\.php)/i);
+    const base = apiPrefixMatch
+      ? `${u.protocol}//${u.host}${apiPrefixMatch[1]}`
+      : `${u.protocol}//${u.host}`;
+
+    return { base, username, password };
   } catch {}
   return null;
 }

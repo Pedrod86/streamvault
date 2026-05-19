@@ -26,6 +26,7 @@ export default function ServerHealthBadge({ server }) {
       } else if (server.server_type === 'xtream') {
         const u = encodeURIComponent(server.username || '');
         const p = encodeURIComponent(server.password || '');
+        // base may include a path prefix like /api — use it directly
         url = `${base}/player_api.php?username=${u}&password=${p}`;
       } else {
         url = `${base}/System/Info/Public`;
