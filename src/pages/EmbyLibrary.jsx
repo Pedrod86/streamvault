@@ -5,7 +5,7 @@ import { Database, Search, Play, Star, Clock, X, ChevronLeft, Filter } from 'luc
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import VideoPlayer from '@/components/media/VideoPlayer';
+import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -162,18 +162,13 @@ function DetailOverlay({ item, onClose, onPlay }) {
             <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-3">{item.overview}</p>
           )}
 
-          {item.type === 'Movie' ? (
-            <Button
-              className="w-full bg-primary hover:bg-primary/90 gap-2 rounded-xl"
-              onClick={() => onPlay(item)}
-            >
-              <Play className="w-4 h-4 fill-current" /> Play Now
-            </Button>
-          ) : (
-            <p className="text-xs text-center text-muted-foreground">
-              Select an episode from your Emby app to play TV shows.
-            </p>
-          )}
+          <Button
+            className="w-full bg-primary hover:bg-primary/90 gap-2 rounded-xl"
+            onClick={() => onPlay(item)}
+          >
+            <Play className="w-4 h-4 fill-current" />
+            {item.type === 'Series' ? 'Play (Direct Stream)' : 'Play Now'}
+          </Button>
         </div>
       </div>
     </div>
@@ -245,7 +240,7 @@ export default function EmbyLibrary() {
             genres: item.Genres || [],
             posterUrl: item.ImageTags?.Primary ? buildImageUrl(base, item.Id, token, 'Primary') : null,
             backdropUrl: item.BackdropImageTags?.[0] ? buildImageUrl(base, item.Id, token, 'Backdrop') : null,
-            streamUrl: item.Type === 'Movie' ? buildStreamUrl(base, item.Id, token) : null,
+            streamUrl: buildStreamUrl(base, item.Id, token),
           });
         }
         if (items.length < PAGE) break;
@@ -295,7 +290,6 @@ export default function EmbyLibrary() {
   }, [filtered, activeFilter, search]);
 
   const handlePlay = (item) => {
-    if (!item.streamUrl) return;
     setSelectedItem(null);
     setPlayingItem(item);
   };
@@ -416,11 +410,11 @@ export default function EmbyLibrary() {
         />
       )}
 
-      {/* Video player */}
+      {/* Emby Video player */}
       {playingItem && (
-        <VideoPlayer
-          src={playingItem.streamUrl}
-          title={playingItem.title}
+        <EmbyVideoPlayer
+          item={playingItem}
+          server={embyServer}
           onClose={() => setPlayingItem(null)}
         />
       )}
