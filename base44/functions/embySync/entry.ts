@@ -132,13 +132,16 @@ Deno.serve(async (req) => {
 
     // Get existing media to deduplicate
     const base44 = base44Client;
-    const existing = await base44.asServiceRole.entities.Media.list('-created_date', 5000);
+    const existing = await base44.asServiceRole.entities.Media.list('-created_date', 2000);
     const existingMap = new Map(existing.map(m => [m.title.toLowerCase().trim(), m]));
 
     let startIndex = 0;
     let newItems = [];
+    let updateItems = []; // collect updates, apply in batch at end
     let updatedCount = 0;
     let fetchedCount = 0;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
     while (startIndex < totalCount || (startIndex === 0 && totalCount === 0)) {
       const url = `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true` +
@@ -158,8 +161,7 @@ Deno.serve(async (req) => {
         if (existingItem) {
           // Only update real DB records (sentinels have no id)
           if (existingItem.id && mapped.video_url && !existingItem.video_url) {
-            await base44.asServiceRole.entities.Media.update(existingItem.id, { video_url: mapped.video_url });
-            updatedCount++;
+            updateItems.push({ id: existingItem.id, video_url: mapped.video_url });
           }
         } else {
           newItems.push(mapped);
@@ -174,16 +176,26 @@ Deno.serve(async (req) => {
       if (newItems.length >= BATCH_WRITE * 5) {
         for (let i = 0; i < newItems.length; i += BATCH_WRITE) {
           await base44.asServiceRole.entities.Media.bulkCreate(newItems.slice(i, i + BATCH_WRITE));
+          await sleep(300); // avoid rate limit
         }
         newItems = [];
       }
     }
 
-    // Flush remaining
+    // Flush remaining new items
     let createdCount = 0;
     for (let i = 0; i < newItems.length; i += BATCH_WRITE) {
       await base44.asServiceRole.entities.Media.bulkCreate(newItems.slice(i, i + BATCH_WRITE));
       createdCount += Math.min(BATCH_WRITE, newItems.length - i);
+      await sleep(300); // avoid rate limit
+    }
+
+    // Apply video_url updates in batches
+    for (let i = 0; i < updateItems.length; i += BATCH_WRITE) {
+      const batch = updateItems.slice(i, i + BATCH_WRITE);
+      await Promise.all(batch.map(u => base44.asServiceRole.entities.Media.update(u.id, { video_url: u.video_url })));
+      updatedCount += batch.length;
+      await sleep(300);
     }
 
     const duration = Math.round((Date.now() - t0) / 1000);
