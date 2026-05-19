@@ -42,6 +42,6 @@ Deno.serve(async (req) => {
     const msg = error.name === 'AbortError'
       ? 'Request timed out — server unreachable or too slow'
       : error.message;
-    return Response.json({ error: msg }, { status: 500 });
+    return Response.json({ status: 0, ok: false, error: msg, data: null });
   }
 });

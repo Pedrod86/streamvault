@@ -5,10 +5,23 @@ import { base44 } from '@/api/base44Client';
  * to avoid CORS issues with HTTP media servers.
  */
 async function proxyFetch(url, headers = {}) {
-  const res = await base44.functions.invoke('mediaProxy', { url, headers });
-  if (!res.data.ok && res.data.status !== 200) {
-    throw new Error(`Server responded with status ${res.data.status} for ${url}`);
+  let res;
+  try {
+    res = await base44.functions.invoke('mediaProxy', { url, headers });
+  } catch (err) {
+    throw new Error(`Proxy error: ${err.message}`);
   }
+
+  // Proxy itself returned an error (e.g. timeout, network failure)
+  if (res.data?.error) {
+    throw new Error(res.data.error);
+  }
+
+  // Upstream returned a non-OK HTTP status
+  if (!res.data.ok && res.data.status !== 200) {
+    throw new Error(`Server responded with status ${res.data.status}`);
+  }
+
   return res.data.data;
 }
 
