@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus, Trash2, Settings, History, Compass, LayoutGrid } from 'lucide-react';
+import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus, Trash2, Settings, History, Compass, LayoutGrid, Zap } from 'lucide-react';
 
 const LOGO_URL = 'https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvault.png?rlkey=png0dj93b0c1m3ksls5t5b7wn&st=4nd7duli&dl=1';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ export default function Navbar() {
     { to: '/history', label: 'History', icon: History },
     { to: '/discover', label: 'Discover', icon: Compass },
     { to: '/tv-guide', label: 'TV Guide', icon: LayoutGrid },
+    { to: '/free-streams', label: 'Free Streams', icon: Zap },
     { to: '/connect-server', label: 'Servers', icon: Server },
     { to: '/settings', label: 'Settings', icon: Settings },
   ];

@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw } from 'lucide-react';
+import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
@@ -310,6 +310,14 @@ export default function MediaDetail() {
               >
                 <FolderPlus className="w-4 h-4" /> Collections
               </Button>
+              <Link to={`/free-streams?q=${encodeURIComponent(media.title)}`}>
+                <Button
+                  variant="outline"
+                  className="border-primary/40 text-primary hover:bg-primary/10 gap-2 h-11 px-5 rounded-xl select-none"
+                >
+                  <Zap className="w-4 h-4" /> Free Streams
+                </Button>
+              </Link>
             </div>
             <AddToCollectionDialog mediaId={mediaId} open={showCollections} onOpenChange={setShowCollections} />
 
