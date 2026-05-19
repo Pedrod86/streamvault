@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { fetchServerLibrary } from '@/lib/serverSync';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function SyncServerButton({ server }) {
   const queryClient = useQueryClient();
@@ -21,10 +21,6 @@ export default function SyncServerButton({ server }) {
       try {
         items = await fetchServerLibrary(server);
       } catch (err) {
-        const isCors = err.message === 'Failed to fetch' || err.name === 'TypeError' || err instanceof TypeError;
-        if (isCors) {
-          throw new Error(server.server_type === 'xtream' ? 'CORS_XTREAM' : 'CORS_BLOCKED');
-        }
         throw new Error(err.message || 'Sync failed. Check your server credentials and URL.');
       }
 
@@ -96,39 +92,13 @@ export default function SyncServerButton({ server }) {
   }
 
   if (status === 'error') {
-    const isCors = errorMsg === 'CORS_BLOCKED';
-    const isXtreamCors = errorMsg === 'CORS_XTREAM';
     return (
-      <div className="flex flex-col gap-1.5 text-xs font-medium max-w-[340px]">
-        <div className="flex items-center gap-1.5 text-destructive">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span className="font-semibold">{(isCors || isXtreamCors) ? 'Network blocked by browser' : 'Sync failed'}</span>
-          <button className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => syncMutation.mutate()}>
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        {isXtreamCors ? (
-          <div className="text-muted-foreground leading-snug space-y-1">
-            <p>Your IPTV provider uses <strong className="text-foreground">HTTP</strong>, which browsers block from secure pages.</p>
-            <p className="font-medium text-foreground">Fix in Chrome:</p>
-            <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground/80">
-              <li>Click the lock icon in the address bar</li>
-              <li><strong className="text-foreground">Site settings → Insecure content → Allow</strong></li>
-              <li>Reload and sync again</li>
-            </ol>
-          </div>
-        ) : isCors ? (
-          <div className="text-muted-foreground leading-snug space-y-1">
-            <p>Browser is blocking requests to your server.</p>
-            <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground/80">
-              <li>Open <strong className="text-foreground">Emby/Jellyfin Dashboard → Networking</strong></li>
-              <li>Add this app's domain to <strong className="text-foreground">CORS Origins</strong></li>
-              <li>Use <strong className="text-foreground">https://</strong> in your server URL</li>
-            </ol>
-          </div>
-        ) : (
-          <span className="text-destructive/80 leading-snug">{errorMsg}</span>
-        )}
+      <div className="flex items-center gap-1.5 text-xs font-medium max-w-[280px]">
+        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-destructive" />
+        <span className="text-destructive/80 leading-snug truncate">{errorMsg}</span>
+        <button className="ml-auto text-muted-foreground hover:text-foreground shrink-0" onClick={() => syncMutation.mutate()}>
+          <RefreshCw className="w-3.5 h-3.5" />
+        </button>
       </div>
     );
   }

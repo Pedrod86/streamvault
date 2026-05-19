@@ -1,32 +1,30 @@
+import { base44 } from '@/api/base44Client';
+
 /**
- * Fetches library items from Plex, Emby, or Jellyfin servers
- * and maps them to our Media entity shape.
+ * All fetches go through the server-side mediaProxy backend function
+ * to avoid CORS issues with HTTP media servers.
  */
+async function proxyFetch(url) {
+  const res = await base44.functions.invoke('mediaProxy', { url });
+  if (!res.data.ok && res.data.status !== 200) {
+    throw new Error(`Server responded with status ${res.data.status}`);
+  }
+  return res.data.data;
+}
 
 // ─── PLEX ────────────────────────────────────────────────────────────────────
 
 async function fetchPlexLibrary(server) {
   const base = server.server_url.replace(/\/$/, '');
   const token = server.plex_token || server.api_token;
-  const headers = { Accept: 'application/json' };
 
-  // Get all library sections
-  const sectionsRes = await fetch(
-    `${base}/library/sections?X-Plex-Token=${token}`,
-    { headers }
-  );
-  if (!sectionsRes.ok) throw new Error(`Plex auth failed (${sectionsRes.status}). Check your token and server URL.`);
-  const sectionsJson = await safeJson(sectionsRes);
+  const sectionsJson = await proxyFetch(`${base}/library/sections?X-Plex-Token=${token}`);
   const sections = sectionsJson?.MediaContainer?.Directory || [];
 
   const items = [];
   for (const section of sections) {
     if (!['movie', 'show'].includes(section.type)) continue;
-    const res = await fetch(
-      `${base}/library/sections/${section.key}/all?X-Plex-Token=${token}`,
-      { headers }
-    );
-    const json = await safeJson(res);
+    const json = await proxyFetch(`${base}/library/sections/${section.key}/all?X-Plex-Token=${token}`);
     const list = json?.MediaContainer?.Metadata || [];
     for (const item of list) {
       items.push(mapPlexItem(item, base, token, section.type));
@@ -36,13 +34,8 @@ async function fetchPlexLibrary(server) {
 }
 
 function mapPlexItem(item, base, token, sectionType) {
-  const posterPath = item.thumb
-    ? `${base}${item.thumb}?X-Plex-Token=${token}`
-    : undefined;
-  const backdropPath = item.art
-    ? `${base}${item.art}?X-Plex-Token=${token}`
-    : undefined;
-
+  const posterPath = item.thumb ? `${base}${item.thumb}?X-Plex-Token=${token}` : undefined;
+  const backdropPath = item.art ? `${base}${item.art}?X-Plex-Token=${token}` : undefined;
   return {
     title: item.title,
     media_type: sectionType === 'show' ? 'tv_show' : 'movie',
@@ -64,53 +57,24 @@ function mapPlexItem(item, base, token, sectionType) {
 
 // ─── JELLYFIN ─────────────────────────────────────────────────────────────────
 
-async function safeJson(res) {
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Server returned non-JSON response (status ${res.status}). Check the server URL includes http:// or https:// and the correct port.`);
-  }
-}
-
 async function fetchJellyfinLibrary(server) {
   const base = server.server_url.replace(/\/$/, '');
   const token = server.api_token;
-  const headers = {
-    'X-Emby-Token': token,
-    'X-MediaBrowser-Token': token,
-    Accept: 'application/json',
-  };
 
-  // Get user id first
-  const userRes = await fetch(`${base}/Users/Me`, { headers });
-  if (!userRes.ok) throw new Error(`Jellyfin auth failed (${userRes.status}). Check your API key and server URL.`);
-  const user = await safeJson(userRes);
+  const user = await proxyFetch(`${base}/Users/Me`);
+  if (!user?.Id) throw new Error(`Jellyfin auth failed. Check your API key and server URL.`);
   const userId = user.Id;
 
-  // Get all items (movies + series)
-  const res = await fetch(
-    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500`,
-    { headers }
+  const json = await proxyFetch(
+    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500&api_key=${token}`
   );
-  if (!res.ok) throw new Error(`Jellyfin library fetch failed (${res.status}).`);
-  const json = await safeJson(res);
   return (json.Items || []).map(item => mapJellyfinItem(item, base, token));
 }
 
 function mapJellyfinItem(item, base, token) {
-  const posterUrl = item.ImageTags?.Primary
-    ? `${base}/Items/${item.Id}/Images/Primary?api_key=${token}`
-    : undefined;
-  const backdropUrl = item.BackdropImageTags?.[0]
-    ? `${base}/Items/${item.Id}/Images/Backdrop/0?api_key=${token}`
-    : undefined;
-
-  let videoUrl;
-  if (item.Type === 'Movie') {
-    videoUrl = `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true`;
-  }
-
+  const posterUrl = item.ImageTags?.Primary ? `${base}/Items/${item.Id}/Images/Primary?api_key=${token}` : undefined;
+  const backdropUrl = item.BackdropImageTags?.[0] ? `${base}/Items/${item.Id}/Images/Backdrop/0?api_key=${token}` : undefined;
+  const videoUrl = item.Type === 'Movie' ? `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true` : undefined;
   return {
     title: item.Name,
     media_type: item.Type === 'Series' ? 'tv_show' : 'movie',
@@ -132,74 +96,28 @@ function mapJellyfinItem(item, base, token) {
 }
 
 // ─── EMBY ─────────────────────────────────────────────────────────────────────
-// Emby API is nearly identical to Jellyfin
-
-async function authenticateEmby(base, username, password) {
-  const res = await fetch(`${base}/Users/AuthenticateByName`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Emby-Authorization': 'MediaBrowser Client="StreamVault", Device="Browser", DeviceId="streamvault", Version="1.0.0"',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({ Username: username, Pw: password }),
-  });
-  if (!res.ok) throw new Error('Emby authentication failed. Check your username/password.');
-  const data = await res.json();
-  return { token: data.AccessToken, userId: data.User?.Id };
-}
 
 async function fetchEmbyLibrary(server) {
   const base = server.server_url.replace(/\/$/, '');
-  let token = server.api_token;
-  let userId;
-
-  // If no token but we have credentials, authenticate first
-  if (!token && server.username && server.password) {
-    const auth = await authenticateEmby(base, server.username, server.password);
-    token = auth.token;
-    userId = auth.userId;
-  }
+  const token = server.api_token;
 
   if (!token) throw new Error('No API token available for Emby. Please reconnect with an API key.');
 
-  const headers = {
-    'X-Emby-Token': token,
-    Accept: 'application/json',
-  };
+  const user = await proxyFetch(`${base}/Users/Me?api_key=${token}`);
+  if (!user?.Id) throw new Error('Could not authenticate with Emby server.');
+  const userId = user.Id;
 
-  if (!userId) {
-    const userRes = await fetch(`${base}/Users/Me`, { headers });
-    if (!userRes.ok) throw new Error('Could not authenticate with Emby server.');
-    const user = await safeJson(userRes);
-    userId = user.Id;
-  }
-
-  const res = await fetch(
-    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount,MediaSources&Limit=500`,
-    { headers }
+  const json = await proxyFetch(
+    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=500&api_key=${token}`
   );
-  if (!res.ok) throw new Error(`Emby library fetch failed (${res.status}).`);
-  const json = await safeJson(res);
   return (json.Items || []).map(item => mapEmbyItem(item, base, token));
 }
 
 function mapEmbyItem(item, base, token) {
-  const posterUrl = item.ImageTags?.Primary
-    ? `${base}/Items/${item.Id}/Images/Primary?api_key=${token}`
-    : undefined;
-  const backdropUrl = item.BackdropImageTags?.[0]
-    ? `${base}/Items/${item.Id}/Images/Backdrop/0?api_key=${token}`
-    : undefined;
-
-  // Build a direct stream URL for movies (video playback)
-  let videoUrl;
-  if (item.Type === 'Movie') {
-    videoUrl = `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true`;
-  }
-
+  const posterUrl = item.ImageTags?.Primary ? `${base}/Items/${item.Id}/Images/Primary?api_key=${token}` : undefined;
+  const backdropUrl = item.BackdropImageTags?.[0] ? `${base}/Items/${item.Id}/Images/Backdrop/0?api_key=${token}` : undefined;
+  const videoUrl = item.Type === 'Movie' ? `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true` : undefined;
   const communityRating = item.CommunityRating != null ? parseFloat(Number(item.CommunityRating).toFixed(1)) : undefined;
-
   return {
     title: item.Name || '',
     media_type: item.Type === 'Series' ? 'tv_show' : 'movie',
@@ -222,65 +140,30 @@ function mapEmbyItem(item, base, token) {
 
 // ─── XTREAM CODES ─────────────────────────────────────────────────────────────
 
-async function safeXtreamJson(res) {
-  try {
-    const text = await res.text();
-    const parsed = JSON.parse(text);
-    // Some providers wrap list in an object — unwrap to array
-    if (Array.isArray(parsed)) return parsed;
-    if (parsed && Array.isArray(parsed.data)) return parsed.data;
-    if (parsed && Array.isArray(parsed.items)) return parsed.items;
-    return [];
-  } catch {
-    return [];
-  }
-}
-
 async function fetchXtreamLibrary(server) {
   const base = server.server_url.replace(/\/$/, '');
   const username = server.username || '';
   const password = server.password || '';
   const u = encodeURIComponent(username);
   const p = encodeURIComponent(password);
-  // Support providers that use a path prefix like /api/ (e.g. base = http://host:port/api)
   const apiBase = `${base}/player_api.php?username=${u}&password=${p}`;
 
-  // First verify auth
-  let authRes;
-  try {
-    authRes = await fetch(apiBase);
-  } catch {
-    throw new Error('Cannot reach your Xtream server. Check the URL and your network connection.');
-  }
-  if (!authRes.ok) throw new Error(`Xtream server responded with status ${authRes.status}.`);
-
-  let authData;
-  try {
-    const text = await authRes.text();
-    authData = JSON.parse(text);
-  } catch {
-    throw new Error('Xtream server returned an invalid response. Ensure the URL and credentials are correct.');
-  }
-
+  const authData = await proxyFetch(apiBase);
   const authVal = authData?.user_info?.auth;
   if (authVal !== undefined && authVal !== null && Number(authVal) === 0) {
     throw new Error('Xtream authentication failed. Check your username and password.');
   }
 
-  // Fetch VOD (movies) and Series in parallel
-  const [vodRes, seriesRes] = await Promise.all([
-    fetch(`${apiBase}&action=get_vod_streams`).catch(() => null),
-    fetch(`${apiBase}&action=get_series`).catch(() => null),
+  const [vodList, seriesList] = await Promise.all([
+    proxyFetch(`${apiBase}&action=get_vod_streams`).catch(() => []),
+    proxyFetch(`${apiBase}&action=get_series`).catch(() => []),
   ]);
 
-  const [vodList, seriesList] = await Promise.all([
-    vodRes ? safeXtreamJson(vodRes) : [],
-    seriesRes ? safeXtreamJson(seriesRes) : [],
-  ]);
+  const safeArray = (d) => Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []);
 
   const items = [];
 
-  for (const v of vodList) {
+  for (const v of safeArray(vodList)) {
     if (!v || typeof v !== 'object') continue;
     const ext = v.container_extension || v.format || 'mp4';
     const streamUrl = `${base}/movie/${username}/${password}/${v.stream_id}.${ext}`;
@@ -302,7 +185,7 @@ async function fetchXtreamLibrary(server) {
     });
   }
 
-  for (const s of seriesList) {
+  for (const s of safeArray(seriesList)) {
     if (!s || typeof s !== 'object') continue;
     const rating = parseFloat(s.rating || s.rating_5based || 0);
     items.push({
@@ -323,6 +206,26 @@ async function fetchXtreamLibrary(server) {
   return items;
 }
 
+// ─── PING ─────────────────────────────────────────────────────────────────────
+
+async function pingServer(server) {
+  const base = server.server_url?.replace(/\/$/, '');
+  if (!base) throw new Error('No server URL');
+  let pingUrl;
+  if (server.server_type === 'plex') {
+    const token = server.api_token || server.plex_token;
+    pingUrl = `${base}/identity?X-Plex-Token=${token}`;
+  } else if (server.server_type === 'xtream') {
+    const u = encodeURIComponent(server.username || '');
+    const p = encodeURIComponent(server.password || '');
+    pingUrl = `${base}/player_api.php?username=${u}&password=${p}&action=get_server_info`;
+  } else {
+    pingUrl = `${base}/System/Info/Public`;
+  }
+  await proxyFetch(pingUrl);
+  return [];
+}
+
 // ─── PUBLIC API ───────────────────────────────────────────────────────────────
 
 function normaliseUrl(url) {
@@ -333,39 +236,16 @@ function normaliseUrl(url) {
 }
 
 export async function fetchServerLibrary(server) {
-  // Normalise URL so bare IPs/hostnames work
   if (server.server_url) {
     server = { ...server, server_url: normaliseUrl(server.server_url) };
   }
-  // _pingOnly: just check reachability, don't return full library
-  if (server._pingOnly) {
-    const base = server.server_url?.replace(/\/$/, '');
-    if (!base) throw new Error('No server URL');
-    let pingUrl;
-    if (server.server_type === 'plex') {
-      const token = server.api_token || server.plex_token;
-      pingUrl = `${base}/identity?X-Plex-Token=${token}`;
-    } else if (server.server_type === 'xtream') {
-      const u = encodeURIComponent(server.username || '');
-      const p = encodeURIComponent(server.password || '');
-      pingUrl = `${base}/player_api.php?username=${u}&password=${p}&action=get_server_info`;
-    } else {
-      pingUrl = `${base}/System/Info/Public`;
-    }
-    const res = await fetch(pingUrl, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) throw new Error('Server returned error');
-    return [];
-  }
+  if (server._pingOnly) return pingServer(server);
 
   switch (server.server_type) {
-    case 'plex':
-      return fetchPlexLibrary(server);
-    case 'jellyfin':
-      return fetchJellyfinLibrary(server);
-    case 'emby':
-      return fetchEmbyLibrary(server);
-    case 'xtream':
-      return fetchXtreamLibrary(server);
+    case 'plex':     return fetchPlexLibrary(server);
+    case 'jellyfin': return fetchJellyfinLibrary(server);
+    case 'emby':     return fetchEmbyLibrary(server);
+    case 'xtream':   return fetchXtreamLibrary(server);
     default:
       throw new Error(`Unknown server type "${server.server_type}". Please reconnect this server.`);
   }
