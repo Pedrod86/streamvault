@@ -127,12 +127,76 @@ function mapJellyfinItem(item, base, token) {
 
 // ─── EMBY ─────────────────────────────────────────────────────────────────────
 
+function buildEmbyImageUrl(base, itemId, token, type = 'Primary') {
+  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&maxWidth=400`;
+}
+
+function mapEmbyItemForSync(item, base, token) {
+  const hasPrimary = !!(item.ImageTags?.Primary);
+  const hasBackdrop = !!(item.BackdropImageTags?.[0]);
+  const tags = ['emby'];
+  return {
+    title: (item.Name || '').replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '').trim(),
+    media_type: item.Type === 'Series' ? 'tv_show' : 'movie',
+    description: item.Overview || '',
+    year: item.ProductionYear || undefined,
+    rating: item.CommunityRating != null ? parseFloat(Number(item.CommunityRating).toFixed(1)) : undefined,
+    duration_minutes: item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : undefined,
+    poster_url: hasPrimary ? buildEmbyImageUrl(base, item.Id, token, 'Primary') : undefined,
+    backdrop_url: hasBackdrop ? buildEmbyImageUrl(base, item.Id, token, 'Backdrop') : undefined,
+    video_url: item.Type === 'Movie' ? `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true` : undefined,
+    genre: item.Genres || [],
+    director: item.People?.find(p => p.Type === 'Director')?.Name,
+    cast: item.People?.filter(p => p.Type === 'Actor').slice(0, 8).map(p => p.Name) || [],
+    studio: item.Studios?.[0]?.Name,
+    season_count: item.ChildCount || undefined,
+    tags,
+  };
+}
+
 async function fetchEmbyLibrary(server) {
-  // Delegate entirely to the server-side embySync function to handle large
-  // libraries (47k+ items) without browser-side connection timeouts.
-  const res = await base44.functions.invoke('embySync', { server });
+  const base = server.server_url.replace(/\/$/, '');
+  const token = server.api_token;
+  const authHeaders = { 'X-Emby-Token': token };
+
+  // Step 1: resolve userId via proxy (same approach as EmbyLibrary page)
+  let userId;
+  try {
+    const me = await proxyFetch(`${base}/Users/Me`, authHeaders);
+    userId = me?.Id;
+  } catch (_) {}
+  if (!userId) {
+    const users = await proxyFetch(`${base}/Users`, authHeaders);
+    const list = Array.isArray(users) ? users : (users?.Items || []);
+    const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
+    userId = admin?.Id;
+  }
+  if (!userId) throw new Error('Could not authenticate with Emby. Check your API key.');
+
+  // Step 2: fetch all items via proxy (client-side, same as EmbyLibrary page)
+  const PAGE = 500;
+  let startIndex = 0;
+  const allItems = [];
+
+  while (true) {
+    const json = await proxyFetch(
+      `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true` +
+      `&Fields=Overview,Genres,People,Studios,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount,ImageTags,BackdropImageTags` +
+      `&SortBy=SortName&SortOrder=Ascending&Limit=${PAGE}&StartIndex=${startIndex}`,
+      authHeaders
+    );
+    const items = json.Items || [];
+    for (const item of items) {
+      allItems.push(mapEmbyItemForSync(item, base, token));
+    }
+    if (items.length < PAGE) break;
+    startIndex += PAGE;
+  }
+
+  // Step 3: send mapped items to embySync backend for DB writes (with proper user auth)
+  const res = await base44.functions.invoke('embySync', { server, items: allItems });
   if (res.data?.error) throw new Error(res.data.error);
-  // Return a sentinel so callers know sync was handled server-side
+
   return { _serverSideSync: true, ...res.data };
 }
 
