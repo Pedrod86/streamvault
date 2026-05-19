@@ -34,6 +34,13 @@ Deno.serve(async (req) => {
         if (!location) break;
         const nextUrl = location.startsWith('http') ? location : new URL(location, currentUrl).toString();
         console.log(`[mediaProxy] Redirect ${redirectCount + 1}: ${res.status} ${currentUrl} → ${nextUrl}`);
+        // Break redirect loop — same URL redirecting to itself
+        if (nextUrl === currentUrl) {
+          console.warn(`[mediaProxy] Redirect loop detected at ${currentUrl} — attempting direct fetch without redirect:manual`);
+          // Try fetching without redirect:manual so the server can set cookies/session
+          res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal });
+          break;
+        }
         redirectChain.push(nextUrl);
         currentUrl = nextUrl;
         res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
