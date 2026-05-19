@@ -11,7 +11,12 @@ import LibraryCategories from '../components/dashboard/LibraryCategories';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const TABS = ['All', 'Emby'];
+const TABS = [
+  { id: 'All', label: 'All' },
+  { id: 'Movies', label: 'Movies' },
+  { id: 'Shows', label: 'TV Shows' },
+  { id: 'Watchlist', label: 'Watchlist' },
+];
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -37,9 +42,19 @@ export default function Home() {
     gcTime: 30 * 60 * 1000,
   });
 
-  const visibleMedia = activeTab === 'Emby'
-    ? allMedia.filter(m => m.tags?.includes('emby'))
-    : allMedia;
+  const { data: watchlistItems = [] } = useQuery({
+    queryKey: ['watchlist'],
+    queryFn: () => base44.entities.Watchlist.list('-created_date', 200),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const watchlistMediaIds = new Set(watchlistItems.map(w => w.media_id));
+
+  const visibleMedia =
+    activeTab === 'Movies' ? allMedia.filter(m => m.media_type === 'movie') :
+    activeTab === 'Shows'  ? allMedia.filter(m => m.media_type === 'tv_show') :
+    activeTab === 'Watchlist' ? allMedia.filter(m => watchlistMediaIds.has(m.id)) :
+    allMedia;
 
   const featured = visibleMedia.filter(m => m.is_featured);
   const movies = visibleMedia.filter(m => m.media_type === 'movie');
@@ -93,19 +108,19 @@ export default function Home() {
 
       <SyncProgressBar />
 
-      {/* Source tabs */}
-      <div className="px-4 sm:px-6 mt-5 flex gap-2">
+      {/* Filter tabs */}
+      <div className="px-4 sm:px-6 mt-5 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
         {TABS.map(tab => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === tab
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeTab === tab.id
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-secondary text-muted-foreground hover:text-foreground'
             }`}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -115,24 +130,53 @@ export default function Home() {
       <div className="mt-6 space-y-2">
         <ServerStatusBar />
 
-        <EmbyRecentlyAdded />
-
-        {continueWatching.length > 0 && (
-          <MediaRow
-            title="Continue Watching"
-            items={continueWatching.map(c => c.media)}
-            watchHistory={watchHistory}
-            showProgress
-          />
+        {activeTab === 'All' && (
+          <>
+            <EmbyRecentlyAdded />
+            {continueWatching.length > 0 && (
+              <MediaRow
+                title="Continue Watching"
+                items={continueWatching.map(c => c.media)}
+                watchHistory={watchHistory}
+                showProgress
+              />
+            )}
+            <MediaRow title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} />
+            <MediaRow title="Movies" items={movies} watchHistory={watchHistory} />
+            <MediaRow title="TV Shows" items={shows} watchHistory={watchHistory} />
+            {Object.entries(genreMap).slice(0, 4).map(([genre, items]) => (
+              <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
+            ))}
+          </>
         )}
 
-        <MediaRow title="All Recently Added" items={recentlyAdded} watchHistory={watchHistory} />
-        <MediaRow title="Movies" items={movies} watchHistory={watchHistory} />
-        <MediaRow title="TV Shows" items={shows} watchHistory={watchHistory} />
+        {activeTab === 'Movies' && (
+          <>
+            <MediaRow title="All Movies" items={movies} watchHistory={watchHistory} />
+            {Object.entries(genreMap).filter(([, items]) => items.some(i => i.media_type === 'movie')).slice(0, 5).map(([genre, items]) => (
+              <MediaRow key={genre} title={genre} items={items.filter(i => i.media_type === 'movie')} watchHistory={watchHistory} />
+            ))}
+          </>
+        )}
 
-        {Object.entries(genreMap).slice(0, 4).map(([genre, items]) => (
-          <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
-        ))}
+        {activeTab === 'Shows' && (
+          <>
+            <MediaRow title="All TV Shows" items={shows} watchHistory={watchHistory} />
+            {Object.entries(genreMap).filter(([, items]) => items.some(i => i.media_type === 'tv_show')).slice(0, 5).map(([genre, items]) => (
+              <MediaRow key={genre} title={genre} items={items.filter(i => i.media_type === 'tv_show')} watchHistory={watchHistory} />
+            ))}
+          </>
+        )}
+
+        {activeTab === 'Watchlist' && (
+          visibleMedia.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              Your watchlist is empty. Add items by pressing the bookmark icon on any title.
+            </div>
+          ) : (
+            <MediaRow title="My Watchlist" items={visibleMedia} watchHistory={watchHistory} />
+          )
+        )}
       </div>
     </div>
     </PullToRefresh>
