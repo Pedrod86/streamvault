@@ -22,17 +22,29 @@ Deno.serve(async (req) => {
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
+    const redirectChain = [url];
+    let currentUrl = url;
     let res;
     try {
-      res = await fetch(url, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
+      res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
       // Follow redirects manually (up to 10 hops) to avoid Deno's redirect limit errors
       let redirectCount = 0;
       while ((res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) && redirectCount < 10) {
         const location = res.headers.get('location');
         if (!location) break;
-        const nextUrl = location.startsWith('http') ? location : new URL(location, url).toString();
-        res = await fetch(nextUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
+        const nextUrl = location.startsWith('http') ? location : new URL(location, currentUrl).toString();
+        console.log(`[mediaProxy] Redirect ${redirectCount + 1}: ${res.status} ${currentUrl} → ${nextUrl}`);
+        redirectChain.push(nextUrl);
+        currentUrl = nextUrl;
+        res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
         redirectCount++;
+      }
+      if (redirectChain.length > 1) {
+        console.log(`[mediaProxy] Redirect chain (${redirectChain.length - 1} hops): ${redirectChain.join(' → ')}`);
+        console.log(`[mediaProxy] Final URL: ${currentUrl} — status: ${res.status}`);
+      }
+      if (redirectCount >= 10) {
+        console.error(`[mediaProxy] Hit redirect limit (10). Chain so far:\n${redirectChain.map((u, i) => `  ${i}: ${u}`).join('\n')}`);
       }
     } finally {
       clearTimeout(timeout);
