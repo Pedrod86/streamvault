@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       data = text;
     }
 
-    return Response.json({ status: res.status, ok: res.ok, data });
+    return Response.json({ status: res.status, ok: res.ok, data, redirectChain: redirectChain.length > 1 ? redirectChain : undefined });
   } catch (error) {
     const msg = error.name === 'AbortError'
       ? 'Request timed out — server unreachable or too slow'

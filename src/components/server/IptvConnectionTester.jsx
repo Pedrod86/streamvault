@@ -54,6 +54,7 @@ export default function IptvConnectionTester({ server }) {
         const res = await base44.functions.invoke('mediaProxy', { url });
         const d = res.data;
         const ms = Date.now() - start;
+        let redirectChain = d?.redirectChain || null;
 
         if (d?.error) {
           status = d.status || 0;
@@ -63,27 +64,29 @@ export default function IptvConnectionTester({ server }) {
         } else {
           status = d?.status;
           ok = d?.ok;
-          // Show a small preview of the response
           const raw = d?.data;
           if (raw && typeof raw === 'object') {
-            // Summarise arrays, show objects compactly
-            const keys = Object.keys(raw);
             if (Array.isArray(raw)) {
-              preview = `Array[${raw.length}] — first item: ${JSON.stringify(raw[0]).slice(0, 120)}`;
+              preview = `Array[${raw.length}]${raw[0] ? ` — first item: ${JSON.stringify(raw[0]).slice(0, 120)}` : ''}`;
             } else {
-              preview = keys.slice(0, 6).map(k => {
+              preview = Object.keys(raw).slice(0, 6).map(k => {
                 const v = raw[k];
                 return `${k}: ${typeof v === 'object' ? JSON.stringify(v).slice(0, 60) : v}`;
               }).join('\n');
             }
+          } else if (typeof raw === 'string' && raw.includes('<html')) {
+            // HTML response (e.g. Cloudflare redirect page) — flag it clearly
+            ok = false;
+            error = `Server returned HTML instead of JSON (HTTP ${status}). This usually means a redirect to a different URL or a login wall.\n\nHTML snippet: ${raw.slice(0, 300)}`;
+            preview = null;
           } else {
-            preview = String(raw).slice(0, 200);
+            preview = String(raw ?? '').slice(0, 200);
           }
         }
 
-        stepResults.push({ ...step, ms, status, ok, error, preview });
+        stepResults.push({ ...step, ms, status, ok, error, preview, redirectChain });
       } catch (err) {
-        stepResults.push({ ...step, ms: Date.now() - start, status: 0, ok: false, error: err.message, preview: null });
+        stepResults.push({ ...step, ms: Date.now() - start, status: 0, ok: false, error: err.message, preview: null, redirectChain: null });
       }
 
       // Stop after first failure
@@ -127,11 +130,24 @@ export default function IptvConnectionTester({ server }) {
 
               {/* Expanded detail */}
               {expanded === r.id && (
-                <div className="px-3 pb-3 border-t border-border/50">
+                <div className="px-3 pb-3 border-t border-border/50 space-y-2">
+                  {r.redirectChain && (
+                    <div className="mt-2">
+                      <p className="text-xs font-semibold text-amber-400 mb-1">↪ Redirect chain ({r.redirectChain.length - 1} hop{r.redirectChain.length > 2 ? 's' : ''})</p>
+                      <div className="space-y-0.5">
+                        {r.redirectChain.map((u, i) => (
+                          <p key={i} className="font-mono text-xs break-all">
+                            <span className="text-muted-foreground mr-1">{i}.</span>
+                            <span className={i === r.redirectChain.length - 1 ? 'text-foreground' : 'text-muted-foreground'}>{u}</span>
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {r.error ? (
-                    <p className="text-destructive mt-2 leading-relaxed font-mono break-all">{r.error}</p>
+                    <p className="text-destructive mt-2 leading-relaxed font-mono text-xs break-all whitespace-pre-wrap">{r.error}</p>
                   ) : (
-                    <pre className="text-muted-foreground mt-2 whitespace-pre-wrap break-all leading-relaxed font-mono">{r.preview}</pre>
+                    <pre className="text-muted-foreground mt-2 whitespace-pre-wrap break-all leading-relaxed font-mono text-xs">{r.preview}</pre>
                   )}
                 </div>
               )}
