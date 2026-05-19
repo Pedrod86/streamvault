@@ -42,12 +42,7 @@ export default function SyncProgressBar() {
         try {
           const result = await fetchServerLibrary(server);
 
-          if (result?._serverSideSync) {
-            // Emby: already synced server-side, just accumulate counts
-            totalCreated += result.created || 0;
-            totalUpdated += result.updated || 0;
-            setLabel(`Emby: ${result.created || 0} new, ${result.fetched || 0} scanned`);
-          } else if (Array.isArray(result)) {
+          if (Array.isArray(result)) {
             clientItems = clientItems.concat(result);
           }
         } catch (e) {

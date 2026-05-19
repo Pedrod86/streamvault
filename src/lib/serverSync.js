@@ -159,7 +159,7 @@ async function fetchEmbyLibrary(server) {
   const token = server.api_token;
   const authHeaders = { 'X-Emby-Token': token };
 
-  // Step 1: resolve userId via proxy (same approach as EmbyLibrary page)
+  // Step 1: resolve userId via proxy
   let userId;
   try {
     const me = await proxyFetch(`${base}/Users/Me`, authHeaders);
@@ -173,7 +173,7 @@ async function fetchEmbyLibrary(server) {
   }
   if (!userId) throw new Error('Could not authenticate with Emby. Check your API key.');
 
-  // Step 2: fetch all items via proxy (client-side, same as EmbyLibrary page)
+  // Step 2: fetch all items via proxy, return as plain array (same as Plex/Jellyfin)
   const PAGE = 500;
   let startIndex = 0;
   const allItems = [];
@@ -193,11 +193,9 @@ async function fetchEmbyLibrary(server) {
     startIndex += PAGE;
   }
 
-  // Step 3: send mapped items to embySync backend for DB writes (with proper user auth)
-  const res = await base44.functions.invoke('embySync', { server, items: allItems });
-  if (res.data?.error) throw new Error(res.data.error);
-
-  return { _serverSideSync: true, ...res.data };
+  // Return as plain array — DB writes handled client-side by SyncProgressBar/SyncServerButton
+  // exactly like Plex and Jellyfin, avoiding payload size limits on embySync
+  return allItems;
 }
 
 // ─── XTREAM CODES ─────────────────────────────────────────────────────────────

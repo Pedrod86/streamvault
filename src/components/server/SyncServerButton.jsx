@@ -24,12 +24,6 @@ export default function SyncServerButton({ server }) {
         throw new Error(err.message || 'Sync failed. Check your server credentials and URL.');
       }
 
-      // Emby: synced entirely server-side
-      if (result?._serverSideSync) {
-        setCount(result.created || 0);
-        return result.created || 0;
-      }
-
       const items = Array.isArray(result) ? result : [];
       if (!items.length) {
         setCount(0);
