@@ -100,12 +100,23 @@ Deno.serve(async (req) => {
 
     const authHeaders = { 'X-Emby-Token': token, 'Accept': 'application/json' };
 
-    // Resolve user ID
-    const users = await fetchWithRetry(`${base}/Users`, authHeaders);
-    const userList = Array.isArray(users) ? users : (users?.Items || []);
-    if (!userList.length) return Response.json({ error: 'Could not authenticate with Emby. Check API key.' }, { status: 401 });
-    const embyUser = userList.find(u => u.Policy?.IsAdministrator) || userList[0];
-    const userId = embyUser.Id;
+    // Resolve user ID — try /Users/Me first (works with most Emby API keys),
+    // fall back to /Users list if that fails
+    let userId;
+    try {
+      const me = await fetchWithRetry(`${base}/Users/Me`, authHeaders);
+      userId = me?.Id;
+    } catch (_) {
+      // fallback
+    }
+
+    if (!userId) {
+      const users = await fetchWithRetry(`${base}/Users`, authHeaders);
+      const userList = Array.isArray(users) ? users : (users?.Items || []);
+      if (!userList.length) return Response.json({ error: 'Could not authenticate with Emby. Check API key.' }, { status: 401 });
+      const embyUser = userList.find(u => u.Policy?.IsAdministrator) || userList[0];
+      userId = embyUser.Id;
+    }
 
     // Count total items first
     const countJson = await fetchWithRetry(
@@ -176,6 +187,12 @@ Deno.serve(async (req) => {
       total: totalCount,
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    const msg = error.message || String(error);
+    // Surface helpful hints for common failures
+    const isNetworkErr = /dns|connect|ECONNREFUSED|unreachable|network/i.test(msg);
+    const hint = isNetworkErr
+      ? ' (Is your Emby server on a local/private IP? The sync backend cannot reach local network addresses.)'
+      : '';
+    return Response.json({ error: msg + hint }, { status: 500 });
   }
 });
