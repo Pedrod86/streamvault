@@ -1,0 +1,70 @@
+{
+  "name": "SyncLog",
+  "type": "object",
+  "properties": {
+    "server_id": {
+      "type": "string",
+      "description": "ID of the MediaServer record"
+    },
+    "server_name": {
+      "type": "string",
+      "description": "Display name of the server"
+    },
+    "server_type": {
+      "type": "string",
+      "description": "Type: emby, plex, jellyfin, etc."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "error",
+        "partial"
+      ],
+      "description": "Result of the sync"
+    },
+    "items_fetched": {
+      "type": "number",
+      "description": "Total items fetched from server"
+    },
+    "items_created": {
+      "type": "number",
+      "description": "New items added to library"
+    },
+    "items_updated": {
+      "type": "number",
+      "description": "Existing items updated"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error details if sync failed"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "description": "How long the sync took"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the sync started"
+    }
+  },
+  "required": [
+    "server_id",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

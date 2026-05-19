@@ -26,6 +26,7 @@ import Discover from './pages/Discover';
 import TVGuide from './pages/TVGuide';
 import FreeStreams from './pages/FreeStreams';
 import EmbyLibrary from './pages/EmbyLibrary';
+import SyncStatus from './pages/SyncStatus';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -72,6 +73,7 @@ const AuthenticatedApp = () => {
           <Route path="/tv-guide" element={<TVGuide />} />
           <Route path="/free-streams" element={<FreeStreams />} />
           <Route path="/emby" element={<EmbyLibrary />} />
+          <Route path="/sync-status" element={<SyncStatus />} />
         </Route>
       </Route>
 

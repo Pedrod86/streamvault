@@ -86,12 +86,17 @@ async function fetchWithRetry(url, headers, retries = MAX_RETRIES) {
 }
 
 Deno.serve(async (req) => {
+  const startedAt = new Date().toISOString();
+  const t0 = Date.now();
+  let base44Client, parsedServer;
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    base44Client = createClientFromRequest(req);
+    const user = await base44Client.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { server } = await req.json();
+    const body = await req.json();
+    parsedServer = body.server;
+    const { server } = body;
     if (!server) return Response.json({ error: 'Missing server' }, { status: 400 });
 
     const base = server.server_url.replace(/\/$/, '');
@@ -126,6 +131,7 @@ Deno.serve(async (req) => {
     const totalCount = countJson.TotalRecordCount || 0;
 
     // Get existing media to deduplicate
+    const base44 = base44Client;
     const existing = await base44.asServiceRole.entities.Media.list('-created_date', 5000);
     const existingMap = new Map(existing.map(m => [m.title.toLowerCase().trim(), m]));
 
@@ -179,6 +185,21 @@ Deno.serve(async (req) => {
       createdCount += Math.min(BATCH_WRITE, newItems.length - i);
     }
 
+    const duration = Math.round((Date.now() - t0) / 1000);
+
+    // Persist sync log
+    await base44.asServiceRole.entities.SyncLog.create({
+      server_id: parsedServer?.id || server.id || 'unknown',
+      server_name: server.server_name || 'Emby',
+      server_type: 'emby',
+      status: 'success',
+      items_fetched: fetchedCount,
+      items_created: createdCount,
+      items_updated: updatedCount,
+      duration_seconds: duration,
+      started_at: startedAt,
+    });
+
     return Response.json({
       success: true,
       fetched: fetchedCount,
@@ -187,12 +208,29 @@ Deno.serve(async (req) => {
       total: totalCount,
     });
   } catch (error) {
+    const duration = Math.round((Date.now() - t0) / 1000);
     const msg = error.message || String(error);
-    // Surface helpful hints for common failures
     const isNetworkErr = /dns|connect|ECONNREFUSED|unreachable|network/i.test(msg);
     const hint = isNetworkErr
       ? ' (Is your Emby server on a local/private IP? The sync backend cannot reach local network addresses.)'
       : '';
-    return Response.json({ error: msg + hint }, { status: 500 });
+    const fullMsg = msg + hint;
+
+    // Best-effort: write error log (ignore failures here)
+    try {
+      if (base44Client) {
+      await base44Client.asServiceRole.entities.SyncLog.create({
+        server_id: parsedServer?.id || 'unknown',
+        server_name: parsedServer?.server_name || 'Emby',
+        server_type: 'emby',
+        status: 'error',
+        error_message: fullMsg,
+        duration_seconds: duration,
+        started_at: startedAt,
+      });
+      }
+    } catch (_) { /* ignore */ }
+
+    return Response.json({ error: fullMsg }, { status: 500 });
   }
 });
