@@ -24,7 +24,7 @@ export default function Home() {
 
   const { data: allMedia = [], isLoading } = useQuery({
     queryKey: ['media'],
-    queryFn: () => base44.entities.Media.list('-created_date', 100),
+    queryFn: () => base44.entities.Media.list('-created_date', 500),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });

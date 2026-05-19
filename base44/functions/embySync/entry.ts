@@ -131,6 +131,7 @@ Deno.serve(async (req) => {
     const totalCount = countJson.TotalRecordCount || 0;
 
     // Get existing media to deduplicate — paginate to avoid rate limits
+    // Use user-scoped client so RLS applies (items are owned by this user)
     const base44 = base44Client;
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -138,7 +139,7 @@ Deno.serve(async (req) => {
     let existingPage = 0;
     const PAGE_DB = 500;
     while (true) {
-      const page = await base44.asServiceRole.entities.Media.list('-created_date', PAGE_DB, existingPage * PAGE_DB);
+      const page = await base44.entities.Media.list('-created_date', PAGE_DB, existingPage * PAGE_DB);
       for (const m of page) existingMap.set(m.title.toLowerCase().trim(), m);
       if (page.length < PAGE_DB) break;
       existingPage++;
@@ -183,7 +184,7 @@ Deno.serve(async (req) => {
       // Flush new items to DB in batches as we go to avoid memory buildup
       if (newItems.length >= BATCH_WRITE * 5) {
         for (let i = 0; i < newItems.length; i += BATCH_WRITE) {
-          await base44.asServiceRole.entities.Media.bulkCreate(newItems.slice(i, i + BATCH_WRITE));
+          await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH_WRITE));
           await sleep(300); // avoid rate limit
         }
         newItems = [];
@@ -193,7 +194,7 @@ Deno.serve(async (req) => {
     // Flush remaining new items
     let createdCount = 0;
     for (let i = 0; i < newItems.length; i += BATCH_WRITE) {
-      await base44.asServiceRole.entities.Media.bulkCreate(newItems.slice(i, i + BATCH_WRITE));
+      await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH_WRITE));
       createdCount += Math.min(BATCH_WRITE, newItems.length - i);
       await sleep(300); // avoid rate limit
     }
@@ -201,7 +202,7 @@ Deno.serve(async (req) => {
     // Apply video_url updates in batches
     for (let i = 0; i < updateItems.length; i += BATCH_WRITE) {
       const batch = updateItems.slice(i, i + BATCH_WRITE);
-      await Promise.all(batch.map(u => base44.asServiceRole.entities.Media.update(u.id, { video_url: u.video_url })));
+      await Promise.all(batch.map(u => base44.entities.Media.update(u.id, { video_url: u.video_url })));
       updatedCount += batch.length;
       await sleep(300);
     }
@@ -209,7 +210,7 @@ Deno.serve(async (req) => {
     const duration = Math.round((Date.now() - t0) / 1000);
 
     // Persist sync log
-    await base44.asServiceRole.entities.SyncLog.create({
+    await base44.entities.SyncLog.create({
       server_id: parsedServer?.id || server.id || 'unknown',
       server_name: server.server_name || 'Emby',
       server_type: 'emby',
@@ -240,7 +241,7 @@ Deno.serve(async (req) => {
     // Best-effort: write error log (ignore failures here)
     try {
       if (base44Client) {
-      await base44Client.asServiceRole.entities.SyncLog.create({
+      await base44Client.entities.SyncLog.create({
         server_id: parsedServer?.id || 'unknown',
         server_name: parsedServer?.server_name || 'Emby',
         server_type: 'emby',
