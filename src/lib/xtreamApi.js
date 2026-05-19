@@ -18,28 +18,12 @@ function xtreamAuth(server) {
 async function xtreamGet(server, action, extra = '') {
   const base = xtreamBase(server);
   const auth = xtreamAuth(server);
-  // Route::get('/player_api.php') → all JSON API actions
   const actionPart = action ? `&action=${action}` : '';
   const url = `${base}/player_api.php?${auth}${actionPart}${extra ? '&' + extra : ''}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Xtream API error (${res.status})`);
   const text = await res.text();
   try { return JSON.parse(text); } catch { return null; }
-}
-
-// Route::get('/get.php') → M3U playlist download
-export function getPlaylistUrl(server, type = 'm3u_plus', output = 'ts') {
-  const base = xtreamBase(server);
-  const auth = xtreamAuth(server);
-  // type: m3u_plus | m3u | ts
-  return `${base}/get.php?${auth}&type=${type}&output=${output}`;
-}
-
-// Route::get('/xmltv.php') → XMLTV EPG feed
-export function getXmltvUrl(server) {
-  const base = xtreamBase(server);
-  const auth = xtreamAuth(server);
-  return `${base}/xmltv.php?${auth}`;
 }
 
 // ─── 1. USERS ────────────────────────────────────────────────────────────────
@@ -104,6 +88,12 @@ export async function getEpgForStream(server, streamId, limit = 4) {
 
 export async function getFullEpgForStream(server, streamId) {
   return xtreamGet(server, 'get_simple_data_table', `stream_id=${streamId}`);
+}
+
+export function getXmltvUrl(server) {
+  const base = xtreamBase(server);
+  const auth = xtreamAuth(server);
+  return `${base}/xmltv.php?${auth}`;
 }
 
 // ─── 5. CONNECTIONS ──────────────────────────────────────────────────────────
