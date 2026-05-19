@@ -1,13 +1,13 @@
 import React, { useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Film, Tv, BookmarkPlus, Compass } from 'lucide-react';
+import { Home, Film, Tv, BookmarkPlus, LayoutGrid } from 'lucide-react';
 
 const links = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/movies', label: 'Movies', icon: Film },
-  { to: '/shows', label: 'Shows', icon: Tv },
+  { to: '/shows', label: 'TV Shows', icon: Tv },
+  { to: '/tv-guide', label: 'TV Guide', icon: LayoutGrid },
   { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
-  { to: '/discover', label: 'Discover', icon: Compass },
 ];
 
 export default function BottomNav() {

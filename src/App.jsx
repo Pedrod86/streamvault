@@ -23,6 +23,7 @@ import AddMedia from './pages/AddMedia';
 import Settings from './pages/Settings';
 import WatchHistory from './pages/WatchHistory';
 import Discover from './pages/Discover';
+import TVGuide from './pages/TVGuide';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -66,6 +67,7 @@ const AuthenticatedApp = () => {
           <Route path="/settings" element={<Settings />} />
           <Route path="/history" element={<WatchHistory />} />
           <Route path="/discover" element={<Discover />} />
+          <Route path="/tv-guide" element={<TVGuide />} />
         </Route>
       </Route>
 
