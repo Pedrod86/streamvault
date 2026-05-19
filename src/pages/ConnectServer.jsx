@@ -74,7 +74,7 @@ export default function ConnectServer() {
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['mediaServers'] });
       setSaved(true);
-      // Auto-sync library for media servers (not Trakt)
+      // Auto-sync library for media servers (not Trakt) — errors are not silenced
       if (created.server_type !== 'trakt') {
         import('@/lib/serverSync').then(({ fetchServerLibrary }) => {
           fetchServerLibrary(created).then(async (items) => {
@@ -84,7 +84,7 @@ export default function ConnectServer() {
               await base44.entities.Media.bulkCreate(items.slice(i, i + BATCH));
             }
             queryClient.invalidateQueries({ queryKey: ['media'] });
-          }).catch(() => {/* silent — user can manually sync later */});
+          }).catch((err) => { console.error('[StreamVault] Auto-sync failed:', err?.message || err); });
         });
       }
       setTimeout(() => { setSaved(false); setAdding(false); setSelectedServer(null); }, 2000);
