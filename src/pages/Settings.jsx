@@ -5,8 +5,9 @@ import { fetchServerLibrary } from '@/lib/serverSync';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
+import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 
 // Predefined colour themes (primary HSL, accent HSL)
 const THEMES = [
@@ -117,6 +118,7 @@ export default function Settings() {
   };
 
   const mediaServers = servers.filter(s => s.server_type !== 'trakt');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-8">
@@ -234,7 +236,7 @@ export default function Settings() {
       </motion.section>
 
       {/* ── Save ── */}
-      <div className="pb-8">
+      <div>
         <Button
           className="w-full h-11 rounded-xl font-semibold bg-primary hover:bg-primary/90 gap-2"
           onClick={() => saveMutation.mutate()}
@@ -247,6 +249,27 @@ export default function Settings() {
           )}
         </Button>
       </div>
+
+      {/* ── Account Management ── */}
+      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-4 p-5 rounded-xl bg-card border border-destructive/30 pb-8">
+        <div className="flex items-center gap-2 mb-1">
+          <ShieldAlert className="w-4 h-4 text-destructive" />
+          <h2 className="font-heading font-semibold text-foreground">Account Management</h2>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Permanently remove your account and all associated data including watchlist, history, and server connections.
+        </p>
+        <Button
+          variant="outline"
+          className="w-full h-11 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive gap-2"
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete My Account
+        </Button>
+      </motion.section>
+
+      <DeleteAccountDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} />
     </div>
   );
 }

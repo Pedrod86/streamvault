@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAutoSync } from '@/hooks/useAutoSync';
+import { Search, UserCircle2 } from 'lucide-react';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import PageTransition from './PageTransition';
+import StreamVaultLogo from '@/components/StreamVaultLogo';
 
 export default function AppLayout() {
   const location = useLocation();
@@ -44,20 +46,50 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background font-body">
-      {/* Top navbar — hidden on mobile */}
+      {/* Top navbar — desktop only */}
       <div className="hidden md:block">
         <Navbar />
       </div>
-      {/* On mobile, add safe-area top padding instead of navbar */}
+
+      {/* Mobile header — visible only on small screens */}
+      <header
+        className="fixed top-0 left-0 right-0 z-50 md:hidden flex items-center justify-between px-4 bg-card/95 backdrop-blur-md border-b border-border"
+        style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(52px + env(safe-area-inset-top))' }}
+      >
+        <Link to="/" className="flex items-center gap-2">
+          <img
+            src="https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvault.png?rlkey=png0dj93b0c1m3ksls5t5b7wn&st=4nd7duli&dl=1"
+            alt="StreamVault"
+            className="w-7 h-7 rounded-xl object-cover"
+          />
+          <span className="font-heading font-bold text-base bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            StreamVault
+          </span>
+        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/search"
+            className="w-9 h-9 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <Search className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/settings"
+            className="w-9 h-9 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <UserCircle2 className="w-5 h-5" />
+          </Link>
+        </div>
+      </header>
+
+      {/* Main content */}
       <main
-        className="md:pt-16"
+        className="md:pt-16 md:[padding-bottom:0]"
         style={{
-          paddingTop: 'max(env(safe-area-inset-top), 0px)',
+          paddingTop: 'calc(52px + env(safe-area-inset-top))',
           paddingBottom: 'calc(env(safe-area-inset-bottom) + 56px)',
         }}
       >
-        {/* On md+ remove bottom padding override */}
-        <style>{`@media (min-width: 768px) { main { padding-bottom: 0 !important; } }`}</style>
         <AnimatePresence mode="wait" initial={false}>
           <PageTransition key={location.pathname}>
             <Outlet />
