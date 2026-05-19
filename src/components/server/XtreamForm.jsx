@@ -21,7 +21,19 @@ export const XTREAM = {
  */
 function parseXtreamUrl(raw) {
   try {
-    const u = new URL(raw.includes('://') ? raw : 'http://' + raw);
+    const trimmed = raw.trim();
+    // Handle path-only input like /api/player_api.php?username=...&password=...
+    const pathOnlyMatch = trimmed.match(/^\/([^?]+)\?(.*)/);
+    if (pathOnlyMatch && !trimmed.includes('://')) {
+      const params = new URLSearchParams(pathOnlyMatch[2]);
+      const username = params.get('username') || '';
+      const password = params.get('password') || '';
+      // Extract prefix path (everything before the known filenames)
+      const prefixMatch = ('/' + pathOnlyMatch[1]).match(/^(\/[^/]+)\/(player_api\.php|get\.php|xmltv\.php)/i);
+      return username || password ? { base: prefixMatch ? prefixMatch[1] : '', username, password, pathOnly: true } : null;
+    }
+
+    const u = new URL(trimmed.includes('://') ? trimmed : 'http://' + trimmed);
     const username = u.searchParams.get('username') || '';
     const password = u.searchParams.get('password') || '';
     if (!username && !password) return null;
@@ -51,9 +63,10 @@ export default function XtreamForm({ onBack, onSave, isSaving }) {
     setUrl(val);
     const parsed = parseXtreamUrl(val);
     if (parsed) {
-      setUrl(parsed.base);
       if (parsed.username) setUsername(parsed.username);
       if (parsed.password) setPassword(parsed.password);
+      // Only update the URL field if we have a full host (not path-only)
+      if (!parsed.pathOnly && parsed.base) setUrl(parsed.base);
     }
   };
 
@@ -152,9 +165,10 @@ export default function XtreamForm({ onBack, onSave, isSaving }) {
         <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 mb-5 space-y-1">
           <p className="font-semibold flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Tips</p>
           <ul className="list-disc list-inside space-y-0.5 text-blue-300/80">
-            <li>You can paste your full M3U URL — credentials will be auto-filled</li>
-            <li>Server URL format: <span className="font-mono">http://provider.com:8080</span></li>
-            <li>Get your details from your IPTV provider</li>
+            <li>Paste your full M3U or API URL — credentials & base URL will be auto-filled</li>
+            <li>Standard format: <span className="font-mono">http://provider.com:8080</span></li>
+            <li>If your provider uses an <span className="font-mono">/api/</span> path, include it: <span className="font-mono">http://provider.com:8080/api</span></li>
+            <li>Get your details (URL, username, password) from your IPTV provider</li>
           </ul>
         </div>
 
