@@ -366,6 +366,6 @@ export async function fetchServerLibrary(server) {
     case 'xtream':
       return fetchXtreamLibrary(server);
     default:
-      throw new Error(`Unsupported server type: ${server.server_type}`);
+      throw new Error(`Unknown server type "${server.server_type}". Please reconnect this server.`);
   }
 }

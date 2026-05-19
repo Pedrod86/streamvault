@@ -25,7 +25,8 @@ export default function SyncServerButton({ server }) {
         if (isCors) {
           throw new Error(server.server_type === 'xtream' ? 'CORS_XTREAM' : 'CORS_BLOCKED');
         }
-        throw err;
+        // Surface the real error message to the user
+        throw new Error(err.message || 'Sync failed. Check your server credentials and URL.');
       }
 
       if (!items.length) {
