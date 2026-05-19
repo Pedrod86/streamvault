@@ -1,4 +1,5 @@
 import { base44 } from '@/api/base44Client';
+import { mapEmbyItem } from '@/lib/embyMapper';
 
 /**
  * All fetches go through the server-side mediaProxy backend function
@@ -157,31 +158,6 @@ async function fetchEmbyLibrary(server) {
   }
 
   return allItems;
-}
-
-function mapEmbyItem(item, base, token) {
-  const posterUrl = item.ImageTags?.Primary ? `${base}/Items/${item.Id}/Images/Primary?api_key=${token}` : undefined;
-  const backdropUrl = item.BackdropImageTags?.[0] ? `${base}/Items/${item.Id}/Images/Backdrop/0?api_key=${token}` : undefined;
-  const videoUrl = item.Type === 'Movie' ? `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true` : undefined;
-  const communityRating = item.CommunityRating != null ? parseFloat(Number(item.CommunityRating).toFixed(1)) : undefined;
-  return {
-    title: item.Name || '',
-    media_type: item.Type === 'Series' ? 'tv_show' : 'movie',
-    description: item.Overview || '',
-    year: item.ProductionYear ? Number(item.ProductionYear) : undefined,
-    rating: !isNaN(communityRating) ? communityRating : undefined,
-    duration_minutes: item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : undefined,
-    poster_url: posterUrl,
-    backdrop_url: backdropUrl,
-    video_url: videoUrl,
-    genre: Array.isArray(item.Genres) ? item.Genres : [],
-    director: item.People?.find(p => p.Type === 'Director')?.Name || undefined,
-    cast: item.People?.filter(p => p.Type === 'Actor').slice(0, 8).map(p => p.Name) || [],
-    studio: item.Studios?.[0]?.Name || undefined,
-    content_rating: item.OfficialRating || undefined,
-    season_count: item.ChildCount ? Number(item.ChildCount) : undefined,
-    tags: [],
-  };
 }
 
 // ─── XTREAM CODES ─────────────────────────────────────────────────────────────
