@@ -469,15 +469,32 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [serverName, setServerName] = useState('');
-
   const [authError, setAuthError] = useState('');
+  const [testing, setTesting] = useState(false);
+
+  const normaliseBase = (raw) => {
+    let base = raw.trim().replace(/\/$/, '');
+    if (!/^https?:\/\//i.test(base)) base = 'http://' + base;
+    return base;
+  };
+
+  const isCorsError = (err) =>
+    err instanceof TypeError || err.message === 'Failed to fetch' || err.name === 'TypeError';
+
+  const corsMessage = (base) =>
+    `Browser blocked the request to ${base} (mixed-content / CORS).\n\n` +
+    `This happens because your ${server.name} server uses HTTP but this app is served over HTTPS.\n\n` +
+    `How to fix:\n` +
+    `1. In ${server.name} Dashboard → Advanced → Networking, add this app's domain to CORS origins.\n` +
+    `2. Or use an HTTPS URL for your server (e.g. via a reverse proxy).\n` +
+    `3. Or in Chrome: click the address-bar lock → Site settings → Insecure content → Allow, then reload.`;
 
   const handleCredentials = async (e) => {
     e.preventDefault();
     setAuthError('');
-    // For Emby/Jellyfin, authenticate first to obtain an API token
     if (server.id === 'emby' || server.id === 'jellyfin') {
-      const base = url.replace(/\/$/, '');
+      const base = normaliseBase(url);
+      setTesting(true);
       let authRes;
       try {
         authRes = await fetch(`${base}/Users/AuthenticateByName`, {
@@ -490,16 +507,18 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
           body: JSON.stringify({ Username: username, Pw: password }),
         });
       } catch (err) {
-        setAuthError('Cannot reach your server. This is usually a CORS issue — your browser is blocking the request. Go to your Emby/Jellyfin Dashboard → Advanced → Networking and add this app\'s domain to the allowed CORS origins. Also ensure your server URL is reachable from this device.');
+        setTesting(false);
+        setAuthError(isCorsError(err) ? corsMessage(base) : `Cannot reach server: ${err.message}`);
         return;
       }
+      setTesting(false);
       if (!authRes.ok) {
-        setAuthError('Authentication failed. Double-check your username, password, and server URL (include port, e.g. http://192.168.1.10:8096).');
+        setAuthError(`Authentication failed (HTTP ${authRes.status}). Check your username, password, and server URL (include port, e.g. http://192.168.1.10:8096).`);
         return;
       }
       const authData = await authRes.json();
       onSave({
-        server_url: url,
+        server_url: base,
         username,
         api_token: authData.AccessToken,
         server_name: serverName || `${server.name} Server`,
@@ -509,17 +528,44 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
       return;
     }
     onSave({
-      server_url: url,
+      server_url: normaliseBase(url),
       username,
       server_name: serverName || `${server.name} Server`,
       auth_method: 'credentials',
     });
   };
 
-  const handleToken = (e) => {
+  const handleToken = async (e) => {
     e.preventDefault();
+    setAuthError('');
+    const base = normaliseBase(url);
+
+    // Test the token before saving (Emby/Jellyfin only)
+    if (server.id === 'emby' || server.id === 'jellyfin') {
+      setTesting(true);
+      let testRes;
+      try {
+        testRes = await fetch(`${base}/Users/Me`, {
+          headers: {
+            'X-Emby-Token': token,
+            'X-MediaBrowser-Token': token,
+            Accept: 'application/json',
+          },
+        });
+      } catch (err) {
+        setTesting(false);
+        setAuthError(isCorsError(err) ? corsMessage(base) : `Cannot reach server: ${err.message}`);
+        return;
+      }
+      setTesting(false);
+      if (!testRes.ok) {
+        setAuthError(`API key rejected (HTTP ${testRes.status}). Make sure the key is correct and hasn't expired. Generate a new one in ${server.name} Dashboard → Advanced → API Keys.`);
+        return;
+      }
+    }
+
     onSave({
-      server_url: url,
+      server_url: base,
       api_token: server.id === 'plex' ? undefined : token,
       plex_token: server.id === 'plex' ? token : undefined,
       server_name: serverName || `${server.name} Server`,
@@ -600,13 +646,13 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
                 />
               </div>
               {authError && (
-                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-xs text-destructive leading-relaxed">
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-xs text-destructive leading-relaxed whitespace-pre-line">
                   <p className="font-semibold mb-1">Connection failed</p>
                   <p>{authError}</p>
                 </div>
               )}
-              <Button type="submit" className={`w-full h-11 rounded-xl font-semibold bg-gradient-to-r ${server.color} text-white border-0`} disabled={isSaving}>
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : `Connect to ${server.name}`}
+              <Button type="submit" className={`w-full h-11 rounded-xl font-semibold bg-gradient-to-r ${server.color} text-white border-0`} disabled={isSaving || testing}>
+                {(isSaving || testing) ? <><Loader2 className="w-4 h-4 animate-spin" /> Testing connection…</> : `Connect to ${server.name}`}
               </Button>
             </form>
           </TabsContent>
@@ -656,8 +702,14 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
                   <ExternalLink className="w-3 h-3" /> How to get your {server.tokenLabel}
                 </a>
               </div>
-              <Button type="submit" className={`w-full h-11 rounded-xl font-semibold bg-gradient-to-r ${server.color} text-white border-0`} disabled={isSaving}>
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : `Connect to ${server.name}`}
+              {authError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-xs text-destructive leading-relaxed whitespace-pre-line">
+                  <p className="font-semibold mb-1">Connection failed</p>
+                  <p>{authError}</p>
+                </div>
+              )}
+              <Button type="submit" className={`w-full h-11 rounded-xl font-semibold bg-gradient-to-r ${server.color} text-white border-0`} disabled={isSaving || testing}>
+                {(isSaving || testing) ? <><Loader2 className="w-4 h-4 animate-spin" /> Testing connection…</> : `Connect to ${server.name}`}
               </Button>
             </form>
           </TabsContent>
