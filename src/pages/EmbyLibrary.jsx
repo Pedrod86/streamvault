@@ -17,31 +17,18 @@ function buildStreamUrl(base, itemId, token) {
   return `${base}/Videos/${itemId}/stream?api_key=${token}&Static=true`;
 }
 
-// Try direct browser fetch first (works for local/LAN servers).
-// Falls back to mediaProxy only if CORS blocks the direct request.
-async function directFetch(url, headers = {}) {
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
-async function proxyFetch(url, headers = {}) {
-  const res = await base44.functions.invoke('mediaProxy', { url, headers });
-  if (res.data?.error) throw new Error(res.data.error);
-  if (!res.data.ok) throw new Error(`HTTP ${res.data.status}`);
-  return res.data.data;
-}
-
+// Direct browser fetch — no proxy fallback (proxy can't reach local/private IPs)
 async function embyFetch(url, headers = {}) {
+  let res;
   try {
-    return await directFetch(url, headers);
+    res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
   } catch (err) {
-    // CORS or network error — fall back to server-side proxy
-    if (err.name === 'TypeError' || err.message?.includes('fetch') || err.name === 'AbortError') {
-      return proxyFetch(url, headers);
-    }
-    throw err;
+    throw new Error(
+      `Cannot reach Emby server. Make sure the server is online and your browser can access it. (${err.message})`
+    );
   }
+  if (!res.ok) throw new Error(`Emby returned HTTP ${res.status}`);
+  return res.json();
 }
 
 // ── sub-components ─────────────────────────────────────────────────────────
@@ -378,9 +365,12 @@ export default function EmbyLibrary() {
           ))}
         </div>
       ) : error ? (
-        <div className="text-center py-16 px-6">
-          <p className="text-destructive text-sm font-medium mb-1">Failed to load library</p>
-          <p className="text-muted-foreground text-xs">{error.message}</p>
+        <div className="text-center py-16 px-6 space-y-2">
+          <p className="text-destructive text-sm font-medium">Failed to load library</p>
+          <p className="text-muted-foreground text-xs max-w-sm mx-auto leading-relaxed">{error.message}</p>
+          <p className="text-muted-foreground text-[11px] max-w-sm mx-auto">
+            Tip: Your browser must be able to reach <span className="text-foreground font-mono">{embyServer?.server_url}</span> directly. Check that the server is online and reachable from this network.
+          </p>
         </div>
       ) : search.trim() ? (
         // Flat search results
