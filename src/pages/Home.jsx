@@ -8,6 +8,7 @@ import PullToRefresh from '../components/layout/PullToRefresh';
 import StatsWidget from '../components/dashboard/StatsWidget';
 import SyncProgressBar from '../components/dashboard/SyncProgressBar';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
+import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const TABS = ['All', 'Emby'];
@@ -113,6 +114,9 @@ export default function Home() {
 
       <div className="mt-6 space-y-2">
         <ServerStatusBar />
+
+        <EmbyRecentlyAdded />
+
         {continueWatching.length > 0 && (
           <MediaRow
             title="Continue Watching"
@@ -122,7 +126,7 @@ export default function Home() {
           />
         )}
 
-        <MediaRow title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} />
+        <MediaRow title="All Recently Added" items={recentlyAdded} watchHistory={watchHistory} />
         <MediaRow title="Movies" items={movies} watchHistory={watchHistory} />
         <MediaRow title="TV Shows" items={shows} watchHistory={watchHistory} />
 
