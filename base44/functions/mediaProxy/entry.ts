@@ -26,32 +26,13 @@ Deno.serve(async (req) => {
     let currentUrl = url;
     let res;
     try {
-      res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
-      // Follow redirects manually (up to 10 hops) to avoid Deno's redirect limit errors
-      let redirectCount = 0;
-      while ((res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) && redirectCount < 10) {
-        const location = res.headers.get('location');
-        if (!location) break;
-        const nextUrl = location.startsWith('http') ? location : new URL(location, currentUrl).toString();
-        console.log(`[mediaProxy] Redirect ${redirectCount + 1}: ${res.status} ${currentUrl} → ${nextUrl}`);
-        // Break redirect loop — same URL redirecting to itself
-        if (nextUrl === currentUrl) {
-          console.warn(`[mediaProxy] Redirect loop detected at ${currentUrl} — attempting direct fetch without redirect:manual`);
-          // Try fetching without redirect:manual so the server can set cookies/session
-          res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal });
-          break;
-        }
-        redirectChain.push(nextUrl);
-        currentUrl = nextUrl;
-        res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
-        redirectCount++;
-      }
-      if (redirectChain.length > 1) {
-        console.log(`[mediaProxy] Redirect chain (${redirectChain.length - 1} hops): ${redirectChain.join(' → ')}`);
-        console.log(`[mediaProxy] Final URL: ${currentUrl} — status: ${res.status}`);
-      }
-      if (redirectCount >= 10) {
-        console.error(`[mediaProxy] Hit redirect limit (10). Chain so far:\n${redirectChain.map((u, i) => `  ${i}: ${u}`).join('\n')}`);
+      // First attempt: let fetch follow redirects automatically (handles HTTP→HTTPS via Cloudflare)
+      res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'follow' });
+      // If the response URL changed, record it in the chain
+      if (res.url && res.url !== currentUrl) {
+        redirectChain.push(res.url);
+        console.log(`[mediaProxy] Redirect chain: ${currentUrl} → ${res.url} (status: ${res.status})`);
+        currentUrl = res.url;
       }
     } finally {
       clearTimeout(timeout);
