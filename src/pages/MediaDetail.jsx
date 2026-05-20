@@ -12,6 +12,7 @@ import TrailerPlayer from '../components/media/TrailerPlayer';
 import EmbyVideoPlayer from '../components/media/EmbyVideoPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
+import TvdbPanel from '../components/media/TvdbPanel';
 import { fetchEmbyFullLibrary } from '../lib/embyApi';
 
 export default function MediaDetail() {
@@ -352,6 +353,9 @@ export default function MediaDetail() {
 
             {/* IMDb Panel */}
             <ImdbPanel media={media} />
+
+            {/* TVDB Panel */}
+            <TvdbPanel media={media} onEnriched={() => queryClient.invalidateQueries({ queryKey: ['media', mediaId] })} />
 
             {/* Description */}
             {media.description && (
