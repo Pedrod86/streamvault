@@ -9,8 +9,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
 import TrailerPlayer from '../components/media/TrailerPlayer';
+import EmbyVideoPlayer from '../components/media/EmbyVideoPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
+import { fetchEmbyFullLibrary } from '../lib/embyApi';
 
 export default function MediaDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -68,6 +70,26 @@ export default function MediaDetail() {
     queryKey: ['media'],
     queryFn: () => base44.entities.Media.list('-created_date', 100),
   });
+
+  // Emby server + library for direct playback
+  const { data: servers = [] } = useQuery({
+    queryKey: ['mediaServers'],
+    queryFn: () => base44.entities.MediaServer.list(),
+    staleTime: 60 * 1000,
+  });
+  const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+
+  const { data: embyLibrary = [] } = useQuery({
+    queryKey: ['embyLiveLibrary', embyServer?.id],
+    enabled: !!embyServer && !!media,
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => fetchEmbyFullLibrary(embyServer),
+  });
+
+  // Match current media item to an Emby library item by title (case-insensitive)
+  const embyItem = media ? embyLibrary.find(
+    e => e.title.toLowerCase().trim() === media.title.toLowerCase().trim()
+  ) : null;
 
   const isInWatchlist = watchlist.some(w => w.media_id === mediaId);
 
@@ -164,10 +186,16 @@ export default function MediaDetail() {
           </Button>
         </div>
 
-        {/* Trailer / video player overlay */}
-        {showPlayer && (
+        {/* Video player — prefer Emby if item matched, else TrailerPlayer */}
+        {showPlayer && embyItem && embyServer ? (
+          <EmbyVideoPlayer
+            item={embyItem}
+            server={embyServer}
+            onClose={() => setShowPlayer(false)}
+          />
+        ) : showPlayer ? (
           <TrailerPlayer media={media} startAt={startAt} onClose={() => setShowPlayer(false)} onProgress={(p) => saveProgress.mutate(p)} />
-        )}
+        ) : null}
 
         {/* Resume prompt */}
         <AnimatePresence>
@@ -291,7 +319,7 @@ export default function MediaDetail() {
                 onClick={handlePlay}
               >
                 <Play className="w-4 h-4 fill-current" />
-                {media.video_url ? 'Play' : 'Watch Trailer'}
+                {embyItem ? 'Play via Emby' : media.video_url ? 'Play' : 'Watch Trailer'}
               </Button>
               <Button
                 variant="outline"
