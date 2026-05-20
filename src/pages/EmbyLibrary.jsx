@@ -143,7 +143,8 @@ export default function EmbyLibrary() {
   const { data: servers = [], isLoading: serversLoading } = useQuery({
     queryKey: ['mediaServers'],
     queryFn: () => base44.entities.MediaServer.list(),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    retry: 1,
   });
 
   const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
@@ -153,16 +154,7 @@ export default function EmbyLibrary() {
     enabled: !!embyServer,
     staleTime: 0,
     retry: 0,
-    queryFn: async () => {
-      try {
-        const result = await fetchEmbyFullLibrary(embyServer);
-        console.log('[EmbyLibrary] Loaded', result.length, 'items');
-        return result;
-      } catch (err) {
-        console.error('[EmbyLibrary] fetchEmbyFullLibrary failed:', err.message);
-        throw err;
-      }
-    },
+    queryFn: () => fetchEmbyFullLibrary(embyServer),
   });
 
   const filters = ['All', 'Movies', 'TV Shows'];
@@ -204,24 +196,26 @@ export default function EmbyLibrary() {
     setPlayingItem(item);
   };
 
+  if (serversLoading) {
+    return (
+      <div className="pt-20 pb-24 flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!embyServer) {
     return (
       <div className="pt-20 pb-24 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
         <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
           <Database className="w-8 h-8 text-muted-foreground" />
         </div>
-        {serversLoading ? (
-          <p className="text-sm text-muted-foreground">Loading servers…</p>
-        ) : (
-          <>
-            <h2 className="font-heading font-bold text-xl text-foreground">No Emby Server</h2>
-            <p className="text-sm text-muted-foreground max-w-xs">
-              {servers.length === 0
-                ? 'Connect an Emby server in Settings to browse your library.'
-                : `Found ${servers.length} server(s) but none matched Emby: ${servers.map(s => s.server_type).join(', ')}`}
-            </p>
-          </>
-        )}
+        <h2 className="font-heading font-bold text-xl text-foreground">No Emby Server</h2>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          {servers.length === 0
+            ? 'Connect an Emby server in Settings to browse your library.'
+            : `Found ${servers.length} server(s) but none is Emby: [${servers.map(s => s.server_type).join(', ')}]`}
+        </p>
       </div>
     );
   }
