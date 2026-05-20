@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       total,
       startIndex,
       hasMore: startIndex + items.length < total,
-      server: { id: server.id, server_name: server.server_name, server_url: base },
+      server: { id: server.id, server_name: server.server_name, server_url: base, api_token: token },
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
