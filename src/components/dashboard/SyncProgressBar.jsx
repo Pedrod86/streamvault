@@ -31,11 +31,6 @@ export default function SyncProgressBar() {
     const toastId = toast.loading('Syncing library…', { description: 'Connecting to your servers' });
 
     try {
-      // Load ALL existing media for deduplication
-      setLabel('Loading existing library…');
-      const existing = await base44.entities.Media.list('-created_date', 5000);
-      const existingMap = new Map(existing.map(m => [m.title.toLowerCase().trim(), m]));
-
       let totalCreated = 0;
       let totalUpdated = 0;
       let clientItems = [];
@@ -74,55 +69,34 @@ export default function SyncProgressBar() {
         throw new Error(serverErrors.join('\n'));
       }
 
-      console.log(`[Sync] fetched ${clientItems.length} items from servers, ${existing.length} already in DB`);
-      const newItems = [];
-      const updatePromises = [];
-      for (const item of clientItems) {
-        const key = item.title?.toLowerCase().trim();
-        if (!key) continue;
-        const existingItem = existingMap.get(key);
-        if (existingItem) {
-          if (item.video_url && !existingItem.video_url) {
-            updatePromises.push(base44.entities.Media.update(existingItem.id, { video_url: item.video_url }));
-          }
-        } else {
-          newItems.push(item);
-        }
-      }
+      console.log(`[Sync] fetched ${clientItems.length} items from servers`);
 
-      // Throttle updates — do them one at a time with a small gap
-      for (const p of updatePromises) {
-        await p;
-        await new Promise(r => setTimeout(r, 100));
-      }
-      totalUpdated += updatePromises.length;
+      // Send all fetched items to the backend embySync function which handles
+      // proper dedup + bulk create server-side (avoids browser rate limits / timeouts)
+      const CHUNK = 500; // send in chunks to avoid request size limits
+      const totalChunks = Math.ceil(clientItems.length / CHUNK);
+      for (let ci = 0; ci < clientItems.length; ci += CHUNK) {
+        const chunk = clientItems.slice(ci, ci + CHUNK);
+        const chunkNum = Math.floor(ci / CHUNK) + 1;
+        setLabel(`Importing… chunk ${chunkNum} / ${totalChunks}`);
+        toast.loading(`Importing… chunk ${chunkNum} / ${totalChunks}`, { id: toastId });
 
-      const BATCH = 10;
-      let importErrors = 0;
-      for (let i = 0; i < newItems.length; i += BATCH) {
-        const batch = newItems.slice(i, i + BATCH);
-        try {
-          await base44.entities.Media.bulkCreate(batch);
-          totalCreated += batch.length;
-        } catch (batchErr) {
-          console.error(`Batch ${i}-${i + BATCH} failed:`, batchErr.message);
-          importErrors++;
-          // Try one-by-one fallback for this batch
-          for (const item of batch) {
-            try {
-              await base44.entities.Media.create(item);
-              totalCreated++;
-            } catch (e) {
-              console.error(`Failed to create "${item.title}":`, e.message);
-            }
-          }
+        const res = await base44.functions.invoke('embySync', {
+          server: syncableServers[0], // pass first server for logging context
+          items: chunk,
+        });
+
+        totalCreated += res.data?.created || 0;
+        totalUpdated += res.data?.updated || 0;
+
+        if (res.data?.error) {
+          console.error(`embySync chunk ${chunkNum} error:`, res.data.error);
         }
-        const done = Math.min(i + BATCH, newItems.length);
-        const pct = 50 + Math.round((done / Math.max(newItems.length, 1)) * 50);
+
+        const pct = 50 + Math.round(((ci + chunk.length) / clientItems.length) * 50);
         setProgress(Math.min(pct, 99));
-        setLabel(`Importing… ${totalCreated} / ${newItems.length}${importErrors > 0 ? ` (${importErrors} errors)` : ''}`);
-        toast.loading(`Importing… ${totalCreated} / ${newItems.length}`, { id: toastId });
-        await new Promise(r => setTimeout(r, 300));
+        setLabel(`Importing… ${totalCreated} new, ${totalUpdated} updated`);
+        await new Promise(r => setTimeout(r, 200));
       }
 
       setProgress(100);
