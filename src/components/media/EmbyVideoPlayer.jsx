@@ -1,8 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   X, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-  SkipBack, SkipForward, Subtitles, Music, Settings, Check, ChevronLeft
+  SkipBack, SkipForward, Subtitles, Music, Settings, Check,
+  ChevronLeft, Layers, ExternalLink, AlertTriangle, RefreshCw
 } from 'lucide-react';
+import PlayerPicker, { PLAYERS } from './PlayerPicker';
+
+const PLAYER_KEY = 'streamvault_player';
 
 function formatTime(secs) {
   const s = Math.floor(secs || 0);
@@ -13,8 +17,6 @@ function formatTime(secs) {
   return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
-// Report playback session to Emby (start / progress / stop)
-// positionTicks = seconds * 10_000_000
 async function reportPlayback(base, token, action, itemId, positionSeconds, isPaused = false) {
   const ticks = Math.round((positionSeconds || 0) * 10_000_000);
   const body = { ItemId: itemId, PositionTicks: ticks, IsPaused: isPaused, CanSeek: true };
@@ -29,21 +31,17 @@ async function reportPlayback(base, token, action, itemId, positionSeconds, isPa
       headers: { 'X-Emby-Token': token, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-  } catch (_) { /* best-effort */ }
+  } catch (_) {}
 }
 
-// Fetch playback info from Emby: subtitles, audio streams, video streams
 async function fetchPlaybackInfo(base, itemId, token) {
   try {
-    const res = await fetch(
-      `${base}/Items/${itemId}/PlaybackInfo?UserId=&api_key=${token}`,
-      { headers: { 'X-Emby-Token': token } }
-    );
+    const res = await fetch(`${base}/Items/${itemId}/PlaybackInfo?UserId=&api_key=${token}`, {
+      headers: { 'X-Emby-Token': token },
+    });
     if (!res.ok) return null;
     return res.json();
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function MenuPanel({ title, items, activeIndex, onSelect, onBack }) {
@@ -75,7 +73,58 @@ function MenuPanel({ title, items, activeIndex, onSelect, onBack }) {
   );
 }
 
-export default function EmbyVideoPlayer({ item, server, onClose }) {
+// ── External player launcher (VLC / Infuse / nPlayer) ──────────────────────
+function ExternalPlayerView({ item, server, playerId, onClose }) {
+  const base = server.server_url.replace(/\/$/, '');
+  const token = server.api_token;
+  const streamUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true`;
+  const encodedUrl = encodeURIComponent(streamUrl);
+
+  const schemeMap = {
+    vlc: `vlc://${streamUrl}`,
+    infuse: `infuse://x-callback-url/play?url=${encodedUrl}`,
+  };
+
+  const scheme = schemeMap[playerId] || `vlc://${streamUrl}`;
+  const playerLabel = PLAYERS.find(p => p.id === playerId)?.label || 'External Player';
+
+  const handleOpen = () => { window.location.href = scheme; };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center gap-6 p-8">
+      <button onClick={onClose} className="absolute top-4 left-4 text-white/70 hover:text-white">
+        <X className="w-6 h-6" />
+      </button>
+      <ExternalLink className="w-14 h-14 text-primary" />
+      <div className="text-center space-y-2 max-w-sm">
+        <h2 className="text-white text-xl font-bold">{item.title}</h2>
+        <p className="text-white/60 text-sm">Ready to open in <span className="text-primary font-semibold">{playerLabel}</span></p>
+        <p className="text-white/30 text-xs mt-2 break-all">{streamUrl}</p>
+      </div>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <button
+          onClick={handleOpen}
+          className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Open in {playerLabel}
+        </button>
+        <button
+          onClick={() => { navigator.clipboard.writeText(streamUrl); }}
+          className="w-full py-3 rounded-xl bg-white/10 text-white font-medium text-sm"
+        >
+          Copy Stream URL
+        </button>
+      </div>
+      <p className="text-white/25 text-xs text-center max-w-xs">
+        {playerLabel} must be installed on your device. On mobile, tap "Open in {playerLabel}" and it will launch automatically.
+      </p>
+    </div>
+  );
+}
+
+// ── HTML5 native / HLS player ──────────────────────────────────────────────
+function NativePlayer({ item, server, useHls, onClose, onSwitchPlayer }) {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const hideTimer = useRef(null);
@@ -84,7 +133,6 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const base = server.server_url.replace(/\/$/, '');
   const token = server.api_token;
 
-  // Playback state
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -94,45 +142,48 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const [fullscreen, setFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
 
-  // Emby stream info
   const [mediaSources, setMediaSources] = useState([]);
   const [activeSourceIdx, setActiveSourceIdx] = useState(0);
   const [audioTracks, setAudioTracks] = useState([]);
   const [activeAudio, setActiveAudio] = useState(0);
   const [subtitleTracks, setSubtitleTracks] = useState([]);
-  const [activeSubtitle, setActiveSubtitle] = useState(-1); // -1 = off
+  const [activeSubtitle, setActiveSubtitle] = useState(-1);
+  const [openMenu, setOpenMenu] = useState(null);
 
-  // Menu state
-  const [openMenu, setOpenMenu] = useState(null); // 'quality' | 'audio' | 'subtitle' | 'settings' | null
-
-  // Build stream URL for a given source and audio/subtitle index
+  // Build stream URL — HLS transcode or direct static
   const buildStreamUrl = useCallback((sourceIdx = 0, audioIdx = 0) => {
     const source = mediaSources[sourceIdx];
     const mediaSourceId = source?.Id || item.id;
     const audioStreamIndex = audioTracks[audioIdx]?.Index ?? undefined;
-    let url = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true&MediaSourceId=${mediaSourceId}`;
-    if (audioStreamIndex !== undefined) url += `&AudioStreamIndex=${audioStreamIndex}`;
-    return url;
-  }, [base, token, item.id, mediaSources, audioTracks]);
 
-  // Fetch playback info on mount
+    if (useHls) {
+      // HLS transcoded stream — most compatible
+      let url = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&MediaSourceId=${mediaSourceId}&VideoCodec=h264&AudioCodec=aac&TranscodingContainer=ts`;
+      if (audioStreamIndex !== undefined) url += `&AudioStreamIndex=${audioStreamIndex}`;
+      return url;
+    } else {
+      // Direct static stream
+      let url = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true&MediaSourceId=${mediaSourceId}`;
+      if (audioStreamIndex !== undefined) url += `&AudioStreamIndex=${audioStreamIndex}`;
+      return url;
+    }
+  }, [base, token, item.id, mediaSources, audioTracks, useHls]);
+
   useEffect(() => {
     fetchPlaybackInfo(base, item.id, token).then(info => {
       if (!info?.MediaSources?.length) return;
       const sources = info.MediaSources;
       setMediaSources(sources);
-
-      // Extract streams from first source
       const streams = sources[0]?.MediaStreams || [];
       const audio = streams.filter(s => s.Type === 'Audio');
       const subs = streams.filter(s => s.Type === 'Subtitle');
-
       setAudioTracks(audio.map((s, i) => ({
         Index: s.Index,
         label: [s.Language, s.Codec, s.Title].filter(Boolean).join(' · ') || `Audio ${i + 1}`,
       })));
-
       setSubtitleTracks([
         { label: 'Off', Index: -1 },
         ...subs.map((s, i) => ({
@@ -143,12 +194,10 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     });
   }, [base, item.id, token]);
 
-  // Build quality options from mediaSources
   const qualityOptions = mediaSources.map((s, i) => ({
     label: s.Name || s.VideoType || `Source ${i + 1}`,
   }));
 
-  // Reload video when source/audio changes
   const reloadVideo = useCallback((sourceIdx, audioIdx) => {
     const v = videoRef.current;
     if (!v) return;
@@ -156,28 +205,9 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     v.src = buildStreamUrl(sourceIdx, audioIdx);
     v.load();
     v.currentTime = t;
-    v.play();
+    v.play().catch(() => {});
   }, [buildStreamUrl]);
 
-  const handleQualitySelect = (idx) => {
-    setActiveSourceIdx(idx);
-    reloadVideo(idx, activeAudio);
-    setOpenMenu(null);
-  };
-
-  const handleAudioSelect = (idx) => {
-    setActiveAudio(idx);
-    reloadVideo(activeSourceIdx, idx);
-    setOpenMenu(null);
-  };
-
-  const handleSubtitleSelect = (idx) => {
-    setActiveSubtitle(idx);
-    setOpenMenu(null);
-    // Emby external subtitle via <track> is applied in render
-  };
-
-  // Controls auto-hide
   const resetHideTimer = useCallback(() => {
     setShowControls(true);
     clearTimeout(hideTimer.current);
@@ -186,10 +216,8 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     }, 3000);
   }, []);
 
-  // Report playback start to Emby
   useEffect(() => {
     reportPlayback(base, token, 'start', item.id, 0);
-    // Report progress every 10 seconds
     progressInterval.current = setInterval(() => {
       const v = videoRef.current;
       if (!v) return;
@@ -197,7 +225,6 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     }, 10_000);
     return () => {
       clearInterval(progressInterval.current);
-      // Report stop with final position
       const v = videoRef.current;
       reportPlayback(base, token, 'stop', item.id, v?.currentTime || 0);
     };
@@ -215,7 +242,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    playing ? v.pause() : v.play();
+    if (playing) v.pause(); else v.play().catch(() => {});
     resetHideTimer();
   };
 
@@ -231,7 +258,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
 
   const handleVolumeChange = (e) => {
     const val = parseFloat(e.target.value);
-    videoRef.current.volume = val;
+    if (videoRef.current) videoRef.current.volume = val;
     setVolume(val);
     setMuted(val === 0);
   };
@@ -239,11 +266,12 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
 
-  // Active subtitle track for <track> element
   const activeSub = activeSubtitle >= 0 ? subtitleTracks[activeSubtitle] : null;
-  const subSrc = activeSub && activeSub.Index >= 0
+  const subSrc = activeSub?.Index >= 0
     ? `${base}/Videos/${item.id}/${item.id}/Subtitles/${activeSub.Index}/Stream.vtt?api_key=${token}`
     : null;
+
+  const currentPlayerLabel = useHls ? 'HLS Stream' : 'Built-in Player';
 
   return (
     <div
@@ -252,22 +280,21 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
       onMouseMove={resetHideTimer}
       onTouchStart={resetHideTimer}
     >
-      {/* Video */}
       <video
         ref={videoRef}
+        key={`${item.id}-${useHls}`}
         src={buildStreamUrl(activeSourceIdx, activeAudio)}
         className="w-full h-full object-contain"
         autoPlay
-        onPlay={() => {
-          setPlaying(true); setLoading(false);
-          reportPlayback(base, token, 'progress', item.id, videoRef.current?.currentTime || 0, false);
-        }}
-        onPause={() => {
-          setPlaying(false); setShowControls(true);
-          reportPlayback(base, token, 'progress', item.id, videoRef.current?.currentTime || 0, true);
-        }}
+        playsInline
+        onPlay={() => { setPlaying(true); setLoading(false); setError(null); }}
+        onPause={() => { setPlaying(false); setShowControls(true); }}
         onWaiting={() => setLoading(true)}
-        onCanPlay={() => setLoading(false)}
+        onCanPlay={() => { setLoading(false); setError(null); }}
+        onError={(e) => {
+          setLoading(false);
+          setError('Playback failed. Try switching to HLS Stream or an external player.');
+        }}
         onTimeUpdate={() => {
           const v = videoRef.current;
           if (!v) return;
@@ -275,23 +302,43 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
           if (v.buffered.length > 0) setBuffered(v.buffered.end(v.buffered.length - 1));
         }}
         onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
-        onClick={() => { togglePlay(); setOpenMenu(null); }}
+        onClick={() => { if (!error) { togglePlay(); setOpenMenu(null); } }}
         crossOrigin="anonymous"
       >
         {subSrc && <track kind="subtitles" src={subSrc} default />}
       </video>
 
-      {/* Spinner */}
-      {loading && (
+      {loading && !error && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center pointer-events-none">
+          <AlertTriangle className="w-12 h-12 text-yellow-400" />
+          <p className="text-white text-sm max-w-sm">{error}</p>
+          <div className="flex gap-3 pointer-events-auto">
+            <button
+              onClick={() => { setError(null); setLoading(true); if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); } }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+            >
+              <RefreshCw className="w-4 h-4" /> Retry
+            </button>
+            <button
+              onClick={() => { setShowPicker(true); setError(null); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm"
+            >
+              <Layers className="w-4 h-4" /> Switch Player
+            </button>
+          </div>
         </div>
       )}
 
       {/* Controls overlay */}
       <div
         className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 select-none ${
-          showControls || openMenu ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          showControls || openMenu || showPicker ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         {/* Top bar */}
@@ -304,14 +351,24 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
               <X className="w-5 h-5" />
             </button>
             <div>
-              <h3 className="text-white font-semibold text-sm leading-tight truncate max-w-[60vw]">{item.title}</h3>
+              <h3 className="text-white font-semibold text-sm leading-tight truncate max-w-[50vw]">{item.title}</h3>
               {item.year && <p className="text-white/50 text-xs">{item.year}</p>}
             </div>
           </div>
+          {/* Player switcher button */}
+          <button
+            onClick={() => setShowPicker(p => !p)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              showPicker ? 'bg-primary text-primary-foreground' : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            {currentPlayerLabel}
+          </button>
         </div>
 
         {/* Centre play button when paused */}
-        {!playing && !loading && (
+        {!playing && !loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
               <Play className="w-7 h-7 fill-white text-white ml-1" />
@@ -327,14 +384,16 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
             <div className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
             <input
               type="range" min={0} max={duration || 100} step={0.5} value={currentTime}
-              onChange={e => { videoRef.current.currentTime = parseFloat(e.target.value); }}
+              onChange={e => { if (videoRef.current) videoRef.current.currentTime = parseFloat(e.target.value); }}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-            <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow -ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ left: `${progress}%` }} />
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow -ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              style={{ left: `${progress}%` }}
+            />
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            {/* Left */}
             <div className="flex items-center gap-1 sm:gap-2">
               <button onClick={togglePlay} className="text-white w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
                 {playing ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white" />}
@@ -345,9 +404,11 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
               <button onClick={() => skip(10)} className="text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
                 <SkipForward className="w-4 h-4" />
               </button>
-              {/* Volume */}
               <div className="flex items-center gap-1">
-                <button onClick={() => { const v = !muted; videoRef.current.muted = v; setMuted(v); }} className="text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+                <button
+                  onClick={() => { const v = !muted; if (videoRef.current) videoRef.current.muted = v; setMuted(v); }}
+                  className="text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                >
                   {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </button>
                 <input
@@ -361,11 +422,10 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
               </span>
             </div>
 
-            {/* Right — Emby controls */}
             <div className="flex items-center gap-1">
               {subtitleTracks.length > 1 && (
                 <button
-                  onClick={() => setOpenMenu(openMenu === 'subtitle' ? null : 'subtitle')}
+                  onClick={() => setOpenMenu(m => m === 'subtitle' ? null : 'subtitle')}
                   className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${openMenu === 'subtitle' ? 'bg-primary text-primary-foreground' : 'text-white hover:bg-white/10'}`}
                   title="Subtitles"
                 >
@@ -374,7 +434,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
               )}
               {audioTracks.length > 1 && (
                 <button
-                  onClick={() => setOpenMenu(openMenu === 'audio' ? null : 'audio')}
+                  onClick={() => setOpenMenu(m => m === 'audio' ? null : 'audio')}
                   className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${openMenu === 'audio' ? 'bg-primary text-primary-foreground' : 'text-white hover:bg-white/10'}`}
                   title="Audio track"
                 >
@@ -383,7 +443,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
               )}
               {qualityOptions.length > 1 && (
                 <button
-                  onClick={() => setOpenMenu(openMenu === 'quality' ? null : 'quality')}
+                  onClick={() => setOpenMenu(m => m === 'quality' ? null : 'quality')}
                   className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${openMenu === 'quality' ? 'bg-primary text-primary-foreground' : 'text-white hover:bg-white/10'}`}
                   title="Quality"
                 >
@@ -398,34 +458,59 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
         </div>
       </div>
 
-      {/* Popup menus */}
-      {openMenu === 'subtitle' && (
-        <MenuPanel
-          title="Subtitles"
-          items={subtitleTracks}
-          activeIndex={activeSubtitle === -1 ? 0 : activeSubtitle}
-          onSelect={handleSubtitleSelect}
-          onBack={() => setOpenMenu(null)}
+      {/* Player picker dropdown */}
+      {showPicker && (
+        <PlayerPicker
+          current={useHls ? 'hls' : 'native'}
+          onChange={onSwitchPlayer}
+          onClose={() => setShowPicker(false)}
         />
+      )}
+
+      {/* Track menus */}
+      {openMenu === 'subtitle' && (
+        <MenuPanel title="Subtitles" items={subtitleTracks} activeIndex={activeSubtitle === -1 ? 0 : activeSubtitle}
+          onSelect={(i) => { setActiveSubtitle(i); setOpenMenu(null); }} onBack={() => setOpenMenu(null)} />
       )}
       {openMenu === 'audio' && (
-        <MenuPanel
-          title="Audio Track"
-          items={audioTracks}
-          activeIndex={activeAudio}
-          onSelect={handleAudioSelect}
-          onBack={() => setOpenMenu(null)}
-        />
+        <MenuPanel title="Audio Track" items={audioTracks} activeIndex={activeAudio}
+          onSelect={(i) => { setActiveAudio(i); reloadVideo(activeSourceIdx, i); setOpenMenu(null); }} onBack={() => setOpenMenu(null)} />
       )}
       {openMenu === 'quality' && (
-        <MenuPanel
-          title="Quality"
-          items={qualityOptions}
-          activeIndex={activeSourceIdx}
-          onSelect={handleQualitySelect}
-          onBack={() => setOpenMenu(null)}
-        />
+        <MenuPanel title="Quality" items={qualityOptions} activeIndex={activeSourceIdx}
+          onSelect={(i) => { setActiveSourceIdx(i); reloadVideo(i, activeAudio); setOpenMenu(null); }} onBack={() => setOpenMenu(null)} />
       )}
     </div>
+  );
+}
+
+// ── Main exported wrapper — manages player selection ───────────────────────
+export default function EmbyVideoPlayer({ item, server, onClose }) {
+  const [player, setPlayer] = useState(() => localStorage.getItem(PLAYER_KEY) || 'native');
+
+  const handleSwitchPlayer = (newPlayer) => {
+    localStorage.setItem(PLAYER_KEY, newPlayer);
+    setPlayer(newPlayer);
+  };
+
+  if (player === 'vlc' || player === 'infuse') {
+    return (
+      <ExternalPlayerView
+        item={item}
+        server={server}
+        playerId={player}
+        onClose={onClose}
+      />
+    );
+  }
+
+  return (
+    <NativePlayer
+      item={item}
+      server={server}
+      useHls={player === 'hls'}
+      onClose={onClose}
+      onSwitchPlayer={handleSwitchPlayer}
+    />
   );
 }
