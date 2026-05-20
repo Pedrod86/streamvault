@@ -74,6 +74,7 @@ export default function SyncProgressBar() {
         throw new Error(serverErrors.join('\n'));
       }
 
+      console.log(`[Sync] fetched ${clientItems.length} items from servers, ${existing.length} already in DB`);
       const newItems = [];
       const updatePromises = [];
       for (const item of clientItems) {
@@ -96,16 +97,32 @@ export default function SyncProgressBar() {
       }
       totalUpdated += updatePromises.length;
 
-      const BATCH = 25;
+      const BATCH = 10;
+      let importErrors = 0;
       for (let i = 0; i < newItems.length; i += BATCH) {
-        await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH));
-        totalCreated += Math.min(BATCH, newItems.length - i);
+        const batch = newItems.slice(i, i + BATCH);
+        try {
+          await base44.entities.Media.bulkCreate(batch);
+          totalCreated += batch.length;
+        } catch (batchErr) {
+          console.error(`Batch ${i}-${i + BATCH} failed:`, batchErr.message);
+          importErrors++;
+          // Try one-by-one fallback for this batch
+          for (const item of batch) {
+            try {
+              await base44.entities.Media.create(item);
+              totalCreated++;
+            } catch (e) {
+              console.error(`Failed to create "${item.title}":`, e.message);
+            }
+          }
+        }
         const done = Math.min(i + BATCH, newItems.length);
         const pct = 50 + Math.round((done / Math.max(newItems.length, 1)) * 50);
         setProgress(Math.min(pct, 99));
-        setLabel(`Importing… ${done} / ${newItems.length}`);
-        toast.loading(`Importing… ${done} / ${newItems.length}`, { id: toastId });
-        await new Promise(r => setTimeout(r, 500));
+        setLabel(`Importing… ${totalCreated} / ${newItems.length}${importErrors > 0 ? ` (${importErrors} errors)` : ''}`);
+        toast.loading(`Importing… ${totalCreated} / ${newItems.length}`, { id: toastId });
+        await new Promise(r => setTimeout(r, 300));
       }
 
       setProgress(100);
