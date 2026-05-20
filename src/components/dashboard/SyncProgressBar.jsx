@@ -70,10 +70,14 @@ export default function SyncProgressBar() {
         }
       }
 
-      if (updatePromises.length) await Promise.all(updatePromises);
+      // Throttle updates — do them one at a time with a small gap
+      for (const p of updatePromises) {
+        await p;
+        await new Promise(r => setTimeout(r, 100));
+      }
       totalUpdated += updatePromises.length;
 
-      const BATCH = 50;
+      const BATCH = 25; // smaller batches to avoid overloading
       for (let i = 0; i < newItems.length; i += BATCH) {
         await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH));
         totalCreated += Math.min(BATCH, newItems.length - i);
@@ -81,6 +85,7 @@ export default function SyncProgressBar() {
         setProgress(Math.min(pct, 99));
         setLabel(`Importing… ${Math.min(i + BATCH, newItems.length)} / ${newItems.length}`);
         toast.loading(`Importing… ${Math.min(i + BATCH, newItems.length)} / ${newItems.length}`, { id: toastId });
+        await new Promise(r => setTimeout(r, 500)); // pause between DB batches
       }
 
       setProgress(100);

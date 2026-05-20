@@ -95,7 +95,7 @@ async function fetchJellyfinLibrary(server) {
   const user = userList.find(u => u.Policy?.IsAdministrator) || userList[0];
   const userId = user.Id;
 
-  const PAGE_SIZE = 500;
+  const PAGE_SIZE = 200;
   const allItems = [];
   let startIndex = 0;
 
@@ -108,6 +108,7 @@ async function fetchJellyfinLibrary(server) {
     allItems.push(...items.map(item => mapJellyfinItem(item, base, token)));
     if (allItems.length >= (json.TotalRecordCount || 0) || items.length < PAGE_SIZE) break;
     startIndex += PAGE_SIZE;
+    await sleep(800);
   }
 
   return allItems;
@@ -166,6 +167,8 @@ function mapEmbyItemForSync(item, base, token) {
   };
 }
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 async function fetchEmbyLibrary(server) {
   const base = server.server_url.replace(/\/$/, '');
   const token = server.api_token;
@@ -185,8 +188,8 @@ async function fetchEmbyLibrary(server) {
   }
   if (!userId) throw new Error('Could not authenticate with Emby. Check your API key.');
 
-  // Step 2: fetch all items via proxy, return as plain array (same as Plex/Jellyfin)
-  const PAGE = 500;
+  // Step 2: fetch all items via proxy with pacing to avoid overloading the server
+  const PAGE = 200; // smaller page size — less load per request
   let startIndex = 0;
   const allItems = [];
 
@@ -203,10 +206,9 @@ async function fetchEmbyLibrary(server) {
     }
     if (items.length < PAGE) break;
     startIndex += PAGE;
+    await sleep(800); // pause between pages to avoid hammering the server
   }
 
-  // Return as plain array — DB writes handled client-side by SyncProgressBar/SyncServerButton
-  // exactly like Plex and Jellyfin, avoiding payload size limits on embySync
   return allItems;
 }
 
