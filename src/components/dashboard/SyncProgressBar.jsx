@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { fetchServerLibrary } from '@/lib/serverSync';
 import { RefreshCw, CheckCircle2, AlertCircle, X } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export default function SyncProgressBar() {
   const queryClient = useQueryClient();
@@ -28,6 +28,8 @@ export default function SyncProgressBar() {
     setDismissed(false);
     setErrorMsg('');
 
+    const toastId = toast.loading('Syncing library…', { description: 'Connecting to your servers' });
+
     try {
       const existing = await base44.entities.Media.list('-created_date', 2000);
       const existingMap = new Map(existing.map(m => [m.title.toLowerCase().trim(), m]));
@@ -39,6 +41,7 @@ export default function SyncProgressBar() {
       for (let si = 0; si < syncableServers.length; si++) {
         const server = syncableServers[si];
         setLabel(`Fetching from ${server.server_name || server.server_type}…`);
+        toast.loading(`Fetching from ${server.server_name || server.server_type}…`, { id: toastId });
         try {
           const result = await fetchServerLibrary(server);
 
@@ -77,6 +80,7 @@ export default function SyncProgressBar() {
         const pct = 30 + Math.round((Math.min(i + BATCH, newItems.length) / Math.max(newItems.length, 1)) * 70);
         setProgress(Math.min(pct, 99));
         setLabel(`Importing… ${Math.min(i + BATCH, newItems.length)} / ${newItems.length}`);
+        toast.loading(`Importing… ${Math.min(i + BATCH, newItems.length)} / ${newItems.length}`, { id: toastId });
       }
 
       setProgress(100);
@@ -89,10 +93,15 @@ export default function SyncProgressBar() {
       );
       setStatus('done');
       queryClient.invalidateQueries({ queryKey: ['media'] });
+      const doneMsg = totalCreated > 0
+        ? `${totalCreated} new item${totalCreated !== 1 ? 's' : ''} imported`
+        : totalUpdated > 0 ? `${totalUpdated} items updated` : 'Library is up to date';
+      toast.success('Sync complete', { id: toastId, description: doneMsg });
       setTimeout(() => { setStatus('idle'); setProgress(0); }, 5000);
     } catch (err) {
       setStatus('error');
       setErrorMsg(err.message || 'Sync failed');
+      toast.error('Sync failed', { id: toastId, description: err.message || 'Something went wrong' });
     }
   };
 

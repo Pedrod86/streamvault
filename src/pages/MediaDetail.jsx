@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
 import TrailerPlayer from '../components/media/TrailerPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
+import ImdbPanel from '../components/media/ImdbPanel';
 
 export default function MediaDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -320,6 +321,9 @@ export default function MediaDetail() {
               </Link>
             </div>
             <AddToCollectionDialog mediaId={mediaId} open={showCollections} onOpenChange={setShowCollections} />
+
+            {/* IMDb Panel */}
+            <ImdbPanel media={media} />
 
             {/* Description */}
             {media.description && (
