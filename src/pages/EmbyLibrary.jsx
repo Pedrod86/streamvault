@@ -173,7 +173,6 @@ function DetailOverlay({ item, onClose, onPlay }) {
 export default function EmbyLibrary() {
   const [scan, setScan] = useState({ ...scanState });
   const [search, setSearch] = useState('');
-  const [selectedItem, setSelectedItem] = useState(null);
   const [playingItem, setPlayingItem] = useState(null);
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -235,8 +234,6 @@ export default function EmbyLibrary() {
     topGenres.forEach(([g, items]) => rows.push({ title: g, items }));
     return rows;
   }, [filtered, activeFilter, search]);
-
-  const handlePlay = (item) => { setSelectedItem(null); setPlayingItem(item); };
 
   if (isFirstLoad) {
     return (
@@ -342,20 +339,17 @@ export default function EmbyLibrary() {
         <div>
           <p className="text-xs text-muted-foreground px-4 sm:px-6 mb-3">{filtered.length} results for "{search}"</p>
           <div className="flex flex-wrap gap-3 px-4 sm:px-6">
-            {filtered.map(item => <MediaCard key={item.id} item={item} onPlay={setSelectedItem} />)}
+            {filtered.map(item => <MediaCard key={item.id} item={item} onPlay={setPlayingItem} />)}
           </div>
         </div>
       ) : (
         <div>
           {sections?.map(({ title, items }) => (
-            <MediaRow key={title} title={title} items={items} onPlay={setSelectedItem} />
+            <MediaRow key={title} title={title} items={items} onPlay={setPlayingItem} />
           ))}
         </div>
       )}
 
-      {selectedItem && (
-        <DetailOverlay item={selectedItem} onClose={() => setSelectedItem(null)} onPlay={handlePlay} />
-      )}
       {playingItem && (
         <EmbyVideoPlayer item={playingItem} server={embyServer} onClose={() => setPlayingItem(null)} />
       )}
