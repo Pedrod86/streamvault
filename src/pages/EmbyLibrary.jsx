@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchEmbyFullLibrary } from '@/lib/embyApi';
 
 function MediaCard({ item, onPlay }) {
   return (
@@ -116,72 +115,42 @@ export default function EmbyLibrary() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [playingItem, setPlayingItem] = useState(null);
   const [activeFilter, setActiveFilter] = useState('All');
-
-  // Manual fetch state — bypasses React Query to avoid auth-check issues
   const [embyServer, setEmbyServer] = useState(null);
   const [library, setLibrary] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [serversLoading, setServersLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setServersLoading(true);
-      setError(null);
-      try {
-        const servers = await base44.entities.MediaServer.list();
-        if (cancelled) return;
-        const server = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
-        setEmbyServer(server || null);
-        setServersLoading(false);
-
-        if (!server) return;
-
-        setIsLoading(true);
-        const items = await fetchEmbyFullLibrary(server);
-        if (cancelled) return;
-        setLibrary(items);
-      } catch (err) {
-        if (cancelled) return;
-        setError(err.message || 'Unknown error');
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-          setServersLoading(false);
-        }
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  const retry = () => {
-    setLibrary([]);
+  async function loadLibrary() {
+    setIsLoading(true);
     setError(null);
-    setServersLoading(true);
-    // re-mount trick: toggle a key instead; just re-call load
-    async function load() {
-      setServersLoading(true);
-      setError(null);
-      try {
-        const servers = await base44.entities.MediaServer.list();
-        const server = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
-        setEmbyServer(server || null);
-        setServersLoading(false);
-        if (!server) return;
-        setIsLoading(true);
-        const items = await fetchEmbyFullLibrary(server);
-        setLibrary(items);
-      } catch (err) {
-        setError(err.message || 'Unknown error');
-      } finally {
-        setIsLoading(false);
-        setServersLoading(false);
+    setLibrary([]);
+    setEmbyServer(null);
+    try {
+      let startIndex = 0;
+      let hasMore = true;
+      let serverInfo = null;
+
+      while (hasMore) {
+        const res = await base44.functions.invoke('embyLibrary', { startIndex });
+        if (res.data?.error) throw new Error(res.data.error);
+        const { items, hasMore: more, server } = res.data;
+        if (!serverInfo) { serverInfo = server; setEmbyServer(server); }
+        setLibrary(prev => [...prev, ...(items || [])]);
+        hasMore = more;
+        startIndex += (items?.length || 0);
+        if (!items?.length) break;
+        // Show first batch immediately, then load rest
+        if (startIndex === items.length) setIsLoading(false);
       }
+    } catch (err) {
+      setError(err.message || 'Failed to load library');
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
-    load();
-  };
+  }
+
+  useEffect(() => { loadLibrary(); }, []);
 
   const filters = ['All', 'Movies', 'TV Shows'];
 
@@ -217,24 +186,45 @@ export default function EmbyLibrary() {
 
   const handlePlay = (item) => { setSelectedItem(null); setPlayingItem(item); };
 
-  if (serversLoading) {
+  if (isLoading) {
     return (
-      <div className="pt-20 pb-24 flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+      <div className="pt-20 pb-24">
+        <div className="px-4 sm:px-6 pt-4 mb-6 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Loader2 className="w-4 h-4 text-primary animate-spin" />
+          </div>
+          <div>
+            <h1 className="font-heading font-bold text-lg text-foreground">Emby Library</h1>
+            <p className="text-xs text-muted-foreground">Loading your library…</p>
+          </div>
+        </div>
+        <div className="space-y-8 px-4 sm:px-6">
+          {[1, 2, 3].map(i => (
+            <div key={i}>
+              <Skeleton className="h-5 w-32 mb-3 bg-secondary" />
+              <div className="flex gap-3">
+                {[1, 2, 3, 4, 5].map(j => (
+                  <Skeleton key={j} className="w-[140px] h-[210px] rounded-xl bg-secondary shrink-0" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (!embyServer) {
+  if (error) {
     return (
       <div className="pt-20 pb-24 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
         <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
-          <Database className="w-8 h-8 text-muted-foreground" />
+          <Database className="w-8 h-8 text-destructive" />
         </div>
-        <h2 className="font-heading font-bold text-xl text-foreground">No Emby Server</h2>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Connect an Emby server in Settings to browse your library.
-        </p>
+        <h2 className="font-heading font-bold text-xl text-foreground">Failed to load</h2>
+        <p className="text-sm text-muted-foreground max-w-sm font-mono bg-secondary rounded-lg px-3 py-2 break-words">{error}</p>
+        <Button variant="outline" onClick={loadLibrary} className="gap-2">
+          <RefreshCw className="w-4 h-4" /> Retry
+        </Button>
       </div>
     );
   }
@@ -248,7 +238,7 @@ export default function EmbyLibrary() {
           </div>
           <div>
             <h1 className="font-heading font-bold text-lg text-foreground">
-              {embyServer.server_name || 'Emby Library'}
+              {embyServer?.server_name || 'Emby Library'}
             </h1>
             {library.length > 0 && (
               <p className="text-xs text-muted-foreground">{library.length.toLocaleString()} items</p>
@@ -286,32 +276,7 @@ export default function EmbyLibrary() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-8 px-4 sm:px-6">
-          <div className="flex items-center gap-3 text-sm text-muted-foreground px-0 mb-2">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Loading library from {embyServer.server_name || 'Emby'}…</span>
-          </div>
-          {[1, 2, 3].map(i => (
-            <div key={i}>
-              <Skeleton className="h-5 w-32 mb-3 bg-secondary" />
-              <div className="flex gap-3">
-                {[1, 2, 3, 4, 5].map(j => (
-                  <Skeleton key={j} className="w-[140px] h-[210px] rounded-xl bg-secondary shrink-0" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : error ? (
-        <div className="text-center py-16 px-6 space-y-3">
-          <p className="text-destructive text-sm font-medium">Failed to load library</p>
-          <p className="text-muted-foreground text-xs max-w-sm mx-auto leading-relaxed font-mono bg-secondary rounded-lg px-3 py-2 break-words">{error}</p>
-          <button onClick={retry} className="flex items-center gap-2 text-xs text-primary underline mx-auto">
-            <RefreshCw className="w-3 h-3" /> Retry
-          </button>
-        </div>
-      ) : search.trim() ? (
+      {search.trim() ? (
         <div>
           <p className="text-xs text-muted-foreground px-4 sm:px-6 mb-3">{filtered.length} results for "{search}"</p>
           <div className="flex flex-wrap gap-3 px-4 sm:px-6">
@@ -329,7 +294,6 @@ export default function EmbyLibrary() {
       {selectedItem && (
         <DetailOverlay item={selectedItem} onClose={() => setSelectedItem(null)} onPlay={handlePlay} />
       )}
-
       {playingItem && (
         <EmbyVideoPlayer item={playingItem} server={embyServer} onClose={() => setPlayingItem(null)} />
       )}
