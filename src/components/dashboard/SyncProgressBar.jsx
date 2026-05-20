@@ -40,10 +40,22 @@ export default function SyncProgressBar() {
 
       for (let si = 0; si < syncableServers.length; si++) {
         const server = syncableServers[si];
-        setLabel(`Fetching from ${server.server_name || server.server_type}…`);
-        toast.loading(`Fetching from ${server.server_name || server.server_type}…`, { id: toastId });
+        const serverLabel = server.server_name || server.server_type;
+        setLabel(`Scanning ${serverLabel}…`);
+        toast.loading(`Scanning ${serverLabel}…`, { id: toastId });
+
+        // Base progress range for this server's fetch phase: 0–50% split across servers
+        const fetchBase = Math.round((si / syncableServers.length) * 50);
+        const fetchTop  = Math.round(((si + 1) / syncableServers.length) * 50);
+
         try {
-          const result = await fetchServerLibrary(server);
+          const result = await fetchServerLibrary(server, (fetched, total) => {
+            if (total > 0) {
+              const pct = fetchBase + Math.round((fetched / total) * (fetchTop - fetchBase));
+              setProgress(pct);
+              setLabel(`Scanning ${serverLabel}… ${fetched} / ${total}`);
+            }
+          });
 
           if (Array.isArray(result)) {
             clientItems = clientItems.concat(result);
@@ -51,7 +63,7 @@ export default function SyncProgressBar() {
         } catch (e) {
           console.warn(`Sync skipped server ${server.server_name}: ${e.message}`);
         }
-        setProgress(Math.round(((si + 1) / syncableServers.length) * 30));
+        setProgress(fetchTop);
       }
 
       // Handle client-side items (Plex, Jellyfin, Xtream)
@@ -77,15 +89,16 @@ export default function SyncProgressBar() {
       }
       totalUpdated += updatePromises.length;
 
-      const BATCH = 25; // smaller batches to avoid overloading
+      const BATCH = 25;
       for (let i = 0; i < newItems.length; i += BATCH) {
         await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH));
         totalCreated += Math.min(BATCH, newItems.length - i);
-        const pct = 30 + Math.round((Math.min(i + BATCH, newItems.length) / Math.max(newItems.length, 1)) * 70);
+        const done = Math.min(i + BATCH, newItems.length);
+        const pct = 50 + Math.round((done / Math.max(newItems.length, 1)) * 50);
         setProgress(Math.min(pct, 99));
-        setLabel(`Importing… ${Math.min(i + BATCH, newItems.length)} / ${newItems.length}`);
-        toast.loading(`Importing… ${Math.min(i + BATCH, newItems.length)} / ${newItems.length}`, { id: toastId });
-        await new Promise(r => setTimeout(r, 500)); // pause between DB batches
+        setLabel(`Importing… ${done} / ${newItems.length}`);
+        toast.loading(`Importing… ${done} / ${newItems.length}`, { id: toastId });
+        await new Promise(r => setTimeout(r, 500));
       }
 
       setProgress(100);

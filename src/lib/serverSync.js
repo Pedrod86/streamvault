@@ -83,12 +83,11 @@ function mapPlexItem(item, base, token, sectionType) {
 
 // ─── JELLYFIN ─────────────────────────────────────────────────────────────────
 
-async function fetchJellyfinLibrary(server) {
+async function fetchJellyfinLibrary(server, onProgress) {
   const base = server.server_url.replace(/\/$/, '');
   const token = server.api_token;
   const authHeaders = { 'X-Emby-Token': token, 'X-MediaBrowser-Token': token };
 
-  // /Users/Me requires session auth — use /Users list instead
   const users = await proxyFetch(`${base}/Users`, authHeaders);
   const userList = Array.isArray(users) ? users : (users?.Items || []);
   if (!userList.length) throw new Error('Jellyfin auth failed. Check your API key and server URL.');
@@ -98,6 +97,7 @@ async function fetchJellyfinLibrary(server) {
   const PAGE_SIZE = 200;
   const allItems = [];
   let startIndex = 0;
+  let totalCount = 0;
 
   while (true) {
     const json = await proxyFetch(
@@ -105,8 +105,10 @@ async function fetchJellyfinLibrary(server) {
       authHeaders
     );
     const items = json.Items || [];
+    totalCount = json.TotalRecordCount || totalCount;
     allItems.push(...items.map(item => mapJellyfinItem(item, base, token)));
-    if (allItems.length >= (json.TotalRecordCount || 0) || items.length < PAGE_SIZE) break;
+    if (onProgress) onProgress(allItems.length, totalCount || allItems.length);
+    if (allItems.length >= totalCount || items.length < PAGE_SIZE) break;
     startIndex += PAGE_SIZE;
     await sleep(800);
   }
@@ -169,7 +171,7 @@ function mapEmbyItemForSync(item, base, token) {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function fetchEmbyLibrary(server) {
+async function fetchEmbyLibrary(server, onProgress) {
   const base = server.server_url.replace(/\/$/, '');
   const token = server.api_token;
   const authHeaders = { 'X-Emby-Token': token };
@@ -188,8 +190,15 @@ async function fetchEmbyLibrary(server) {
   }
   if (!userId) throw new Error('Could not authenticate with Emby. Check your API key.');
 
-  // Step 2: fetch all items via proxy with pacing to avoid overloading the server
-  const PAGE = 200; // smaller page size — less load per request
+  // Step 2: get total count first so we can show accurate progress
+  const countJson = await proxyFetch(
+    `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Limit=1&StartIndex=0`,
+    authHeaders
+  );
+  const totalCount = countJson?.TotalRecordCount || 0;
+
+  // Step 3: fetch all items via proxy with pacing to avoid overloading the server
+  const PAGE = 200;
   let startIndex = 0;
   const allItems = [];
 
@@ -204,9 +213,12 @@ async function fetchEmbyLibrary(server) {
     for (const item of items) {
       allItems.push(mapEmbyItemForSync(item, base, token));
     }
+    const fetched = Math.min(startIndex + items.length, totalCount || allItems.length);
+    const total = totalCount || allItems.length;
+    if (onProgress) onProgress(fetched, total);
     if (items.length < PAGE) break;
     startIndex += PAGE;
-    await sleep(800); // pause between pages to avoid hammering the server
+    await sleep(800);
   }
 
   return allItems;
@@ -309,7 +321,7 @@ function normaliseUrl(url) {
   return url.replace(/\/$/, '');
 }
 
-export async function fetchServerLibrary(server) {
+export async function fetchServerLibrary(server, onProgress) {
   if (server.server_url) {
     server = { ...server, server_url: normaliseUrl(server.server_url) };
   }
@@ -317,8 +329,8 @@ export async function fetchServerLibrary(server) {
 
   switch (server.server_type) {
     case 'plex':     return fetchPlexLibrary(server);
-    case 'jellyfin': return fetchJellyfinLibrary(server);
-    case 'emby':     return fetchEmbyLibrary(server);
+    case 'jellyfin': return fetchJellyfinLibrary(server, onProgress);
+    case 'emby':     return fetchEmbyLibrary(server, onProgress);
     case 'xtream':   return fetchXtreamLibrary(server);
     default:
       throw new Error(`Unknown server type "${server.server_type}". Please reconnect this server.`);
