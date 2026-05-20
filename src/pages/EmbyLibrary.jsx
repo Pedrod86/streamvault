@@ -116,8 +116,8 @@ function MediaRow({ title, items, onPlay }) {
 function DetailOverlay({ item, onClose, onPlay }) {
   const backdropUrl = item.backdropUrl || item.posterUrl;
   return (
-    <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
-      <div className="bg-card w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl overflow-hidden">
+    <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6" onClick={onClose}>
+      <div className="bg-card w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="relative h-48 sm:h-56">
           {backdropUrl ? (
             <img src={backdropUrl} alt={item.title} className="w-full h-full object-cover" />
