@@ -276,7 +276,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
         }}
         onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
         onClick={() => { togglePlay(); setOpenMenu(null); }}
-        crossOrigin="use-credentials"
+        crossOrigin="anonymous"
       >
         {subSrc && <track kind="subtitles" src={subSrc} default />}
       </video>
