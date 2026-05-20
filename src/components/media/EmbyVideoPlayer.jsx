@@ -83,6 +83,7 @@ function ExternalPlayerView({ item, server, playerId, onClose, onSwitchPlayer })
   const schemeMap = {
     vlc: `vlc://${streamUrl}`,
     infuse: `infuse://x-callback-url/play?url=${encodedUrl}`,
+    mx: `intent:${streamUrl}#Intent;package=com.mxtech.videoplayer.ad;end`,
   };
 
   const scheme = schemeMap[playerId] || `vlc://${streamUrl}`;
@@ -508,7 +509,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     setPlayer(newPlayer);
   };
 
-  if (player === 'vlc' || player === 'infuse') {
+  if (player === 'vlc' || player === 'infuse' || player === 'mx') {
     return (
       <ExternalPlayerView
         item={item}

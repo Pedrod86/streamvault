@@ -26,6 +26,12 @@ export const PLAYERS = [
     description: 'Open in Infuse or nPlayer on iOS/tvOS',
     icon: ExternalLink,
   },
+  {
+    id: 'mx',
+    label: 'MX Player',
+    description: 'Open in MX Player on Android',
+    icon: ExternalLink,
+  },
 ];
 
 export default function PlayerPicker({ current, onChange, onClose }) {

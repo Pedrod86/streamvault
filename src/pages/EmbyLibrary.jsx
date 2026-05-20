@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Database, Search, Play, Star, Clock, X, RefreshCw, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,66 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Global scan state — persists across page navigation
+const scanState = {
+  library: [],
+  server: null,
+  startIndex: 0,
+  done: false,
+  loading: false,
+  error: null,
+  listeners: new Set(),
+};
+
+function notifyListeners() {
+  scanState.listeners.forEach(fn => fn({ ...scanState }));
+}
+
+async function runScan() {
+  if (scanState.loading || scanState.done) return;
+  scanState.loading = true;
+  scanState.error = null;
+  notifyListeners();
+
+  const BATCH = 500;   // backend page size
+  const PAUSE_AT = 5000; // pause after every 5000 items
+
+  try {
+    while (!scanState.done) {
+      const res = await base44.functions.invoke('embyLibrary', { startIndex: scanState.startIndex });
+      if (res.data?.error) throw new Error(res.data.error);
+      const { items, hasMore, server } = res.data;
+
+      if (!scanState.server && server) scanState.server = server;
+      if (items?.length) {
+        scanState.library = [...scanState.library, ...items];
+        scanState.startIndex += items.length;
+      }
+      if (!hasMore || !items?.length) {
+        scanState.done = true;
+        scanState.loading = false;
+        notifyListeners();
+        break;
+      }
+
+      notifyListeners();
+
+      // Pause for 2s every 5000 items to avoid overwhelming the server
+      if (scanState.startIndex % PAUSE_AT < BATCH) {
+        scanState.loading = false;
+        notifyListeners();
+        await new Promise(r => setTimeout(r, 2000));
+        scanState.loading = true;
+        notifyListeners();
+      }
+    }
+  } catch (err) {
+    scanState.error = err.message || 'Failed to load library';
+    scanState.loading = false;
+    notifyListeners();
+  }
+}
 
 function MediaCard({ item, onPlay }) {
   return (
@@ -111,46 +171,38 @@ function DetailOverlay({ item, onClose, onPlay }) {
 }
 
 export default function EmbyLibrary() {
+  const [scan, setScan] = useState({ ...scanState });
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [playingItem, setPlayingItem] = useState(null);
   const [activeFilter, setActiveFilter] = useState('All');
-  const [embyServer, setEmbyServer] = useState(null);
-  const [library, setLibrary] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  async function loadLibrary() {
-    setIsLoading(true);
-    setError(null);
-    setLibrary([]);
-    setEmbyServer(null);
-    try {
-      let startIndex = 0;
-      let hasMore = true;
-      let serverInfo = null;
+  useEffect(() => {
+    // Subscribe to global scan state
+    const listener = (state) => setScan({ ...state });
+    scanState.listeners.add(listener);
+    setScan({ ...scanState });
 
-      while (hasMore) {
-        const res = await base44.functions.invoke('embyLibrary', { startIndex });
-        if (res.data?.error) throw new Error(res.data.error);
-        const { items, hasMore: more, server } = res.data;
-        if (!serverInfo) { serverInfo = server; setEmbyServer(server); }
-        setLibrary(prev => [...prev, ...(items || [])]);
-        hasMore = more;
-        startIndex += (items?.length || 0);
-        if (!items?.length) break;
-        // Show first batch immediately, then load rest
-        if (startIndex === items.length) setIsLoading(false);
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to load library');
-      setIsLoading(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+    // Start scan if not already running / done
+    runScan();
 
-  useEffect(() => { loadLibrary(); }, []);
+    return () => { scanState.listeners.delete(listener); };
+  }, []);
+
+  const resetAndRescan = () => {
+    scanState.library = [];
+    scanState.server = null;
+    scanState.startIndex = 0;
+    scanState.done = false;
+    scanState.loading = false;
+    scanState.error = null;
+    notifyListeners();
+    runScan();
+  };
+
+  const library = scan.library;
+  const embyServer = scan.server;
+  const isFirstLoad = library.length === 0 && scan.loading;
 
   const filters = ['All', 'Movies', 'TV Shows'];
 
@@ -186,7 +238,7 @@ export default function EmbyLibrary() {
 
   const handlePlay = (item) => { setSelectedItem(null); setPlayingItem(item); };
 
-  if (isLoading) {
+  if (isFirstLoad) {
     return (
       <div className="pt-20 pb-24">
         <div className="px-4 sm:px-6 pt-4 mb-6 flex items-center gap-3">
@@ -214,15 +266,15 @@ export default function EmbyLibrary() {
     );
   }
 
-  if (error) {
+  if (scan.error && library.length === 0) {
     return (
       <div className="pt-20 pb-24 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
         <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
           <Database className="w-8 h-8 text-destructive" />
         </div>
         <h2 className="font-heading font-bold text-xl text-foreground">Failed to load</h2>
-        <p className="text-sm text-muted-foreground max-w-sm font-mono bg-secondary rounded-lg px-3 py-2 break-words">{error}</p>
-        <Button variant="outline" onClick={loadLibrary} className="gap-2">
+        <p className="text-sm text-muted-foreground max-w-sm font-mono bg-secondary rounded-lg px-3 py-2 break-words">{scan.error}</p>
+        <Button variant="outline" onClick={resetAndRescan} className="gap-2">
           <RefreshCw className="w-4 h-4" /> Retry
         </Button>
       </div>
@@ -236,13 +288,23 @@ export default function EmbyLibrary() {
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
             <Database className="w-4 h-4 text-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="font-heading font-bold text-lg text-foreground">
               {embyServer?.server_name || 'Emby Library'}
             </h1>
-            {library.length > 0 && (
-              <p className="text-xs text-muted-foreground">{library.length.toLocaleString()} items</p>
-            )}
+            <div className="flex items-center gap-2">
+              {library.length > 0 && (
+                <p className="text-xs text-muted-foreground">{library.length.toLocaleString()} items</p>
+              )}
+              {scan.loading && (
+                <span className="flex items-center gap-1 text-[10px] text-accent">
+                  <Loader2 className="w-3 h-3 animate-spin" /> scanning…
+                </span>
+              )}
+              {scan.done && (
+                <span className="text-[10px] text-green-400">✓ complete</span>
+              )}
+            </div>
           </div>
         </div>
 
