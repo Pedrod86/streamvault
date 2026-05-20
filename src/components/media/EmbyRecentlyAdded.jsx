@@ -5,51 +5,7 @@ import { Play, Star, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
-
-function buildImageUrl(base, itemId, token, type = 'Primary') {
-  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&maxWidth=400`;
-}
-
-async function fetchRecentlyAdded(server) {
-  const base = server.server_url.replace(/\/$/, '');
-  const token = server.api_token;
-  const headers = { 'X-Emby-Token': token };
-
-  // Resolve userId
-  let userId;
-  try {
-    const me = await fetch(`${base}/Users/Me`, { headers, signal: AbortSignal.timeout(10000) });
-    if (me.ok) userId = (await me.json())?.Id;
-  } catch (_) {}
-  if (!userId) {
-    const res = await fetch(`${base}/Users`, { headers, signal: AbortSignal.timeout(10000) });
-    const list = await res.json();
-    const arr = Array.isArray(list) ? list : (list?.Items || []);
-    userId = (arr.find(u => u.Policy?.IsAdministrator) || arr[0])?.Id;
-  }
-  if (!userId) throw new Error('Could not authenticate with Emby');
-
-  const res = await fetch(
-    `${base}/Users/${userId}/Items/Latest?IncludeItemTypes=Movie,Episode&Fields=Overview,Genres,CommunityRating,ProductionYear,RunTimeTicks,ImageTags,BackdropImageTags,SeriesName,ParentId&Limit=20`,
-    { headers, signal: AbortSignal.timeout(15000) }
-  );
-  if (!res.ok) throw new Error(`Emby returned HTTP ${res.status}`);
-  const items = await res.json();
-
-  return (Array.isArray(items) ? items : []).map(item => ({
-    id: item.Id,
-    title: item.Type === 'Episode' ? (item.SeriesName || item.Name) : item.Name,
-    subtitle: item.Type === 'Episode' ? `S${String(item.ParentIndexNumber).padStart(2,'0')}E${String(item.IndexNumber).padStart(2,'0')} – ${item.Name}` : null,
-    type: item.Type,
-    year: item.ProductionYear,
-    rating: item.CommunityRating ? parseFloat(item.CommunityRating.toFixed(1)) : null,
-    overview: item.Overview || '',
-    genres: item.Genres || [],
-    posterUrl: item.ImageTags?.Primary ? buildImageUrl(base, item.Id, token, 'Primary') : null,
-    backdropUrl: item.BackdropImageTags?.[0] ? buildImageUrl(base, item.Id, token, 'Backdrop') : null,
-    streamUrl: `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true`,
-  }));
-}
+import { fetchEmbyRecentlyAdded } from '@/lib/embyApi';
 
 function RecentCard({ item, onPlay }) {
   return (
@@ -112,7 +68,7 @@ export default function EmbyRecentlyAdded() {
     queryKey: ['embyRecentlyAdded', embyServer?.id],
     enabled: !!embyServer,
     staleTime: 5 * 60 * 1000,
-    queryFn: () => fetchRecentlyAdded(embyServer),
+    queryFn: () => fetchEmbyRecentlyAdded(embyServer),
   });
 
   if (!embyServer || error || (!isLoading && items.length === 0)) return null;
