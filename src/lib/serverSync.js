@@ -59,9 +59,19 @@ async function fetchPlexLibrary(server) {
   return items;
 }
 
+function autoTags(genres = [], contentRating = '', existingTags = []) {
+  const tags = [...existingTags];
+  const allText = [...genres, contentRating].join(' ').toLowerCase();
+  if (/anime/.test(allText)) tags.push('anime');
+  if (/kids?|children|family/.test(allText) || ['TV-Y', 'TV-G', 'G', 'TV-Y7'].includes(contentRating)) tags.push('kids');
+  return [...new Set(tags)];
+}
+
 function mapPlexItem(item, base, token, sectionType) {
   const posterPath = item.thumb ? `${base}${item.thumb}?X-Plex-Token=${token}` : undefined;
   const backdropPath = item.art ? `${base}${item.art}?X-Plex-Token=${token}` : undefined;
+  const genres = item.Genre?.map(g => g.tag) || [];
+  const contentRating = item.contentRating || '';
   return {
     title: item.title,
     media_type: sectionType === 'show' ? 'tv_show' : 'movie',
@@ -71,13 +81,13 @@ function mapPlexItem(item, base, token, sectionType) {
     duration_minutes: item.duration ? Math.round(item.duration / 60000) : undefined,
     poster_url: posterPath,
     backdrop_url: backdropPath,
-    genre: item.Genre?.map(g => g.tag) || [],
+    genre: genres,
     director: item.Director?.[0]?.tag || undefined,
     cast: item.Role?.slice(0, 8).map(r => r.tag) || [],
     studio: item.studio || undefined,
-    content_rating: item.contentRating || undefined,
+    content_rating: contentRating || undefined,
     season_count: item.childCount ? Number(item.childCount) : undefined,
-    tags: [],
+    tags: autoTags(genres, contentRating),
   };
 }
 
@@ -136,7 +146,7 @@ function mapJellyfinItem(item, base, token) {
     studio: item.Studios?.[0]?.Name,
     content_rating: item.OfficialRating || undefined,
     season_count: item.ChildCount || undefined,
-    tags: [],
+    tags: autoTags(item.Genres || [], item.OfficialRating || ''),
   };
 }
 
@@ -149,7 +159,8 @@ function buildEmbyImageUrl(base, itemId, token, type = 'Primary') {
 function mapEmbyItemForSync(item, base, token) {
   const hasPrimary = !!(item.ImageTags?.Primary);
   const hasBackdrop = !!(item.BackdropImageTags?.[0]);
-  const tags = ['emby'];
+  const genres = item.Genres || [];
+  const contentRating = item.OfficialRating || '';
   return {
     title: (item.Name || '').replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '').trim(),
     media_type: item.Type === 'Series' ? 'tv_show' : 'movie',
@@ -160,12 +171,12 @@ function mapEmbyItemForSync(item, base, token) {
     poster_url: hasPrimary ? buildEmbyImageUrl(base, item.Id, token, 'Primary') : undefined,
     backdrop_url: hasBackdrop ? buildEmbyImageUrl(base, item.Id, token, 'Backdrop') : undefined,
     video_url: item.Type === 'Movie' ? `${base}/Videos/${item.Id}/stream?api_key=${token}&Static=true` : undefined,
-    genre: item.Genres || [],
+    genre: genres,
     director: item.People?.find(p => p.Type === 'Director')?.Name,
     cast: item.People?.filter(p => p.Type === 'Actor').slice(0, 8).map(p => p.Name) || [],
     studio: item.Studios?.[0]?.Name,
     season_count: item.ChildCount || undefined,
-    tags,
+    tags: autoTags(genres, contentRating, ['emby']),
   };
 }
 
@@ -267,13 +278,14 @@ async function fetchXtreamLibrary(server) {
       director: v.director || undefined,
       cast: v.cast ? v.cast.split(',').map(c => c.trim()).filter(Boolean).slice(0, 8) : [],
       video_url: streamUrl,
-      tags: ['xtream', 'iptv'],
+      tags: autoTags(v.genre ? v.genre.split(',').map(g => g.trim()) : [], '', ['xtream', 'iptv']),
     });
   }
 
   for (const s of safeArray(seriesList)) {
     if (!s || typeof s !== 'object') continue;
     const rating = parseFloat(s.rating || s.rating_5based || 0);
+    const sGenres = s.genre ? s.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
     items.push({
       title: s.name || String(s.series_id),
       media_type: 'tv_show',
@@ -281,11 +293,11 @@ async function fetchXtreamLibrary(server) {
       year: s.year ? Number(s.year) : undefined,
       rating: rating > 0 ? rating : undefined,
       poster_url: s.cover || s.stream_icon || undefined,
-      genre: s.genre ? s.genre.split(',').map(g => g.trim()).filter(Boolean) : [],
+      genre: sGenres,
       director: s.director || undefined,
       cast: s.cast ? s.cast.split(',').map(c => c.trim()).filter(Boolean).slice(0, 8) : [],
       season_count: s.num_seasons ? Number(s.num_seasons) : undefined,
-      tags: ['xtream', 'iptv'],
+      tags: autoTags(sGenres, '', ['xtream', 'iptv']),
     });
   }
 

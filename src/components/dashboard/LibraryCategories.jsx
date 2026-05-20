@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Film, Tv2, Baby, Clock, PlayCircle } from 'lucide-react';
+import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
@@ -9,9 +9,13 @@ const IS_4K = (m) =>
   m.title?.match(/\b(4K|UHD|2160p)\b/i);
 
 const IS_KIDS = (m) =>
-  m.tags?.some(t => /kids?|children|family|animated/i.test(t)) ||
-  m.genre?.some(g => /kids?|children|family|animation/i.test(g)) ||
-  ['TV-Y', 'TV-G', 'G'].includes(m.content_rating);
+  m.tags?.some(t => /^kids?$/.test(t)) ||
+  m.genre?.some(g => /kids?|children|family/i.test(g)) ||
+  ['TV-Y', 'TV-G', 'G', 'TV-Y7'].includes(m.content_rating);
+
+const IS_ANIME = (m) =>
+  m.tags?.some(t => /^anime$/.test(t)) ||
+  m.genre?.some(g => /^anime$/i.test(g));
 
 function formatWatchTime(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
@@ -76,13 +80,23 @@ export default function LibraryCategories({ allMedia = [] }) {
     },
     {
       key: 'kids',
-      label: 'Kids TV',
+      label: 'Kids',
       icon: Baby,
       color: 'text-pink-400',
       bg: 'bg-pink-400/10',
       border: 'border-pink-400/20',
       href: '/shows',
       value: allMedia.filter(IS_KIDS).length.toLocaleString(),
+    },
+    {
+      key: 'anime',
+      label: 'Anime',
+      icon: Sparkles,
+      color: 'text-rose-400',
+      bg: 'bg-rose-400/10',
+      border: 'border-rose-400/20',
+      href: '/shows',
+      value: allMedia.filter(IS_ANIME).length.toLocaleString(),
     },
     {
       key: 'watchtime',

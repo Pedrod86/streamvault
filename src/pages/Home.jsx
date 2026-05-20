@@ -11,10 +11,21 @@ import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import EmbyMediaRows from '../components/media/EmbyMediaRows';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const IS_ANIME = (m) =>
+  m.tags?.some(t => /^anime$/.test(t)) ||
+  m.genre?.some(g => /^anime$/i.test(g));
+
+const IS_KIDS = (m) =>
+  m.tags?.some(t => /^kids?$/.test(t)) ||
+  m.genre?.some(g => /kids?|children|family/i.test(g)) ||
+  ['TV-Y', 'TV-G', 'G', 'TV-Y7'].includes(m.content_rating);
+
 const TABS = [
   { id: 'All', label: 'All' },
   { id: 'Movies', label: 'Movies' },
   { id: 'Shows', label: 'TV Shows' },
+  { id: 'Anime', label: 'Anime' },
+  { id: 'Kids', label: 'Kids' },
   { id: 'Watchlist', label: 'Watchlist' },
 ];
 
@@ -51,14 +62,18 @@ export default function Home() {
   const watchlistMediaIds = new Set(watchlistItems.map(w => w.media_id));
 
   const visibleMedia =
-    activeTab === 'Movies' ? allMedia.filter(m => m.media_type === 'movie') :
-    activeTab === 'Shows'  ? allMedia.filter(m => m.media_type === 'tv_show') :
-    activeTab === 'Watchlist' ? allMedia.filter(m => watchlistMediaIds.has(m.id)) :
+    activeTab === 'Movies'   ? allMedia.filter(m => m.media_type === 'movie') :
+    activeTab === 'Shows'    ? allMedia.filter(m => m.media_type === 'tv_show') :
+    activeTab === 'Anime'    ? allMedia.filter(IS_ANIME) :
+    activeTab === 'Kids'     ? allMedia.filter(IS_KIDS) :
+    activeTab === 'Watchlist'? allMedia.filter(m => watchlistMediaIds.has(m.id)) :
     allMedia;
 
   const featured = visibleMedia.filter(m => m.is_featured);
   const movies = visibleMedia.filter(m => m.media_type === 'movie');
   const shows = visibleMedia.filter(m => m.media_type === 'tv_show');
+  const animeItems = allMedia.filter(IS_ANIME);
+  const kidsItems = allMedia.filter(IS_KIDS);
   const recentlyAdded = [...visibleMedia].slice(0, 20);
 
   // Continue watching: media with incomplete watch history
@@ -140,6 +155,12 @@ export default function Home() {
               />
             )}
             <MediaRow title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} />
+            {animeItems.length > 0 && (
+              <MediaRow title="Anime" items={animeItems} watchHistory={watchHistory} />
+            )}
+            {kidsItems.length > 0 && (
+              <MediaRow title="Kids" items={kidsItems} watchHistory={watchHistory} />
+            )}
             <EmbyMediaRows />
             {Object.entries(genreMap).slice(0, 4).map(([genre, items]) => (
               <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
@@ -163,6 +184,46 @@ export default function Home() {
               <MediaRow key={genre} title={genre} items={items.filter(i => i.media_type === 'tv_show')} watchHistory={watchHistory} />
             ))}
           </>
+        )}
+
+        {activeTab === 'Anime' && (
+          visibleMedia.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              No anime found. Anime is auto-detected from genres during sync.
+            </div>
+          ) : (
+            <>
+              <MediaRow title="All Anime" items={visibleMedia} watchHistory={watchHistory} />
+              {Object.entries(
+                visibleMedia.reduce((acc, m) => {
+                  m.genre?.forEach(g => { if (!/^anime$/i.test(g)) { if (!acc[g]) acc[g] = []; acc[g].push(m); } });
+                  return acc;
+                }, {})
+              ).slice(0, 5).map(([genre, items]) => (
+                <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
+              ))}
+            </>
+          )
+        )}
+
+        {activeTab === 'Kids' && (
+          visibleMedia.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              No kids content found. Kids content is auto-detected from genres and ratings during sync.
+            </div>
+          ) : (
+            <>
+              <MediaRow title="All Kids" items={visibleMedia} watchHistory={watchHistory} />
+              {Object.entries(
+                visibleMedia.reduce((acc, m) => {
+                  m.genre?.forEach(g => { if (!acc[g]) acc[g] = []; acc[g].push(m); });
+                  return acc;
+                }, {})
+              ).slice(0, 5).map(([genre, items]) => (
+                <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
+              ))}
+            </>
+          )
         )}
 
         {activeTab === 'Watchlist' && (
