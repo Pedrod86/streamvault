@@ -9,6 +9,7 @@ import SyncProgressBar from '../components/dashboard/SyncProgressBar';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import EmbyMediaRows from '../components/media/EmbyMediaRows';
+import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const IS_ANIME = (m) =>
@@ -145,6 +146,7 @@ export default function Home() {
 
         {activeTab === 'All' && (
           <>
+            <EmbyContinueWatching />
             <EmbyRecentlyAdded />
             <EmbyMediaRows />
             {continueWatching.length > 0 && (
