@@ -22,16 +22,23 @@ export function buildStreamUrl(base, itemId, token) {
 export async function resolveEmbyUserId(base, token) {
   const headers = { 'X-Emby-Token': token };
   let userId;
+
+  // Try /Users/Me with header auth
   try {
     const me = await embyProxyFetch(`${base}/Users/Me`, headers);
     userId = me?.Id;
   } catch (_) {}
+
+  // Fallback: /Users with api_key query param (some Emby servers require this)
   if (!userId) {
-    const users = await embyProxyFetch(`${base}/Users`, headers);
-    const list = Array.isArray(users) ? users : (users?.Items || []);
-    const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
-    userId = admin?.Id;
+    try {
+      const users = await embyProxyFetch(`${base}/Users?api_key=${token}`, {});
+      const list = Array.isArray(users) ? users : (users?.Items || []);
+      const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
+      userId = admin?.Id;
+    } catch (_) {}
   }
+
   if (!userId) throw new Error('Could not authenticate with Emby');
   return userId;
 }
@@ -45,7 +52,7 @@ export async function fetchEmbyRecentlyAdded(server) {
 
   const items = await embyProxyFetch(
     `${base}/Users/${userId}/Items/Latest?IncludeItemTypes=Movie,Episode` +
-    `&Fields=Overview,Genres,CommunityRating,ProductionYear,RunTimeTicks,ImageTags,BackdropImageTags,SeriesName,ParentId&Limit=20`,
+    `&Fields=Overview,Genres,CommunityRating,ProductionYear,RunTimeTicks,ImageTags,BackdropImageTags,SeriesName,ParentId&Limit=20&api_key=${token}`,
     headers
   );
 
@@ -81,7 +88,7 @@ export async function fetchEmbyFullLibrary(server) {
     const json = await embyProxyFetch(
       `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true` +
       `&Fields=Overview,Genres,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount,ImageTags,BackdropImageTags` +
-      `&SortBy=SortName&SortOrder=Ascending&Limit=${PAGE}&StartIndex=${startIndex}`,
+      `&SortBy=SortName&SortOrder=Ascending&Limit=${PAGE}&StartIndex=${startIndex}&api_key=${token}`,
       headers
     );
     const items = json.Items || [];
