@@ -1,7 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Database, Search, Play, Star, Clock, X } from 'lucide-react';
+import { Database, Search, Play, Star, Clock, X, RefreshCw, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,18 +10,10 @@ import { fetchEmbyFullLibrary } from '@/lib/embyApi';
 
 function MediaCard({ item, onPlay }) {
   return (
-    <div
-      className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group"
-      onClick={() => onPlay(item)}
-    >
+    <div className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group" onClick={() => onPlay(item)}>
       <div className="relative rounded-xl overflow-hidden bg-secondary aspect-[2/3] mb-2">
         {item.posterUrl ? (
-          <img
-            src={item.posterUrl}
-            alt={item.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
+          <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Play className="w-8 h-8 text-muted-foreground" />
@@ -57,9 +48,7 @@ function MediaRow({ title, items, onPlay }) {
     <div className="mb-6">
       <h2 className="font-heading font-bold text-base text-foreground px-4 sm:px-6 mb-3">{title}</h2>
       <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
-        {items.map(item => (
-          <MediaCard key={item.id} item={item} onPlay={onPlay} />
-        ))}
+        {items.map(item => <MediaCard key={item.id} item={item} onPlay={onPlay} />)}
       </div>
     </div>
   );
@@ -77,10 +66,7 @@ function DetailOverlay({ item, onClose, onPlay }) {
             <div className="w-full h-full bg-secondary" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
-          <button
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
-            onClick={onClose}
-          >
+          <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70" onClick={onClose}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -95,19 +81,15 @@ function DetailOverlay({ item, onClose, onPlay }) {
                 {item.year && <span>{item.year}</span>}
                 {item.rating && (
                   <span className="flex items-center gap-0.5">
-                    <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                    {item.rating.toFixed(1)}
+                    <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />{item.rating.toFixed(1)}
                   </span>
                 )}
                 {item.duration && (
                   <span className="flex items-center gap-0.5">
-                    <Clock className="w-3 h-3" />
-                    {Math.floor(item.duration / 60)}h {item.duration % 60}m
+                    <Clock className="w-3 h-3" />{Math.floor(item.duration / 60)}h {item.duration % 60}m
                   </span>
                 )}
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {item.type === 'Series' ? 'TV Show' : 'Movie'}
-                </Badge>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.type === 'Series' ? 'TV Show' : 'Movie'}</Badge>
               </div>
             </div>
           </div>
@@ -118,13 +100,8 @@ function DetailOverlay({ item, onClose, onPlay }) {
               ))}
             </div>
           )}
-          {item.overview && (
-            <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-3">{item.overview}</p>
-          )}
-          <Button
-            className="w-full bg-primary hover:bg-primary/90 gap-2 rounded-xl"
-            onClick={() => onPlay(item)}
-          >
+          {item.overview && <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-3">{item.overview}</p>}
+          <Button className="w-full bg-primary hover:bg-primary/90 gap-2 rounded-xl" onClick={() => onPlay(item)}>
             <Play className="w-4 h-4 fill-current" />
             {item.type === 'Series' ? 'Play (Direct Stream)' : 'Play Now'}
           </Button>
@@ -140,22 +117,71 @@ export default function EmbyLibrary() {
   const [playingItem, setPlayingItem] = useState(null);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const { data: servers = [], isLoading: serversLoading } = useQuery({
-    queryKey: ['mediaServers'],
-    queryFn: () => base44.entities.MediaServer.list(),
-    staleTime: 0,
-    retry: 1,
-  });
+  // Manual fetch state — bypasses React Query to avoid auth-check issues
+  const [embyServer, setEmbyServer] = useState(null);
+  const [library, setLibrary] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [serversLoading, setServersLoading] = useState(true);
 
-  const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setServersLoading(true);
+      setError(null);
+      try {
+        const servers = await base44.entities.MediaServer.list();
+        if (cancelled) return;
+        const server = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+        setEmbyServer(server || null);
+        setServersLoading(false);
 
-  const { data: library = [], isLoading, error } = useQuery({
-    queryKey: ['embyLiveLibrary', embyServer?.id],
-    enabled: !!embyServer,
-    staleTime: 0,
-    retry: 0,
-    queryFn: () => fetchEmbyFullLibrary(embyServer),
-  });
+        if (!server) return;
+
+        setIsLoading(true);
+        const items = await fetchEmbyFullLibrary(server);
+        if (cancelled) return;
+        setLibrary(items);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.message || 'Unknown error');
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+          setServersLoading(false);
+        }
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const retry = () => {
+    setLibrary([]);
+    setError(null);
+    setServersLoading(true);
+    // re-mount trick: toggle a key instead; just re-call load
+    async function load() {
+      setServersLoading(true);
+      setError(null);
+      try {
+        const servers = await base44.entities.MediaServer.list();
+        const server = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+        setEmbyServer(server || null);
+        setServersLoading(false);
+        if (!server) return;
+        setIsLoading(true);
+        const items = await fetchEmbyFullLibrary(server);
+        setLibrary(items);
+      } catch (err) {
+        setError(err.message || 'Unknown error');
+      } finally {
+        setIsLoading(false);
+        setServersLoading(false);
+      }
+    }
+    load();
+  };
 
   const filters = ['All', 'Movies', 'TV Shows'];
 
@@ -181,9 +207,7 @@ export default function EmbyLibrary() {
         genreMap[g].push(item);
       });
     });
-    const topGenres = Object.entries(genreMap)
-      .sort((a, b) => b[1].length - a[1].length)
-      .slice(0, 8);
+    const topGenres = Object.entries(genreMap).sort((a, b) => b[1].length - a[1].length).slice(0, 8);
     const rows = [];
     if (activeFilter !== 'TV Shows' && movies.length) rows.push({ title: 'Movies', items: movies });
     if (activeFilter !== 'Movies' && shows.length) rows.push({ title: 'TV Shows', items: shows });
@@ -191,10 +215,7 @@ export default function EmbyLibrary() {
     return rows;
   }, [filtered, activeFilter, search]);
 
-  const handlePlay = (item) => {
-    setSelectedItem(null);
-    setPlayingItem(item);
-  };
+  const handlePlay = (item) => { setSelectedItem(null); setPlayingItem(item); };
 
   if (serversLoading) {
     return (
@@ -212,9 +233,7 @@ export default function EmbyLibrary() {
         </div>
         <h2 className="font-heading font-bold text-xl text-foreground">No Emby Server</h2>
         <p className="text-sm text-muted-foreground max-w-xs">
-          {servers.length === 0
-            ? 'Connect an Emby server in Settings to browse your library.'
-            : `Found ${servers.length} server(s) but none is Emby: [${servers.map(s => s.server_type).join(', ')}]`}
+          Connect an Emby server in Settings to browse your library.
         </p>
       </div>
     );
@@ -225,7 +244,7 @@ export default function EmbyLibrary() {
       <div className="px-4 sm:px-6 pt-4 mb-4">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Database className="w-4.5 h-4.5 text-primary" />
+            <Database className="w-4 h-4 text-primary" />
           </div>
           <div>
             <h1 className="font-heading font-bold text-lg text-foreground">
@@ -258,9 +277,7 @@ export default function EmbyLibrary() {
               key={f}
               onClick={() => setActiveFilter(f)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                activeFilter === f
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+                activeFilter === f ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'
               }`}
             >
               {f}
@@ -269,8 +286,12 @@ export default function EmbyLibrary() {
         </div>
       </div>
 
-      {isLoading && !error ? (
+      {isLoading ? (
         <div className="space-y-8 px-4 sm:px-6">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground px-0 mb-2">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span>Loading library from {embyServer.server_name || 'Emby'}…</span>
+          </div>
           {[1, 2, 3].map(i => (
             <div key={i}>
               <Skeleton className="h-5 w-32 mb-3 bg-secondary" />
@@ -285,21 +306,16 @@ export default function EmbyLibrary() {
       ) : error ? (
         <div className="text-center py-16 px-6 space-y-3">
           <p className="text-destructive text-sm font-medium">Failed to load library</p>
-          <p className="text-muted-foreground text-xs max-w-sm mx-auto leading-relaxed font-mono bg-secondary rounded-lg px-3 py-2">{error.message}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-xs text-primary underline"
-          >
-            Retry
+          <p className="text-muted-foreground text-xs max-w-sm mx-auto leading-relaxed font-mono bg-secondary rounded-lg px-3 py-2 break-words">{error}</p>
+          <button onClick={retry} className="flex items-center gap-2 text-xs text-primary underline mx-auto">
+            <RefreshCw className="w-3 h-3" /> Retry
           </button>
         </div>
       ) : search.trim() ? (
         <div>
           <p className="text-xs text-muted-foreground px-4 sm:px-6 mb-3">{filtered.length} results for "{search}"</p>
           <div className="flex flex-wrap gap-3 px-4 sm:px-6">
-            {filtered.map(item => (
-              <MediaCard key={item.id} item={item} onPlay={setSelectedItem} />
-            ))}
+            {filtered.map(item => <MediaCard key={item.id} item={item} onPlay={setSelectedItem} />)}
           </div>
         </div>
       ) : (
@@ -311,19 +327,11 @@ export default function EmbyLibrary() {
       )}
 
       {selectedItem && (
-        <DetailOverlay
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onPlay={handlePlay}
-        />
+        <DetailOverlay item={selectedItem} onClose={() => setSelectedItem(null)} onPlay={handlePlay} />
       )}
 
       {playingItem && (
-        <EmbyVideoPlayer
-          item={playingItem}
-          server={embyServer}
-          onClose={() => setPlayingItem(null)}
-        />
+        <EmbyVideoPlayer item={playingItem} server={embyServer} onClose={() => setPlayingItem(null)} />
       )}
     </div>
   );
