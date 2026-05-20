@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Play, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
-import { fetchEmbyFullLibrary } from '@/lib/embyApi';
+import { scanState, runScan } from '@/lib/embyScanState';
 
 function EmbyCard({ item, onPlay }) {
   return (
@@ -58,31 +58,24 @@ function EmbyRow({ title, items, onPlay }) {
 
 export default function EmbyMediaRows() {
   const [playingItem, setPlayingItem] = useState(null);
+  const [scan, setScan] = useState({ ...scanState });
 
-  const { data: servers = [] } = useQuery({
-    queryKey: ['mediaServers'],
-    queryFn: () => base44.entities.MediaServer.list(),
-    staleTime: 60 * 1000,
-  });
+  useEffect(() => {
+    const listener = (state) => setScan({ ...state });
+    scanState.listeners.add(listener);
+    setScan({ ...scanState });
+    runScan();
+    return () => scanState.listeners.delete(listener);
+  }, []);
 
-  const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+  const library = scan.library;
+  const embyServer = scan.server;
+  const isFirstLoad = library.length === 0 && scan.loading;
 
-  const { data: library = [], isLoading } = useQuery({
-    queryKey: ['embyLiveLibrary', embyServer?.id],
-    enabled: !!embyServer,
-    staleTime: 5 * 60 * 1000,
-    queryFn: () => fetchEmbyFullLibrary(embyServer),
-  });
-
-  if (!embyServer) return null;
-
-  const movies = library.filter(i => i.type === 'Movie');
-  const shows = library.filter(i => i.type === 'Series');
-
-  if (isLoading) {
+  if (isFirstLoad) {
     return (
       <div className="space-y-6">
-        {[1, 2].map(i => (
+        {[1, 2, 3].map(i => (
           <div key={i}>
             <Skeleton className="h-5 w-28 mb-3 mx-4 sm:mx-6 bg-secondary" />
             <div className="flex gap-3 px-4 sm:px-6">
@@ -96,12 +89,32 @@ export default function EmbyMediaRows() {
     );
   }
 
+  if (!library.length) return null;
+
+  // Build rows: Movies, TV Shows, then one row per genre
+  const movies = library.filter(i => i.type === 'Movie');
+  const shows = library.filter(i => i.type === 'Series');
+
+  const genreMap = {};
+  library.forEach(item => {
+    item.genres?.forEach(g => {
+      if (!genreMap[g]) genreMap[g] = [];
+      genreMap[g].push(item);
+    });
+  });
+  const genreRows = Object.entries(genreMap)
+    .sort((a, b) => b[1].length - a[1].length)
+    .filter(([, items]) => items.length >= 3);
+
   return (
     <>
       <EmbyRow title="Movies" items={movies} onPlay={setPlayingItem} />
       <EmbyRow title="TV Shows" items={shows} onPlay={setPlayingItem} />
+      {genreRows.map(([genre, items]) => (
+        <EmbyRow key={genre} title={genre} items={items} onPlay={setPlayingItem} />
+      ))}
 
-      {playingItem && (
+      {playingItem && embyServer && (
         <EmbyVideoPlayer
           item={playingItem}
           server={embyServer}
