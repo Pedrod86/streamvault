@@ -5,7 +5,6 @@ import HeroBanner from '../components/media/HeroBanner';
 import MediaRow from '../components/media/MediaRow';
 import ServerStatusBar from '../components/server/ServerStatusBar';
 import PullToRefresh from '../components/layout/PullToRefresh';
-import StatsWidget from '../components/dashboard/StatsWidget';
 import SyncProgressBar from '../components/dashboard/SyncProgressBar';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
@@ -103,8 +102,6 @@ export default function Home() {
     <PullToRefresh onRefresh={handleRefresh}>
     <div>
       <HeroBanner featured={featured.length > 0 ? featured : recentlyAdded.slice(0, 5)} />
-
-      <StatsWidget />
 
       <SyncProgressBar />
 
