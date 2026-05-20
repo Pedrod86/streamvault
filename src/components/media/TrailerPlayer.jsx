@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ExoPlayer from './ExoPlayer.jsx';
+import ExoPlayer from '@/components/media/ExoPlayer.jsx';
 
 export default function TrailerPlayer({ media, onClose, startAt = 0, onProgress }) {
   const [trailerUrl, setTrailerUrl] = useState(null);
