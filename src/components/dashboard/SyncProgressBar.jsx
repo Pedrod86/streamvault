@@ -31,12 +31,15 @@ export default function SyncProgressBar() {
     const toastId = toast.loading('Syncing library…', { description: 'Connecting to your servers' });
 
     try {
-      const existing = await base44.entities.Media.list('-created_date', 2000);
+      // Load ALL existing media for deduplication
+      setLabel('Loading existing library…');
+      const existing = await base44.entities.Media.list('-created_date', 5000);
       const existingMap = new Map(existing.map(m => [m.title.toLowerCase().trim(), m]));
 
       let totalCreated = 0;
       let totalUpdated = 0;
-      let clientItems = []; // items from non-Emby servers
+      let clientItems = [];
+      const serverErrors = [];
 
       for (let si = 0; si < syncableServers.length; si++) {
         const server = syncableServers[si];
@@ -44,7 +47,6 @@ export default function SyncProgressBar() {
         setLabel(`Scanning ${serverLabel}…`);
         toast.loading(`Scanning ${serverLabel}…`, { id: toastId });
 
-        // Base progress range for this server's fetch phase: 0–50% split across servers
         const fetchBase = Math.round((si / syncableServers.length) * 50);
         const fetchTop  = Math.round(((si + 1) / syncableServers.length) * 50);
 
@@ -61,12 +63,17 @@ export default function SyncProgressBar() {
             clientItems = clientItems.concat(result);
           }
         } catch (e) {
-          console.warn(`Sync skipped server ${server.server_name}: ${e.message}`);
+          console.error(`Sync error for ${serverLabel}:`, e.message);
+          serverErrors.push(`${serverLabel}: ${e.message}`);
         }
         setProgress(fetchTop);
       }
 
-      // Handle client-side items (Plex, Jellyfin, Xtream)
+      // If ALL servers failed, surface the error
+      if (serverErrors.length === syncableServers.length && clientItems.length === 0) {
+        throw new Error(serverErrors.join('\n'));
+      }
+
       const newItems = [];
       const updatePromises = [];
       for (const item of clientItems) {
@@ -114,7 +121,9 @@ export default function SyncProgressBar() {
       const doneMsg = totalCreated > 0
         ? `${totalCreated} new item${totalCreated !== 1 ? 's' : ''} imported`
         : totalUpdated > 0 ? `${totalUpdated} items updated` : 'Library is up to date';
-      toast.success('Sync complete', { id: toastId, description: doneMsg });
+      const partialNote = serverErrors.length > 0 ? ` (${serverErrors.length} server${serverErrors.length > 1 ? 's' : ''} failed)` : '';
+      toast.success('Sync complete', { id: toastId, description: doneMsg + partialNote });
+      if (serverErrors.length > 0) console.error('Sync partial failures:', serverErrors.join('\n'));
       setTimeout(() => { setStatus('idle'); setProgress(0); }, 5000);
     } catch (err) {
       setStatus('error');
