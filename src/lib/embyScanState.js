@@ -33,6 +33,32 @@ function clearCache() {
   try { localStorage.removeItem(CACHE_KEY); } catch (_) {}
 }
 
+// ── Progress persistence (separate from library cache) ──────────────────────
+
+const PROGRESS_KEY = 'streamvault_emby_scan_progress';
+
+function saveProgress(startIndex, total, server) {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ startIndex, total, server, savedAt: Date.now() }));
+  } catch (_) {}
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    const age = Date.now() - (data.savedAt || 0);
+    // Progress is valid for 24 hours
+    if (age > 24 * 60 * 60 * 1000) return null;
+    return data;
+  } catch (_) { return null; }
+}
+
+function clearProgress() {
+  try { localStorage.removeItem(PROGRESS_KEY); } catch (_) {}
+}
+
 // ── Singleton state ──────────────────────────────────────────────────────────
 
 export const scanState = {
@@ -43,19 +69,32 @@ export const scanState = {
   done: false,
   loading: false,
   error: null,
-  fromCache: false,   // true when data was restored from localStorage
+  fromCache: false,
   listeners: new Set(),
 };
 
-// Restore from cache immediately (synchronous, before first render)
+// Restore progress from localStorage so we resume where we left off
+const savedProgress = loadProgress();
+if (savedProgress) {
+  scanState.startIndex = savedProgress.startIndex || 0;
+  scanState.total = savedProgress.total || 0;
+  scanState.server = savedProgress.server || null;
+  scanState.fromCache = scanState.startIndex > 0;
+  if (scanState.startIndex > 0 && scanState.total > 0 && scanState.startIndex >= scanState.total) {
+    scanState.done = true;
+  }
+}
+
+// Also restore library cache for in-memory display
 const cached = loadCache();
 if (cached) {
   scanState.library = cached.library;
-  scanState.server = cached.server;
-  scanState.total = cached.total;
-  scanState.startIndex = cached.library.length;
-  scanState.fromCache = true;
-  // If cache is fresh and we have all items, mark as done
+  if (!scanState.server && cached.server) scanState.server = cached.server;
+  if (!scanState.total && cached.total) scanState.total = cached.total;
+  // Keep startIndex from progress (more reliable) unless cache has more
+  if (cached.library.length > scanState.startIndex) {
+    scanState.startIndex = cached.library.length;
+  }
   if (!cached.stale && cached.library.length >= cached.total && cached.total > 0) {
     scanState.done = true;
   }
@@ -82,6 +121,8 @@ async function fetchPage() {
 
     if (!scanState.server && server) scanState.server = server;
     if (total) scanState.total = total;
+    // Persist progress immediately so a page reload resumes from here
+    saveProgress(scanState.startIndex, scanState.total, scanState.server);
 
     if (items?.length) {
       scanState.library = [...scanState.library, ...items];
@@ -112,6 +153,8 @@ async function fetchPage() {
     scanState.fromCache = false;
 
     saveCache(scanState);
+    // Keep progress updated with latest position
+    saveProgress(scanState.startIndex, scanState.total, scanState.server);
     notifyListeners();
 
     // Automatically fetch the next page after a short delay
@@ -134,6 +177,7 @@ export async function runScan() {
 
 export function resetScan() {
   clearCache();
+  clearProgress();
   scanState.library = [];
   scanState.server = null;
   scanState.startIndex = 0;
