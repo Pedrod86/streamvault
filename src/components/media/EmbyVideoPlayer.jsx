@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
+import dashjs from 'dashjs';
 import { X, Layers, Volume2, VolumeX, Maximize, Subtitles, ChevronDown } from 'lucide-react';
 import PlayerPicker, { PLAYERS } from './PlayerPicker';
 import ExternalPlayerView from './ExternalPlayerView';
@@ -7,6 +8,7 @@ import ExternalPlayerView from './ExternalPlayerView';
 export default function EmbyVideoPlayer({ item, server, onClose }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const dashRef = useRef(null);
   const [playerId, setPlayerId] = useState('direct'); // default: Direct Play
   const [showPicker, setShowPicker] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -22,6 +24,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const token = server?.api_token || '';
 
   const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3,ac3,eac3,flac,opus&SubtitleMethod=Encode&TranscodingMaxAudioChannels=2&RequireAvc=false&EnableAdaptiveBitrateStreaming=true&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10`;
+  const dashUrl = `${base}/Videos/${item.id}/master.mpd?api_key=${token}&VideoCodec=h264,hevc,av1&AudioCodec=aac,ac3,eac3,flac,opus&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&EnableAdaptiveBitrateStreaming=true`;
   const directUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true`;
 
   // Fetch subtitle streams from Emby MediaInfo
@@ -62,10 +65,24 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     if (!video) return;
 
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    if (dashRef.current) { dashRef.current.destroy(); dashRef.current = null; }
 
     if (playerId === 'direct') {
       video.src = directUrl;
       video.play().catch(() => {});
+      return;
+    }
+
+    // DASH mode
+    if (playerId === 'dash') {
+      const player = dashjs.MediaPlayer().create();
+      dashRef.current = player;
+      player.initialize(video, dashUrl, true);
+      player.on(dashjs.MediaPlayer.events.MANIFEST_LOADED, () => {
+        const tracks = player.getTracksFor('video');
+        const hdrTrack = tracks.find(t => t.bitrateList?.some(b => b.height >= 1080));
+        if (hdrTrack) player.setCurrentTrack(hdrTrack);
+      });
       return;
     }
 
@@ -93,8 +110,11 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
       video.play().catch(() => {});
     }
 
-    return () => { if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; } };
-  }, [playerId, hlsUrl, directUrl]);
+    return () => {
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      if (dashRef.current) { dashRef.current.destroy(); dashRef.current = null; }
+    };
+  }, [playerId, hlsUrl, dashUrl, directUrl]);
 
   // Sync volume to video element
   useEffect(() => {

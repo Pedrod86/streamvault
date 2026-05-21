@@ -21,6 +21,12 @@ export const PLAYERS = [
     icon: Zap,
   },
   {
+    id: 'dash',
+    label: 'DASH',
+    description: 'dash.js — MPEG-DASH adaptive streaming, good HDR10 support in-browser',
+    icon: Monitor,
+  },
+  {
     id: 'vlc',
     label: 'VLC',
     description: 'Open in VLC — supports HDR10+, all codecs (must be installed)',
@@ -71,7 +77,7 @@ export default function PlayerPicker({ current, onChange, onClose }) {
       </div>
       <div className="px-4 py-2.5 border-t border-white/10">
         <p className="text-[10px] text-white/30 leading-relaxed">
-          Direct Play recommended for most content. For HDR10+ use MPV or VLC. Browser HDR10+ tone-mapping is limited.
+          Direct Play recommended for most content. DASH for adaptive HDR10 in-browser. For HDR10+ use MPV or VLC.
         </p>
       </div>
     </div>
