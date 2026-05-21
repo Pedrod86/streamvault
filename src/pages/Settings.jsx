@@ -5,7 +5,8 @@ import { fetchServerLibrary } from '@/lib/serverSync';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Database } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 
@@ -337,6 +338,45 @@ export default function Settings() {
 
       {/* ── TVDB Bulk Enrich ── */}
       <TvdbEnrichSection />
+
+      {/* ── Quick Links ── */}
+      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="space-y-3 p-5 rounded-xl bg-card border border-border">
+        <div className="flex items-center gap-2 mb-1">
+          <Radio className="w-4 h-4 text-primary" />
+          <h2 className="font-heading font-semibold text-foreground">Tools & Connections</h2>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-2">Quick access to advanced tools and server management.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Link to="/stream-tester" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <FlaskConical className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Stream Tester</p>
+              <p className="text-[11px] text-muted-foreground">Test any stream URL</p>
+            </div>
+          </Link>
+          <Link to="/connect-server" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <Plug className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Connections</p>
+              <p className="text-[11px] text-muted-foreground">Add / manage servers</p>
+            </div>
+          </Link>
+          <Link to="/emby" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <Database className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Emby Library</p>
+              <p className="text-[11px] text-muted-foreground">Browse full library</p>
+            </div>
+          </Link>
+          <Link to="/sync-status" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <RefreshCw className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Sync Status</p>
+              <p className="text-[11px] text-muted-foreground">View sync logs</p>
+            </div>
+          </Link>
+        </div>
+      </motion.section>
 
       {/* ── Save ── */}
       <div>

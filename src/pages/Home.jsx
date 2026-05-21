@@ -23,11 +23,7 @@ const IS_KIDS = (m) =>
 
 const TABS = [
   { id: 'All', label: 'All' },
-  { id: 'Movies', label: 'Movies' },
-  { id: 'Shows', label: 'TV Shows' },
-  { id: 'Anime', label: 'Anime' },
-  { id: 'Kids', label: 'Kids' },
-  { id: 'Watchlist', label: 'Watchlist' },
+  { id: 'Watchlist', label: 'My List' },
 ];
 
 export default function Home() {
@@ -168,64 +164,6 @@ export default function Home() {
               <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
             ))}
           </>
-        )}
-
-        {activeTab === 'Movies' && (
-          <>
-            <MediaRow title="All Movies" items={movies} watchHistory={watchHistory} />
-            {Object.entries(genreMap).filter(([, items]) => items.some(i => i.media_type === 'movie')).slice(0, 5).map(([genre, items]) => (
-              <MediaRow key={genre} title={genre} items={items.filter(i => i.media_type === 'movie')} watchHistory={watchHistory} />
-            ))}
-          </>
-        )}
-
-        {activeTab === 'Shows' && (
-          <>
-            <MediaRow title="All TV Shows" items={shows} watchHistory={watchHistory} />
-            {Object.entries(genreMap).filter(([, items]) => items.some(i => i.media_type === 'tv_show')).slice(0, 5).map(([genre, items]) => (
-              <MediaRow key={genre} title={genre} items={items.filter(i => i.media_type === 'tv_show')} watchHistory={watchHistory} />
-            ))}
-          </>
-        )}
-
-        {activeTab === 'Anime' && (
-          visibleMedia.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              No anime found. Anime is auto-detected from genres during sync.
-            </div>
-          ) : (
-            <>
-              <MediaRow title="All Anime" items={visibleMedia} watchHistory={watchHistory} />
-              {Object.entries(
-                visibleMedia.reduce((acc, m) => {
-                  m.genre?.forEach(g => { if (!/^anime$/i.test(g)) { if (!acc[g]) acc[g] = []; acc[g].push(m); } });
-                  return acc;
-                }, {})
-              ).slice(0, 5).map(([genre, items]) => (
-                <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
-              ))}
-            </>
-          )
-        )}
-
-        {activeTab === 'Kids' && (
-          visibleMedia.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              No kids content found. Kids content is auto-detected from genres and ratings during sync.
-            </div>
-          ) : (
-            <>
-              <MediaRow title="All Kids" items={visibleMedia} watchHistory={watchHistory} />
-              {Object.entries(
-                visibleMedia.reduce((acc, m) => {
-                  m.genre?.forEach(g => { if (!acc[g]) acc[g] = []; acc[g].push(m); });
-                  return acc;
-                }, {})
-              ).slice(0, 5).map(([genre, items]) => (
-                <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
-              ))}
-            </>
-          )
         )}
 
         {activeTab === 'Watchlist' && (

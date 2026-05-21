@@ -166,13 +166,14 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
         </div>
       </div>
 
-      {/* Video */}
+      {/* Video — no native controls so our custom volume slider works on Android */}
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
-        controls={false}
         autoPlay
         playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
       />
 
       {/* Bottom controls */}
