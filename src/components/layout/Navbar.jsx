@@ -25,16 +25,9 @@ export default function Navbar() {
 
   const links = [
     { to: '/', label: 'Home', icon: Home },
-    { to: '/movies', label: 'Movies', icon: Film },
-    { to: '/shows', label: 'TV Shows', icon: Tv },
-    { to: '/emby', label: 'Emby', icon: Database },
+    { to: '/emby', label: 'Library', icon: Database },
     { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
-    { to: '/history', label: 'History', icon: History },
     { to: '/discover', label: 'Discover', icon: Compass },
-    { to: '/tv-guide', label: 'TV Guide', icon: LayoutGrid },
-    { to: '/free-streams', label: 'Free Streams', icon: Zap },
-    { to: '/connect-server', label: 'Servers', icon: Server },
-    { to: '/sync-status', label: 'Sync Status', icon: RefreshCw },
     { to: '/settings', label: 'Settings', icon: Settings },
   ];
 

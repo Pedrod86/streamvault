@@ -10,18 +10,12 @@ import { base44 } from '@/api/base44Client';
 const LOGO_URL = 'https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvault.png?rlkey=png0dj93b0c1m3ksls5t5b7wn&st=4nd7duli&dl=1';
 
 const LINKS = [
-  { to: '/',             label: 'Home',         icon: Home },
-  { to: '/search',       label: 'Search',       icon: Search },
-  { to: '/emby',         label: 'Emby Library', icon: Database },
-  { to: '/movies',       label: 'Movies',       icon: Film },
-  { to: '/shows',        label: 'TV Shows',     icon: Tv },
-  { to: '/watchlist',    label: 'My List',      icon: BookmarkPlus },
-  { to: '/history',      label: 'History',      icon: History },
-  { to: '/discover',     label: 'Discover',     icon: Compass },
-  { to: '/tv-guide',     label: 'TV Guide',     icon: LayoutGrid },
-  { to: '/free-streams', label: 'Free Streams', icon: Zap },
-  { to: '/connect-server', label: 'Servers',   icon: Server },
-  { to: '/settings',     label: 'Settings',     icon: Settings },
+  { to: '/',          label: 'Home',       icon: Home },
+  { to: '/search',    label: 'Search',     icon: Search },
+  { to: '/emby',      label: 'Library',    icon: Database },
+  { to: '/watchlist', label: 'My List',    icon: BookmarkPlus },
+  { to: '/discover',  label: 'Discover',   icon: Compass },
+  { to: '/settings',  label: 'Settings',   icon: Settings },
 ];
 
 export default function TvSidebar() {

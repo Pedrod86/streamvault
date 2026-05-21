@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Film, Tv, BookmarkPlus, Database } from 'lucide-react';
+import { Home, Database, BookmarkPlus, Search, Settings } from 'lucide-react';
 
 const TABS = [
   { to: '/', label: 'Home', icon: Home },
-  { to: '/movies', label: 'Movies', icon: Film },
-  { to: '/emby', label: 'Emby', icon: Database },
-  { to: '/shows', label: 'TV Shows', icon: Tv },
+  { to: '/emby', label: 'Library', icon: Database },
+  { to: '/search', label: 'Search', icon: Search },
   { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const TAB_PATHS = new Set(TABS.map(t => t.to));

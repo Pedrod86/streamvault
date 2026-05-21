@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Database } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Database, Zap, LayoutGrid, History } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 
@@ -347,6 +347,20 @@ export default function Settings() {
         </div>
         <p className="text-xs text-muted-foreground -mt-2">Quick access to advanced tools and server management.</p>
         <div className="grid grid-cols-2 gap-3">
+          <Link to="/free-streams" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <Zap className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Free Streams</p>
+              <p className="text-[11px] text-muted-foreground">Browse free content</p>
+            </div>
+          </Link>
+          <Link to="/tv-guide" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <LayoutGrid className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">TV Guide</p>
+              <p className="text-[11px] text-muted-foreground">Live TV schedule</p>
+            </div>
+          </Link>
           <Link to="/stream-tester" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
             <FlaskConical className="w-5 h-5 text-accent shrink-0" />
             <div>
@@ -361,18 +375,18 @@ export default function Settings() {
               <p className="text-[11px] text-muted-foreground">Add / manage servers</p>
             </div>
           </Link>
-          <Link to="/emby" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
-            <Database className="w-5 h-5 text-accent shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Emby Library</p>
-              <p className="text-[11px] text-muted-foreground">Browse full library</p>
-            </div>
-          </Link>
           <Link to="/sync-status" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
             <RefreshCw className="w-5 h-5 text-accent shrink-0" />
             <div>
               <p className="text-sm font-medium text-foreground">Sync Status</p>
               <p className="text-[11px] text-muted-foreground">View sync logs</p>
+            </div>
+          </Link>
+          <Link to="/history" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <History className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Watch History</p>
+              <p className="text-[11px] text-muted-foreground">Your viewing history</p>
             </div>
           </Link>
         </div>
