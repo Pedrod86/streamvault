@@ -1,9 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * Video stream proxy — pipes binary stream data to the browser.
- * Usage: POST { url: "http://xtream-server/live/user/pass/id.m3u8" }
- * Returns the raw stream with proper content-type headers.
+ * Video stream proxy — fetches a URL server-side and returns the content,
+ * bypassing browser CORS restrictions for IPTV/HLS streams.
+ * Usage: POST { url: "http://..." }
+ * Returns: { content: string, contentType: string } for playlists
+ *          or raw binary for segments
  */
 Deno.serve(async (req) => {
   try {
@@ -23,29 +25,28 @@ Deno.serve(async (req) => {
     });
 
     if (!upstream.ok) {
-      return new Response(`Upstream error: ${upstream.status}`, { status: 502 });
+      return Response.json({ error: `Upstream error: ${upstream.status}` }, { status: 502 });
     }
 
     const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    const isPlaylist = contentType.includes('mpegurl') || url.includes('.m3u8');
 
-    // If this is an m3u8 playlist, we need to rewrite segment URLs to go through this proxy
-    if (contentType.includes('mpegurl') || url.includes('.m3u8')) {
+    if (isPlaylist) {
       const text = await upstream.text();
-      // Return the playlist as-is — the client HLS player handles segment fetching
-      // but segments will also fail CORS. Return base info for client to decide.
-      return new Response(JSON.stringify({ type: 'm3u8', content: text, originalUrl: url }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return Response.json({ content: text, contentType: 'application/vnd.apple.mpegurl', originalUrl: url });
     }
 
-    return new Response(upstream.body, {
+    // Binary passthrough for TS segments
+    const buffer = await upstream.arrayBuffer();
+    return new Response(buffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-cache',
       },
     });
   } catch (error) {
-    return new Response(error.message, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 });

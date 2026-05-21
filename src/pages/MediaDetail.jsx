@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap } from 'lucide-react';
+import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap, Radio } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
@@ -14,6 +14,8 @@ import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
 import { fetchEmbyFullLibrary } from '../lib/embyApi';
+import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
+import IptvDetailPlayer from '../components/media/IptvDetailPlayer';
 
 export default function MediaDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -21,6 +23,8 @@ export default function MediaDetail() {
   const mediaId = window.location.pathname.split('/media/')[1];
   const queryClient = useQueryClient();
   const [showPlayer, setShowPlayer] = useState(false);
+  const [playerSource, setPlayerSource] = useState('emby'); // 'emby' | 'iptv'
+  const [showSourcePicker, setShowSourcePicker] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
   const [resumePrompt, setResumePrompt] = useState(false);
   const [startAt, setStartAt] = useState(0);
@@ -79,6 +83,7 @@ export default function MediaDetail() {
     staleTime: 60 * 1000,
   });
   const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+  const xtreamServer = servers.find(s => s.server_type === 'xtream' && s.is_active !== false);
 
   const { data: embyLibrary = [] } = useQuery({
     queryKey: ['embyLiveLibrary', embyServer?.id],
@@ -91,6 +96,19 @@ export default function MediaDetail() {
   const embyItem = media ? embyLibrary.find(
     e => e.title.toLowerCase().trim() === media.title.toLowerCase().trim()
   ) : null;
+
+  // Try to find a matching VOD in IPTV by title
+  const { data: iptvVod = null } = useQuery({
+    queryKey: ['iptvVodMatch', xtreamServer?.id, media?.title],
+    enabled: !!xtreamServer && !!media,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const streams = await getVodStreams(xtreamServer);
+      if (!streams) return null;
+      const q = media.title.toLowerCase().trim();
+      return streams.find(s => s.name?.toLowerCase().trim() === q) || null;
+    },
+  });
 
   const isInWatchlist = watchlist.some(w => w.media_id === mediaId);
 
@@ -130,8 +148,26 @@ export default function MediaDetail() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
   });
 
-  const handlePlay = () => {
-    if (media?.video_url && historyEntry?.progress_seconds > 30) {
+  const handlePlay = (source = null) => {
+    if (source) {
+      setPlayerSource(source);
+      setShowSourcePicker(false);
+      if (historyEntry?.progress_seconds > 30) {
+        setResumePrompt(true);
+      } else {
+        setStartAt(0);
+        setShowPlayer(true);
+      }
+      return;
+    }
+    // Show picker if multiple sources available
+    if (embyItem && iptvVod) {
+      setShowSourcePicker(true);
+      return;
+    }
+    // Single source
+    setPlayerSource(embyItem ? 'emby' : 'iptv');
+    if (historyEntry?.progress_seconds > 30) {
       setResumePrompt(true);
     } else {
       setStartAt(0);
@@ -187,16 +223,68 @@ export default function MediaDetail() {
           </Button>
         </div>
 
-        {/* Video player — prefer Emby if item matched, else TrailerPlayer */}
-        {showPlayer && embyItem && embyServer ? (
-          <EmbyVideoPlayer
-            item={embyItem}
-            server={embyServer}
+        {/* Video player */}
+        {showPlayer && playerSource === 'emby' && embyItem && embyServer ? (
+          <EmbyVideoPlayer item={embyItem} server={embyServer} onClose={() => setShowPlayer(false)} />
+        ) : showPlayer && playerSource === 'iptv' && iptvVod && xtreamServer ? (
+          <IptvDetailPlayer
+            url={getVodStreamUrl(xtreamServer, iptvVod.stream_id, iptvVod.container_extension || 'mp4')}
+            title={media.title}
             onClose={() => setShowPlayer(false)}
           />
         ) : showPlayer ? (
           <TrailerPlayer media={media} startAt={startAt} onClose={() => setShowPlayer(false)} onProgress={(p) => saveProgress.mutate(p)} />
         ) : null}
+
+        {/* Source picker */}
+        <AnimatePresence>
+          {showSourcePicker && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
+              onClick={() => setShowSourcePicker(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="font-heading font-bold text-lg text-foreground mb-1 text-center">Choose Source</h3>
+                <p className="text-muted-foreground text-sm mb-5 text-center">Where would you like to play from?</p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => handlePlay('emby')}
+                    className="flex items-center gap-3 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl px-4 py-3 transition-colors text-left"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                      <Tv className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">Play with Emby</p>
+                      <p className="text-muted-foreground text-xs">Stream from your Emby server</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handlePlay('iptv')}
+                    className="flex items-center gap-3 bg-secondary hover:bg-secondary/80 border border-border rounded-xl px-4 py-3 transition-colors text-left"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                      <Radio className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">Play with IPTV</p>
+                      <p className="text-muted-foreground text-xs">Stream from your IPTV provider</p>
+                    </div>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Resume prompt */}
         <AnimatePresence>
@@ -320,7 +408,7 @@ export default function MediaDetail() {
                 onClick={handlePlay}
               >
                 <Play className="w-4 h-4 fill-current" />
-                {embyItem ? 'Play via Emby' : media.video_url ? 'Play' : 'Watch Trailer'}
+                {embyItem && iptvVod ? 'Play…' : embyItem ? 'Play with Emby' : iptvVod ? 'Play with IPTV' : media.video_url ? 'Play' : 'Watch Trailer'}
               </Button>
               <Button
                 variant="outline"

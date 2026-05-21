@@ -372,7 +372,7 @@ export default function IPTV() {
 function IptvPlayer({ url, title, onClose }) {
   const videoRef = React.useRef(null);
   const hlsRef = React.useRef(null);
-  const [playerId, setPlayerId] = React.useState('mpv');
+  const [playerId, setPlayerId] = React.useState('hls');
   const [showPicker, setShowPicker] = React.useState(false);
 
   const IPTV_PLAYERS = [
@@ -389,26 +389,78 @@ function IptvPlayer({ url, title, onClose }) {
     vlc: `vlc://${url}`,
   };
 
-  // Browser-side HLS/direct playback
+  // Browser-side HLS/direct playback — all IPTV streams go through backend proxy to avoid CORS
   React.useEffect(() => {
     if (isExternal) return;
     const video = videoRef.current;
     if (!video) return;
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
 
-    if (playerId === 'hls' && Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: false, lowLatencyMode: true });
+    async function startHls() {
+      if (!Hls.isSupported()) {
+        video.src = url;
+        video.play().catch(() => {});
+        return;
+      }
+
+      // Fetch the m3u8 through the backend proxy to bypass CORS
+      let playlistText = null;
+      try {
+        const res = await base44.functions.invoke('streamProxy', { url });
+        playlistText = res?.data?.content;
+      } catch (_) {}
+
+      if (!playlistText) {
+        // Fallback: try direct
+        video.src = url;
+        video.play().catch(() => {});
+        return;
+      }
+
+      // Rewrite segment lines to go through the proxy
+      const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+      const rewritten = playlistText.split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return line;
+        const absUrl = trimmed.startsWith('http') ? trimmed : baseUrl + trimmed;
+        // Keep as a special marker so our custom loader can pick it up
+        return `proxy::${absUrl}`;
+      }).join('\n');
+
+      // Custom hls.js loader that intercepts proxy:: URLs
+      const defaultLoader = Hls.DefaultConfig.loader;
+      class ProxyLoader extends defaultLoader {
+        load(context, config, callbacks) {
+          if (context.url.startsWith('proxy::')) {
+            const realUrl = context.url.slice(7);
+            base44.functions.invoke('streamProxy', { url: realUrl }).then(res => {
+              const content = res?.data?.content;
+              if (content) {
+                callbacks.onSuccess({ data: content, url: context.url }, { code: 200, text: '' }, context);
+              } else {
+                callbacks.onError({ code: 0, text: 'proxy error' }, context, null);
+              }
+            }).catch(() => callbacks.onError({ code: 0, text: 'proxy error' }, context, null));
+          } else {
+            super.load(context, config, callbacks);
+          }
+        }
+      }
+
+      const blob = new Blob([rewritten], { type: 'application/vnd.apple.mpegurl' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const hls = new Hls({ enableWorker: false, lowLatencyMode: true, loader: ProxyLoader });
       hlsRef.current = hls;
-      hls.loadSource(url);
+      hls.loadSource(blobUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
       hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data.fatal) { hls.destroy(); hlsRef.current = null; video.src = url; video.play().catch(() => {}); }
+        if (data.fatal) { hls.destroy(); hlsRef.current = null; }
       });
-    } else {
-      video.src = url;
-      video.play().catch(() => {});
     }
+
+    startHls();
     return () => { if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; } };
   }, [url, playerId, isExternal]);
 
