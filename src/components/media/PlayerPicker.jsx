@@ -3,8 +3,14 @@ import { Monitor, Tv2, ExternalLink, Check, Zap } from 'lucide-react';
 
 export const PLAYERS = [
   {
+    id: 'mpv',
+    label: 'MPV',
+    description: 'Open in MPV media player — supports all codecs (must be installed)',
+    icon: ExternalLink,
+  },
+  {
     id: 'hls',
-    label: 'HLS (Recommended)',
+    label: 'HLS',
     description: 'hls.js — adaptive bitrate, HEVC where browser supports it',
     icon: Tv2,
   },

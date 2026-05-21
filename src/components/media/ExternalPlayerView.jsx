@@ -9,6 +9,7 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
   const encodedUrl = encodeURIComponent(streamUrl);
 
   const schemeMap = {
+    mpv: `mpv://${streamUrl}`,
     vlc: `vlc://${streamUrl}`,
     infuse: `infuse://x-callback-url/play?url=${encodedUrl}`,
     mx: `intent:${streamUrl}#Intent;package=com.mxtech.videoplayer.ad;end`,

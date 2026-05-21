@@ -7,7 +7,7 @@ import ExternalPlayerView from './ExternalPlayerView';
 export default function EmbyVideoPlayer({ item, server, onClose }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
-  const [playerId, setPlayerId] = useState('direct'); // default: direct play
+  const [playerId, setPlayerId] = useState('mpv'); // default: MPV
   const [showPicker, setShowPicker] = useState(false);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
@@ -57,7 +57,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
 
   // Load video source
   useEffect(() => {
-    if (['vlc', 'infuse', 'mx'].includes(playerId)) return;
+    if (['mpv', 'vlc', 'infuse', 'mx'].includes(playerId)) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -114,7 +114,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     return () => clearTimeout(hideTimer.current);
   }, [showControls]);
 
-  if (['vlc', 'infuse', 'mx'].includes(playerId)) {
+  if (['mpv', 'vlc', 'infuse', 'mx'].includes(playerId)) {
     return (
       <ExternalPlayerView
         item={item}
