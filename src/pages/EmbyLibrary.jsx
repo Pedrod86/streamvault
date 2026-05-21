@@ -63,6 +63,12 @@ export default function EmbyLibrary() {
     const listener = (state) => setScan({ ...state });
     scanState.listeners.add(listener);
     setScan({ ...scanState });
+
+    // If cache was loaded but scan isn't complete, continue fetching in background
+    if (!scanState.done && !scanState.loading) {
+      runScan();
+    }
+
     return () => { scanState.listeners.delete(listener); };
   }, []);
 
@@ -163,16 +169,22 @@ export default function EmbyLibrary() {
             <h1 className="font-heading font-bold text-lg text-foreground">
               {embyServer?.server_name || 'Emby Library'}
             </h1>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="text-xs text-muted-foreground">
                 {library.length.toLocaleString()}{totalKnown > 0 ? ` / ${totalKnown.toLocaleString()}` : ''} items
               </p>
+              {scan.fromCache && !scan.loading && !scan.done && (
+                <span className="text-[10px] text-accent/70 bg-accent/10 px-1.5 py-0.5 rounded-full">cached · syncing…</span>
+              )}
+              {scan.fromCache && scan.done && (
+                <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-full">cached</span>
+              )}
               {scan.loading && (
                 <span className="flex items-center gap-1 text-[10px] text-accent">
-                  <Loader2 className="w-3 h-3 animate-spin" /> loading…
+                  <Loader2 className="w-3 h-3 animate-spin" /> syncing…
                 </span>
               )}
-              {scan.done && (
+              {scan.done && !scan.fromCache && (
                 <span className="text-[10px] text-green-400">✓ all loaded</span>
               )}
             </div>
