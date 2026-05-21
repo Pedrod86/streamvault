@@ -6,11 +6,13 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
   const base = server.server_url.replace(/\/$/, '');
   const token = server.api_token;
   const streamUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true`;
-  const encodedUrl = encodeURIComponent(streamUrl);
+  // HDR10+ passthrough: request 10-bit HLS with video stream copy for MPV/VLC
+  const hdrStreamUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=hevc,av1,h264&AudioCodec=aac,ac3,eac3,flac,opus&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&SubtitleMethod=Encode&EnableAdaptiveBitrateStreaming=true`;
+  const encodedUrl = encodeURIComponent(hdrStreamUrl);
 
   const schemeMap = {
-    mpv: `mpv://${streamUrl}`,
-    vlc: `vlc://${streamUrl}`,
+    mpv: `mpv://${hdrStreamUrl}`,
+    vlc: `vlc://${hdrStreamUrl}`,
     infuse: `infuse://x-callback-url/play?url=${encodedUrl}`,
     mx: `intent:${streamUrl}#Intent;package=com.mxtech.videoplayer.ad;end`,
   };
@@ -37,7 +39,7 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
       <div className="text-center space-y-2 max-w-sm">
         <h2 className="text-white text-xl font-bold">{item.title}</h2>
         <p className="text-white/60 text-sm">Ready to open in <span className="text-primary font-semibold">{playerLabel}</span></p>
-        <p className="text-white/30 text-xs mt-2 break-all">{streamUrl}</p>
+        <p className="text-white/30 text-xs mt-2 break-all">{['mpv','vlc'].includes(playerId) ? hdrStreamUrl : streamUrl}</p>
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <a
@@ -47,7 +49,7 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
           <ExternalLink className="w-4 h-4" /> Open in {playerLabel}
         </a>
         <button
-          onClick={() => navigator.clipboard.writeText(streamUrl)}
+          onClick={() => navigator.clipboard.writeText(['mpv','vlc'].includes(playerId) ? hdrStreamUrl : streamUrl)}
           className="w-full py-3 rounded-xl bg-white/10 text-white font-medium text-sm"
         >
           Copy Stream URL
