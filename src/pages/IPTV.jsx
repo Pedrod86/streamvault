@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Radio, Search, Play, Tv, Film, Star, X, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
+import Hls from 'hls.js';
 import {
   getLiveStreams, getLiveCategories,
   getVodStreams, getVodCategories,
   getSeriesStreams, getSeriesCategories,
   getLiveStreamUrl, getVodStreamUrl,
 } from '@/lib/xtreamApi';
-import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 
 const TABS = [
   { id: 'live', label: 'Live TV', icon: Radio },
@@ -372,6 +370,36 @@ export default function IPTV() {
 }
 
 function IptvPlayer({ url, title, onClose }) {
+  const videoRef = React.useRef(null);
+  const hlsRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !url) return;
+    if (Hls.isSupported()) {
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+      hlsRef.current = hls;
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (data.fatal) {
+          hls.destroy();
+          hlsRef.current = null;
+          video.src = url;
+          video.play().catch(() => {});
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+      video.play().catch(() => {});
+    } else {
+      video.src = url;
+      video.play().catch(() => {});
+    }
+    return () => { if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; } };
+  }, [url]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
@@ -382,12 +410,13 @@ function IptvPlayer({ url, title, onClose }) {
         <div className="w-8" />
       </div>
       <video
-        src={url}
+        ref={videoRef}
         className="w-full h-full object-contain"
         autoPlay
         controls
         playsInline
         webkit-playsinline="true"
+        x5-playsinline="true"
       />
     </div>
   );

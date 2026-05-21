@@ -10,6 +10,7 @@ import LibraryCategories from '../components/dashboard/LibraryCategories';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import EmbyMediaRows from '../components/media/EmbyMediaRows';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
+import HomeLiveTV from '../components/media/HomeLiveTV';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const IS_ANIME = (m) =>
@@ -142,6 +143,7 @@ export default function Home() {
 
         {activeTab === 'All' && (
           <>
+            <HomeLiveTV />
             <EmbyContinueWatching />
             <EmbyRecentlyAdded />
             <EmbyMediaRows />
