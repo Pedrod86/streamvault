@@ -65,9 +65,9 @@ function notifyListeners() {
   scanState.listeners.forEach(fn => fn({ ...scanState }));
 }
 
-// ── Load one page of results ─────────────────────────────────────────────────
+// ── Load one page and automatically continue until done ──────────────────────
 
-export async function runScan() {
+async function fetchPage() {
   if (scanState.loading || scanState.done) return;
 
   scanState.loading = true;
@@ -92,15 +92,23 @@ export async function runScan() {
     scanState.loading = false;
     scanState.fromCache = false;
 
-    // Persist to localStorage after every page
     saveCache(scanState);
-
     notifyListeners();
+
+    // Automatically fetch the next page after a short delay
+    if (!scanState.done) {
+      setTimeout(() => fetchPage(), 300);
+    }
   } catch (err) {
     scanState.error = err.message || 'Failed to load library';
     scanState.loading = false;
     notifyListeners();
   }
+}
+
+export async function runScan() {
+  if (scanState.loading || scanState.done) return;
+  fetchPage();
 }
 
 // ── Full refresh (clears cache + restarts scan) ──────────────────────────────
