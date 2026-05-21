@@ -1,18 +1,18 @@
 import React from 'react';
-import { Monitor, Tv2, ExternalLink, Check } from 'lucide-react';
+import { Monitor, Tv2, ExternalLink, Check, Zap } from 'lucide-react';
 
 export const PLAYERS = [
   {
-    id: 'native',
-    label: 'Built-in Player',
-    description: 'Browser HTML5 video — best for most content',
-    icon: Monitor,
+    id: 'hls',
+    label: 'HLS (Recommended)',
+    description: 'hls.js — adaptive bitrate, HEVC where browser supports it',
+    icon: Tv2,
   },
   {
-    id: 'hls',
-    label: 'HLS Stream',
-    description: 'Force HLS transcoding — fixes most playback errors',
-    icon: Tv2,
+    id: 'direct',
+    label: 'Direct Play',
+    description: 'Native browser decode — best for HEVC on Safari / Edge',
+    icon: Zap,
   },
   {
     id: 'vlc',
@@ -65,7 +65,7 @@ export default function PlayerPicker({ current, onChange, onClose }) {
       </div>
       <div className="px-4 py-2.5 border-t border-white/10">
         <p className="text-[10px] text-white/30 leading-relaxed">
-          If playback fails, try HLS Stream. For external players, VLC / Infuse must be installed on your device.
+          HLS recommended for most content. Use Direct Play for HEVC on Safari/Edge. External players support all codecs.
         </p>
       </div>
     </div>
