@@ -5,14 +5,10 @@ import { Play, Star, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
-import { fetchEmbyRecentlyAdded } from '@/lib/embyApi';
 
 function RecentCard({ item, onPlay }) {
   return (
-    <div
-      className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group"
-      onClick={() => onPlay(item)}
-    >
+    <div className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group" onClick={() => onPlay(item)}>
       <div className="relative rounded-xl overflow-hidden bg-secondary aspect-[2/3] mb-2">
         {item.posterUrl ? (
           <img
@@ -56,49 +52,46 @@ function RecentCard({ item, onPlay }) {
 export default function EmbyRecentlyAdded() {
   const [playingItem, setPlayingItem] = useState(null);
 
-  const { data: servers = [] } = useQuery({
-    queryKey: ['mediaServers'],
-    queryFn: () => base44.entities.MediaServer.list(),
-    staleTime: 60 * 1000,
-  });
-
-  const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
-
-  const { data: items = [], isLoading, error } = useQuery({
-    queryKey: ['embyRecentlyAdded', embyServer?.id],
-    enabled: !!embyServer,
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['embyRecentlyAdded'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('embyRecentlyAdded', {});
+      if (res.data?.error) throw new Error(res.data.error);
+      return res.data;
+    },
     staleTime: 5 * 60 * 1000,
-    queryFn: () => fetchEmbyRecentlyAdded(embyServer),
   });
 
-  if (!embyServer || error || (!isLoading && items.length === 0)) return null;
+  const items = data?.items || [];
+  const embyServer = data?.server;
+
+  if (error || (!isLoading && items.length === 0)) return null;
 
   return (
     <div className="mb-2">
       <div className="flex items-center gap-2 px-4 sm:px-6 mb-3">
         <Sparkles className="w-4 h-4 text-accent" />
         <h2 className="font-heading font-bold text-base text-foreground">Recently Added</h2>
-        <span className="text-xs text-muted-foreground ml-1">from {embyServer.server_name || 'Emby'}</span>
+        {embyServer?.server_name && (
+          <span className="text-xs text-muted-foreground ml-1">from {embyServer.server_name}</span>
+        )}
       </div>
 
       {isLoading ? (
         <div className="flex gap-3 px-4 sm:px-6">
-          {[1,2,3,4,5].map(i => (
+          {[1, 2, 3, 4, 5].map(i => (
             <Skeleton key={i} className="w-[140px] h-[210px] rounded-xl bg-secondary shrink-0" />
           ))}
         </div>
       ) : (
-        <div
-          className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2"
-          style={{ scrollbarWidth: 'none' }}
-        >
+        <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
           {items.map(item => (
             <RecentCard key={item.id} item={item} onPlay={setPlayingItem} />
           ))}
         </div>
       )}
 
-      {playingItem && (
+      {playingItem && embyServer && (
         <EmbyVideoPlayer
           item={playingItem}
           server={embyServer}
