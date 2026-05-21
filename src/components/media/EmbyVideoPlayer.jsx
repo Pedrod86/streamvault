@@ -21,7 +21,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const base = server?.server_url?.replace(/\/$/, '') || '';
   const token = server?.api_token || '';
 
-  const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3,ac3,eac3,flac,opus&SubtitleMethod=Encode&TranscodingMaxAudioChannels=2&RequireAvc=false&EnableAdaptiveBitrateStreaming=true`;
+  const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3,ac3,eac3,flac,opus&SubtitleMethod=Encode&TranscodingMaxAudioChannels=2&RequireAvc=false&EnableAdaptiveBitrateStreaming=true&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10`;
   const directUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true`;
 
   // Fetch subtitle streams from Emby MediaInfo
@@ -78,8 +78,10 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
       hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
       hls.on(Hls.Events.FRAG_PARSED, (_e, data) => {
         const codec = data?.frag?.levelCodec || '';
-        if (codec.includes('hev') || codec.includes('hvc')) setCodecLabel('HEVC');
-        else if (codec.includes('av01')) setCodecLabel('AV1');
+        const level = hls.levels?.[hls.currentLevel];
+        const isHdr = level?.videoRange === 'PQ' || level?.videoRange === 'HLG';
+        if (codec.includes('hev') || codec.includes('hvc')) setCodecLabel(isHdr ? 'HEVC HDR10+' : 'HEVC');
+        else if (codec.includes('av01')) setCodecLabel(isHdr ? 'AV1 HDR10+' : 'AV1');
         else if (codec.includes('vp09')) setCodecLabel('VP9');
         else if (codec.includes('avc') || codec.includes('h264')) setCodecLabel('H264');
       });
