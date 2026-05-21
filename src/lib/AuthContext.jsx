@@ -61,12 +61,14 @@ export const AuthProvider = ({ children }) => {
           }
         } else if (appError.status === 403) {
           setAuthError({ type: 'auth_required', message: 'Authentication required' });
-        } else {
+        } else if (appError.status >= 400 && appError.status < 500) {
+          // Only treat explicit HTTP client errors as unknown errors
           setAuthError({
             type: 'unknown',
             message: appError.message || 'Failed to load app'
           });
         }
+        // Network errors (no status) — silently continue, don't force logout
         setIsLoadingPublicSettings(false);
         setIsLoadingAuth(false);
       }
@@ -93,16 +95,14 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
-      setIsAuthenticated(false);
       setAuthChecked(true);
-      
-      // If user auth fails, it might be an expired token
+
+      // Only treat explicit auth errors as logout triggers — not network failures
       if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+        setIsAuthenticated(false);
+        setAuthError({ type: 'auth_required', message: 'Authentication required' });
       }
+      // For network errors or unknown errors, leave auth state unchanged (don't log out)
     }
   };
 
