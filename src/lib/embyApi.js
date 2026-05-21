@@ -6,8 +6,19 @@ import { base44 } from '@/api/base44Client';
 
 export async function embyProxyFetch(url, headers = {}) {
   const res = await base44.functions.invoke('mediaProxy', { url, headers });
-  if (res.data?.error) throw new Error(res.data.error);
-  if (!res.data?.ok) throw new Error(`Server responded with HTTP ${res.data?.status}: ${JSON.stringify(res.data?.data)}`);
+  if (res.data?.error) throw new Error(`Proxy error: ${res.data.error}`);
+  if (!res.data?.ok) {
+    const status = res.data?.status;
+    const body = typeof res.data?.data === 'string' ? res.data.data.slice(0, 200) : JSON.stringify(res.data?.data);
+    if (status === 502 || status === 503 || status === 504 || status === 0) {
+      throw new Error(
+        `Cannot reach your Emby server (HTTP ${status || 'timeout'}). ` +
+        `Make sure the server URL is publicly accessible — local IPs (192.168.x.x, localhost) ` +
+        `cannot be reached by the proxy.`
+      );
+    }
+    throw new Error(`Emby returned HTTP ${status}: ${body}`);
+  }
   return res.data.data;
 }
 
