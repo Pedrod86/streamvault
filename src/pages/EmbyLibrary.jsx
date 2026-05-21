@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { scanState, runScan, resetScan } from '@/lib/embyScanState';
+import { scanState, resetScan, runScan } from '@/lib/embyScanState';
 
 function MediaCard({ item, onPlay }) {
   return (
@@ -123,9 +123,6 @@ export default function EmbyLibrary() {
     const listener = (state) => setScan({ ...state });
     scanState.listeners.add(listener);
     setScan({ ...scanState });
-
-    // Start scan if not already running / done
-    runScan();
 
     return () => { scanState.listeners.delete(listener); };
   }, []);

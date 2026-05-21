@@ -11,6 +11,7 @@ import TvSidebar from './TvSidebar';
 import PageTransition from './PageTransition';
 import StreamVaultLogo from '@/components/StreamVaultLogo';
 import { useTvDevice } from '@/hooks/useTvDevice';
+import { runScan } from '@/lib/embyScanState';
 
 const ROOT_TABS = new Set(['/', '/movies', '/emby', '/shows', '/watchlist']);
 
@@ -19,6 +20,9 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const isRootTab = ROOT_TABS.has(location.pathname);
   useAutoSync();
+
+  // Kick off Emby background scan once at app startup — survives all navigation
+  useEffect(() => { runScan(); }, []);
 
   // Restore saved theme from settings
   const { data: settingsList = [] } = useQuery({

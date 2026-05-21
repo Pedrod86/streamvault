@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Play, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
-import { scanState, runScan } from '@/lib/embyScanState';
+import { scanState } from '@/lib/embyScanState';
 
 function EmbyCard({ item, onPlay }) {
   return (
@@ -64,7 +64,6 @@ export default function EmbyMediaRows() {
     const listener = (state) => setScan({ ...state });
     scanState.listeners.add(listener);
     setScan({ ...scanState });
-    runScan();
     return () => scanState.listeners.delete(listener);
   }, []);
 
