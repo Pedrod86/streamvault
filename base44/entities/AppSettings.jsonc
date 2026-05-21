@@ -16,6 +16,11 @@
       "type": "number",
       "description": "Auto-sync interval in minutes (0 = disabled)",
       "default": 0
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description or notes for this settings configuration",
+      "maxLength": 1000
     }
   },
   "required": [],

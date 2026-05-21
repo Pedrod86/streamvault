@@ -23,6 +23,11 @@
       "type": "string",
       "format": "date-time",
       "description": "When the user last watched this"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this watch history entry",
+      "maxLength": 1000
     }
   },
   "required": [

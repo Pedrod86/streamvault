@@ -47,6 +47,11 @@
       "type": "string",
       "format": "date-time",
       "description": "When the sync started"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this sync run",
+      "maxLength": 1000
     }
   },
   "required": [

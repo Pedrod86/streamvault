@@ -5,6 +5,11 @@
     "media_id": {
       "type": "string",
       "description": "Reference to the media item"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this watchlist entry",
+      "maxLength": 1000
     }
   },
   "required": [

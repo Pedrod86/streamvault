@@ -58,6 +58,11 @@
     "is_active": {
       "type": "boolean",
       "default": true
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this media server connection",
+      "maxLength": 1000
     }
   },
   "required": [

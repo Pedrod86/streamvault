@@ -12,6 +12,11 @@
         "type": "string"
       },
       "description": "Array of media IDs in this collection"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of this collection",
+      "maxLength": 1000
     }
   },
   "required": [
