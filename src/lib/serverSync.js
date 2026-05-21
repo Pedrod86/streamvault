@@ -32,7 +32,16 @@ async function proxyFetch(url, headers = {}) {
 
   // Upstream returned a non-OK HTTP status
   if (!res.data.ok) {
-    throw new Error(`Server responded with HTTP ${res.data.status}`);
+    const status = res.data.status;
+    const body = typeof res.data?.data === 'string' ? res.data.data.slice(0, 300) : JSON.stringify(res.data?.data);
+    if (status === 502 || status === 503 || status === 504) {
+      throw new Error(
+        `Your Emby server returned HTTP ${status} (Bad Gateway / Unavailable). ` +
+        `This usually means a reverse proxy (nginx, Cloudflare, Caddy, etc.) in front of Emby is running but Emby itself is not. ` +
+        `Check that the Emby service is running on the host.`
+      );
+    }
+    throw new Error(`Server responded with HTTP ${status}: ${body}`);
   }
 
   return res.data.data;
