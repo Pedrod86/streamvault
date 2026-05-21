@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Play, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
-import { scanState } from '@/lib/embyScanState';
 
 function EmbyCard({ item, onPlay }) {
   return (
@@ -58,20 +57,23 @@ function EmbyRow({ title, items, onPlay }) {
 
 export default function EmbyMediaRows() {
   const [playingItem, setPlayingItem] = useState(null);
-  const [scan, setScan] = useState({ ...scanState });
 
-  useEffect(() => {
-    const listener = (state) => setScan({ ...state });
-    scanState.listeners.add(listener);
-    setScan({ ...scanState });
-    return () => scanState.listeners.delete(listener);
-  }, []);
+  const { data: servers = [] } = useQuery({
+    queryKey: ['mediaServers'],
+    queryFn: () => base44.entities.MediaServer.list('-created_date'),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const library = scan.library;
-  const embyServer = scan.server;
-  const isFirstLoad = library.length === 0 && scan.loading;
+  const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
 
-  if (isFirstLoad) {
+  const { data: library = [], isLoading } = useQuery({
+    queryKey: ['embyMedia'],
+    queryFn: () => base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 2000),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!embyServer,
+  });
+
+  if (isLoading) {
     return (
       <div className="space-y-6">
         {[1, 2, 3].map(i => (
@@ -90,12 +92,25 @@ export default function EmbyMediaRows() {
 
   if (!library.length) return null;
 
-  // Build rows: Movies, TV Shows, then one row per genre
-  const movies = library.filter(i => i.type === 'Movie');
-  const shows = library.filter(i => i.type === 'Series');
+  // Map Media entity shape to what EmbyCard expects
+  const mapped = library.map(m => ({
+    id: m.id,
+    title: m.title,
+    type: m.media_type === 'tv_show' ? 'Series' : 'Movie',
+    year: m.year,
+    rating: m.rating,
+    overview: m.description,
+    genres: m.genre || [],
+    posterUrl: m.poster_url,
+    backdropUrl: m.backdrop_url,
+    streamUrl: m.video_url,
+  }));
+
+  const movies = mapped.filter(i => i.type === 'Movie');
+  const shows = mapped.filter(i => i.type === 'Series');
 
   const genreMap = {};
-  library.forEach(item => {
+  mapped.forEach(item => {
     item.genres?.forEach(g => {
       if (!genreMap[g]) genreMap[g] = [];
       genreMap[g].push(item);
@@ -103,12 +118,13 @@ export default function EmbyMediaRows() {
   });
   const genreRows = Object.entries(genreMap)
     .sort((a, b) => b[1].length - a[1].length)
-    .filter(([, items]) => items.length >= 3);
+    .filter(([, items]) => items.length >= 3)
+    .slice(0, 6);
 
   return (
     <>
-      <EmbyRow title="Movies" items={movies} onPlay={setPlayingItem} />
-      <EmbyRow title="TV Shows" items={shows} onPlay={setPlayingItem} />
+      <EmbyRow title="Emby Movies" items={movies} onPlay={setPlayingItem} />
+      <EmbyRow title="Emby TV Shows" items={shows} onPlay={setPlayingItem} />
       {genreRows.map(([genre, items]) => (
         <EmbyRow key={genre} title={genre} items={items} onPlay={setPlayingItem} />
       ))}

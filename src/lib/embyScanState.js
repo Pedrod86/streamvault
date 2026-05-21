@@ -86,6 +86,25 @@ async function fetchPage() {
     if (items?.length) {
       scanState.library = [...scanState.library, ...items];
       scanState.startIndex += items.length;
+
+      // Persist this page to DB so content survives page refresh / other devices
+      try {
+        const dbItems = items.map(item => ({
+          title: item.title,
+          media_type: item.type === 'Series' ? 'tv_show' : 'movie',
+          description: item.overview || '',
+          year: item.year || undefined,
+          rating: item.rating || undefined,
+          duration_minutes: item.duration || undefined,
+          poster_url: item.posterUrl || undefined,
+          backdrop_url: item.backdropUrl || undefined,
+          video_url: item.streamUrl || undefined,
+          genre: item.genres || [],
+          tags: ['emby'],
+        }));
+        // Fire-and-forget — don't block the scan
+        base44.functions.invoke('embySync', { server: scanState.server, items: dbItems }).catch(() => {});
+      } catch (_) {}
     }
 
     scanState.done = !hasMore || !items?.length;
@@ -97,7 +116,7 @@ async function fetchPage() {
 
     // Automatically fetch the next page after a short delay
     if (!scanState.done) {
-      setTimeout(() => fetchPage(), 300);
+      setTimeout(() => fetchPage(), 500);
     }
   } catch (err) {
     scanState.error = err.message || 'Failed to load library';

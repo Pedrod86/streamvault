@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Database, Search, Play, Star, Clock, X, RefreshCw, Loader2, ChevronDown } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Database, Search, Play, Star, X, RefreshCw, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,8 +13,8 @@ function MediaCard({ item, onPlay }) {
   return (
     <div className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group" onClick={() => onPlay(item)}>
       <div className="relative rounded-xl overflow-hidden bg-secondary aspect-[2/3] mb-2">
-        {item.posterUrl ? (
-          <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+        {item.poster_url ? (
+          <img src={item.poster_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Play className="w-8 h-8 text-muted-foreground" />
@@ -29,7 +31,7 @@ function MediaCard({ item, onPlay }) {
             <span className="text-white text-[10px] font-medium">{item.rating.toFixed(1)}</span>
           </div>
         )}
-        {item.type === 'Series' && (
+        {item.media_type === 'tv_show' && (
           <div className="absolute top-2 right-2">
             <Badge className="text-[9px] px-1 py-0 bg-accent text-accent-foreground">TV</Badge>
           </div>
@@ -54,41 +56,44 @@ function MediaRow({ title, items, onPlay }) {
 }
 
 export default function EmbyLibrary() {
-  const [scan, setScan] = useState({ ...scanState });
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [playingItem, setPlayingItem] = useState(null);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [scanProgress, setScanProgress] = useState({ loading: scanState.loading, done: scanState.done, total: scanState.total, count: scanState.library.length });
 
+  // Subscribe to scan state for progress indicator only
   useEffect(() => {
-    const listener = (state) => setScan({ ...state });
+    const listener = (state) => {
+      setScanProgress({ loading: state.loading, done: state.done, total: state.total, count: state.library.length });
+      // Refresh DB query when a new page of items has been saved
+      if (!state.loading) queryClient.invalidateQueries({ queryKey: ['embyMedia'] });
+    };
     scanState.listeners.add(listener);
-    setScan({ ...scanState });
+    // Kick off scan if not already running/done
+    if (!scanState.loading && !scanState.done) runScan();
+    return () => scanState.listeners.delete(listener);
+  }, [queryClient]);
 
-    // If cache was loaded but scan isn't complete, continue fetching in background
-    if (!scanState.done && !scanState.loading) {
-      runScan();
-    }
+  const { data: servers = [] } = useQuery({
+    queryKey: ['mediaServers'],
+    queryFn: () => base44.entities.MediaServer.list('-created_date'),
+    staleTime: 5 * 60 * 1000,
+  });
+  const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
 
-    return () => { scanState.listeners.delete(listener); };
-  }, []);
-
-  const resetAndRescan = () => {
-    resetScan();
-    runScan();
-  };
-
-  const library = scan.library;
-  const embyServer = scan.server;
-  const isFirstLoad = library.length === 0 && scan.loading;
-  const hasMore = !scan.done && !scan.loading;
-  const totalKnown = scan.total || 0;
+  const { data: library = [], isLoading } = useQuery({
+    queryKey: ['embyMedia'],
+    queryFn: () => base44.entities.Media.filter({ tags: 'emby' }, 'title', 5000),
+    staleTime: 2 * 60 * 1000,
+  });
 
   const filters = ['All', 'Movies', 'TV Shows'];
 
   const filtered = useMemo(() => {
     let items = library;
-    if (activeFilter === 'Movies') items = items.filter(i => i.type === 'Movie');
-    if (activeFilter === 'TV Shows') items = items.filter(i => i.type === 'Series');
+    if (activeFilter === 'Movies') items = items.filter(i => i.media_type === 'movie');
+    if (activeFilter === 'TV Shows') items = items.filter(i => i.media_type === 'tv_show');
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(i => i.title.toLowerCase().includes(q));
@@ -98,11 +103,11 @@ export default function EmbyLibrary() {
 
   const sections = useMemo(() => {
     if (search.trim()) return null;
-    const movies = filtered.filter(i => i.type === 'Movie');
-    const shows = filtered.filter(i => i.type === 'Series');
+    const movies = filtered.filter(i => i.media_type === 'movie');
+    const shows = filtered.filter(i => i.media_type === 'tv_show');
     const genreMap = {};
     filtered.forEach(item => {
-      item.genres?.forEach(g => {
+      item.genre?.forEach(g => {
         if (!genreMap[g]) genreMap[g] = [];
         genreMap[g].push(item);
       });
@@ -115,7 +120,12 @@ export default function EmbyLibrary() {
     return rows;
   }, [filtered, activeFilter, search]);
 
-  if (isFirstLoad) {
+  const handleRescan = () => {
+    resetScan();
+    setTimeout(() => runScan(), 100);
+  };
+
+  if (isLoading && library.length === 0) {
     return (
       <div className="pt-20 pb-24">
         <div className="px-4 sm:px-6 pt-4 mb-6 flex items-center gap-3">
@@ -143,21 +153,6 @@ export default function EmbyLibrary() {
     );
   }
 
-  if (scan.error && library.length === 0) {
-    return (
-      <div className="pt-20 pb-24 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
-        <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
-          <Database className="w-8 h-8 text-destructive" />
-        </div>
-        <h2 className="font-heading font-bold text-xl text-foreground">Failed to load</h2>
-        <p className="text-sm text-muted-foreground max-w-sm font-mono bg-secondary rounded-lg px-3 py-2 break-words">{scan.error}</p>
-        <Button variant="outline" onClick={resetAndRescan} className="gap-2">
-          <RefreshCw className="w-4 h-4" /> Retry
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="pt-16 pb-24">
       <div className="px-4 sm:px-6 pt-4 mb-4">
@@ -171,25 +166,20 @@ export default function EmbyLibrary() {
             </h1>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-xs text-muted-foreground">
-                {library.length.toLocaleString()}{totalKnown > 0 ? ` / ${totalKnown.toLocaleString()}` : ''} items
+                {library.length.toLocaleString()} items
+                {scanProgress.total > 0 && !scanProgress.done && ` · scanning ${scanProgress.count} / ${scanProgress.total}`}
               </p>
-              {scan.fromCache && !scan.loading && !scan.done && (
-                <span className="text-[10px] text-accent/70 bg-accent/10 px-1.5 py-0.5 rounded-full">cached · syncing…</span>
-              )}
-              {scan.fromCache && scan.done && (
-                <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-full">cached</span>
-              )}
-              {scan.loading && (
+              {scanProgress.loading && (
                 <span className="flex items-center gap-1 text-[10px] text-accent">
                   <Loader2 className="w-3 h-3 animate-spin" /> syncing…
                 </span>
               )}
-              {scan.done && !scan.fromCache && (
-                <span className="text-[10px] text-green-400">✓ all loaded</span>
+              {scanProgress.done && (
+                <span className="text-[10px] text-green-400">✓ up to date</span>
               )}
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={resetAndRescan} className="gap-1.5 text-xs text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={handleRescan} className="gap-1.5 text-xs text-muted-foreground">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
         </div>
@@ -224,7 +214,24 @@ export default function EmbyLibrary() {
         </div>
       </div>
 
-      {search.trim() ? (
+      {library.length === 0 && !isLoading ? (
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center px-6">
+          <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
+            <Database className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h2 className="font-heading font-bold text-xl text-foreground">No Emby content yet</h2>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            {scanProgress.loading
+              ? `Scanning your Emby library… ${scanProgress.count} items loaded so far`
+              : 'Use "Sync All Libraries" on the Home page to import your Emby content.'}
+          </p>
+          {!scanProgress.loading && (
+            <Button variant="outline" onClick={handleRescan} className="gap-2">
+              <RefreshCw className="w-4 h-4" /> Start Scan
+            </Button>
+          )}
+        </div>
+      ) : search.trim() ? (
         <div>
           <p className="text-xs text-muted-foreground px-4 sm:px-6 mb-3">{filtered.length} results for "{search}"</p>
           <div className="flex flex-wrap gap-3 px-4 sm:px-6">
@@ -239,24 +246,12 @@ export default function EmbyLibrary() {
         </div>
       )}
 
-      {/* Load more button — only fetch next page when user asks */}
-      {!search.trim() && (hasMore || scan.loading) && (
-        <div className="flex justify-center px-4 py-6">
-          {scan.loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading more…
-            </div>
-          ) : (
-            <Button variant="outline" onClick={runScan} className="gap-2">
-              <ChevronDown className="w-4 h-4" />
-              Load more ({library.length.toLocaleString()} of {totalKnown.toLocaleString()})
-            </Button>
-          )}
-        </div>
-      )}
-
-      {playingItem && (
-        <EmbyVideoPlayer item={playingItem} server={embyServer} onClose={() => setPlayingItem(null)} />
+      {playingItem && embyServer && (
+        <EmbyVideoPlayer
+          item={{ ...playingItem, id: playingItem.id, streamUrl: playingItem.video_url }}
+          server={embyServer}
+          onClose={() => setPlayingItem(null)}
+        />
       )}
     </div>
   );
