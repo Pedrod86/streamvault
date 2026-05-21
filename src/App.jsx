@@ -34,24 +34,17 @@ import IPTV from './pages/IPTV';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-  const [timedOut, setTimedOut] = React.useState(false);
-
-  // Safety timeout — if loading hangs for >8s (e.g. Android TV WebView network issues), stop spinner and show login
-  React.useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 8000);
-    return () => clearTimeout(t);
-  }, []);
 
   // Handle auth_required in an effect to avoid calling navigate during render
   React.useEffect(() => {
-    if (authError?.type === 'auth_required' || timedOut) {
+    if (authError?.type === 'auth_required') {
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }
-  }, [authError, timedOut]);
+  }, [authError]);
 
-  if ((isLoadingPublicSettings || isLoadingAuth) && !timedOut) {
+  if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
