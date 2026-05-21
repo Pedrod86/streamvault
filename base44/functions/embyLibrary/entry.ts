@@ -25,15 +25,17 @@ function buildStreamUrl(base, itemId, token) {
 }
 
 async function resolveUserId(base, token) {
+  // Try /Users/Me first — works for non-admin tokens too
+  try {
+    const me = await doFetch(`${base}/Users/Me?api_key=${token}`);
+    if (me?.Id) return me.Id;
+  } catch (_) {}
+  // Fallback: list users (admin tokens only)
   try {
     const users = await doFetch(`${base}/Users?api_key=${token}`);
     const list = Array.isArray(users) ? users : (users?.Items || []);
     const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
     if (admin?.Id) return admin.Id;
-  } catch (_) {}
-  try {
-    const me = await doFetch(`${base}/Users/Me?api_key=${token}`);
-    if (me?.Id) return me.Id;
   } catch (_) {}
   throw new Error('Could not authenticate with Emby. Check your API token.');
 }
