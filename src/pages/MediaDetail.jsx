@@ -14,7 +14,7 @@ import VideoPlayer from '@/components/media/VideoPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
-import { fetchEmbyFullLibrary } from '../lib/embyApi';
+import { scanState } from '@/lib/embyScanState';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
 import IptvDetailPlayer from '../components/media/IptvDetailPlayer';
 
@@ -86,16 +86,9 @@ export default function MediaDetail() {
   const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
   const xtreamServer = servers.find(s => s.server_type === 'xtream' && s.is_active !== false);
 
-  const { data: embyLibrary = [] } = useQuery({
-    queryKey: ['embyLiveLibrary', embyServer?.id],
-    enabled: !!embyServer && !!media,
-    staleTime: 5 * 60 * 1000,
-    queryFn: () => fetchEmbyFullLibrary(embyServer),
-  });
-
-  // Match current media item to an Emby library item by title (case-insensitive)
-  const embyItem = media ? embyLibrary.find(
-    e => e.title.toLowerCase().trim() === media.title.toLowerCase().trim()
+  // Use the already-loaded in-memory Emby scan — no extra API call needed
+  const embyItem = media && embyServer ? scanState.library.find(
+    e => e.title?.toLowerCase().trim() === media.title?.toLowerCase().trim()
   ) : null;
 
   // Try to find a matching VOD in IPTV by title
