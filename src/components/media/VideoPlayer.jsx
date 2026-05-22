@@ -39,6 +39,7 @@ export default function VideoPlayer({ src, title, poster, onClose, onProgress, s
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [showVolume, setShowVolume] = useState(false);
   const isMobile = typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -428,15 +429,32 @@ export default function VideoPlayer({ src, title, poster, onClose, onProgress, s
               <Btn onClick={() => { skip(-10); flash('left'); }}><SkipBack className="w-4 h-4" /></Btn>
               <Btn onClick={() => { skip(10); flash('right'); }}><SkipForward className="w-4 h-4" /></Btn>
 
-              {/* Volume — slider on desktop, mute toggle only on mobile */}
-              <div className="flex items-center gap-1">
-                <Btn onClick={toggleMute}>
+              {/* Volume control */}
+              <div className="relative flex items-center gap-1">
+                <Btn onClick={() => isMobile ? setShowVolume(v => !v) : toggleMute}>
                   {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </Btn>
+                {/* Desktop: horizontal slider inline */}
                 {!isMobile && (
                   <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume}
-                    onChange={e => { const v = parseFloat(e.target.value); setVolume(v); if (v > 0) setMuted(false); }}
+                    onChange={e => { const v = parseFloat(e.target.value); setVolume(v); setMuted(v === 0); }}
                     className="w-16 sm:w-20 accent-primary cursor-pointer" />
+                )}
+                {/* Mobile: vertical popup slider */}
+                {isMobile && showVolume && (
+                  <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 bg-black/90 border border-white/20 rounded-2xl px-3 py-4 z-30">
+                    <span className="text-white/60 text-[10px]">{muted ? '0' : Math.round(volume * 100)}%</span>
+                    <input
+                      type="range" min={0} max={1} step={0.02}
+                      value={muted ? 0 : volume}
+                      onChange={(e) => { const v = parseFloat(e.target.value); setVolume(v); setMuted(v === 0); }}
+                      className="accent-primary cursor-pointer"
+                      style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '100px', width: '28px' }}
+                    />
+                    <button onClick={toggleMute} className="text-white/60 text-[10px] hover:text-white">
+                      {muted ? 'Unmute' : 'Mute'}
+                    </button>
+                  </div>
                 )}
               </div>
 
