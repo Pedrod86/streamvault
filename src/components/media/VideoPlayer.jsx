@@ -365,8 +365,8 @@ export default function VideoPlayer({ src, title, poster, onClose, onProgress, s
         </button>
       )}
 
-      {/* Controls overlay */}
-      <div className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Controls overlay — always visible when paused */}
+      <div className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 pt-safe-top pt-4 pb-10 bg-gradient-to-b from-black/80 to-transparent">

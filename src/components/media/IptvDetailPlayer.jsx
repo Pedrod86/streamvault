@@ -137,8 +137,8 @@ export default function IptvDetailPlayer({ url, title, onClose }) {
       onMouseMove={resetHideTimer}
       onTouchStart={resetHideTimer}
     >
-      {/* Top bar */}
-      <div className={`absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Top bar — always visible when paused */}
+      <div className={`absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <button onClick={onClose} className="text-white/80 hover:text-white p-1">
           <X className="w-6 h-6" />
         </button>
@@ -167,8 +167,8 @@ export default function IptvDetailPlayer({ url, title, onClose }) {
         onClick={togglePlay}
       />
 
-      {/* Bottom controls */}
-      <div className={`absolute bottom-0 left-0 right-0 z-10 px-4 pb-5 pt-10 bg-gradient-to-t from-black/90 to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Bottom controls — always visible when paused */}
+      <div className={`absolute bottom-0 left-0 right-0 z-10 px-4 pb-5 pt-10 bg-gradient-to-t from-black/90 to-transparent transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 
         {/* Seek bar */}
         <div className="relative h-1.5 rounded-full bg-white/20 cursor-pointer group mb-3">
@@ -199,7 +199,7 @@ export default function IptvDetailPlayer({ url, title, onClose }) {
           </button>
           <input type="range" min={0} max={1} step={0.02} value={muted ? 0 : volume}
             onChange={(e) => { const v = parseFloat(e.target.value); setVolume(v); if (v > 0) setMuted(false); }}
-            className="w-20 accent-primary cursor-pointer hidden sm:block" />
+            className="w-20 accent-primary cursor-pointer" />
 
           {/* Time */}
           <span className="text-white/70 text-xs font-mono tabular-nums ml-1">
