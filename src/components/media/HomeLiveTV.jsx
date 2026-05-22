@@ -129,37 +129,44 @@ export default function HomeLiveTV() {
 
   if (!xtreamServer) return null;
 
-  // Show first 20 channels
   const preview = streams.slice(0, 20);
+
+  const ukSports = streams.filter(item => {
+    const n = (item.name || '').toLowerCase();
+    return (
+      n.includes('sport') || n.includes('sky sport') || n.includes('bt sport') ||
+      n.includes('tnt sport') || n.includes('dazn') || n.includes('eurosport') ||
+      n.includes('premier league') || n.includes('football') || n.includes('cricket') ||
+      n.includes('golf') || n.includes('f1') || n.includes('motogp') || n.includes('boxing') ||
+      n.includes('rugby') || n.includes('tennis') || n.includes('racing') || n.includes('bein')
+    );
+  }).slice(0, 20);
+
+  const LoadingSkeleton = () => (
+    <div className="flex gap-3 px-4 sm:px-6">
+      {[1,2,3,4,5].map(i => (
+        <div key={i} className="shrink-0 w-[120px] sm:w-[140px]">
+          <div className="bg-secondary rounded-xl aspect-video mb-1.5 animate-pulse" />
+          <div className="h-3 bg-secondary rounded animate-pulse w-3/4" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <>
+      {/* Live TV row */}
       <div className="mt-6">
         <div className="flex items-center justify-between px-4 sm:px-6 mb-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             <h2 className="font-heading font-bold text-base text-foreground">Live TV</h2>
           </div>
-          <Link
-            to="/iptv"
-            className="flex items-center gap-0.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
-          >
+          <Link to="/iptv" className="flex items-center gap-0.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium">
             See all <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-
-        {loading && (
-          <div className="flex gap-3 px-4 sm:px-6">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="shrink-0 w-[120px] sm:w-[140px]">
-                <div className="bg-secondary rounded-xl aspect-video mb-1.5 animate-pulse" />
-                <div className="h-3 bg-secondary rounded animate-pulse w-3/4" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && preview.length > 0 && (
+        {loading ? <LoadingSkeleton /> : preview.length > 0 && (
           <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
             {preview.map(item => (
               <LiveChannelCard key={item.stream_id || item.num} item={item} onPlay={handlePlay} />
@@ -167,6 +174,28 @@ export default function HomeLiveTV() {
           </div>
         )}
       </div>
+
+      {/* UK Sports row */}
+      {(loading || ukSports.length > 0) && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between px-4 sm:px-6 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <h2 className="font-heading font-bold text-base text-foreground">UK Sports</h2>
+            </div>
+            <Link to="/iptv" className="flex items-center gap-0.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium">
+              See all <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          {loading ? <LoadingSkeleton /> : (
+            <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
+              {ukSports.map(item => (
+                <LiveChannelCard key={item.stream_id || item.num} item={item} onPlay={handlePlay} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {playing && (
         <IptvPlayerOverlay url={playing.url} title={playing.name} onClose={() => setPlaying(null)} />
