@@ -11,7 +11,9 @@ import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import EmbyMediaRows from '../components/media/EmbyMediaRows';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import HomeLiveTV from '../components/media/HomeLiveTV';
+import HomeOrderEditor, { loadHomeOrder, saveHomeOrder } from '../components/layout/HomeOrderEditor';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LayoutGrid } from 'lucide-react';
 
 const IS_ANIME = (m) =>
   m.tags?.some(t => /^anime$/.test(t)) ||
@@ -30,6 +32,13 @@ const TABS = [
 export default function Home() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('All');
+  const [showOrderEditor, setShowOrderEditor] = useState(false);
+  const [homeOrder, setHomeOrder] = useState(() => loadHomeOrder());
+
+  const handleOrderChange = (updated) => {
+    setHomeOrder(updated);
+    saveHomeOrder(updated);
+  };
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['media'] });
@@ -119,8 +128,8 @@ export default function Home() {
 
       <SyncProgressBar />
 
-      {/* Filter tabs */}
-      <div className="px-4 sm:px-6 mt-5 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+      {/* Filter tabs + arrange button */}
+      <div className="px-4 sm:px-6 mt-5 flex gap-2 overflow-x-auto items-center" style={{ scrollbarWidth: 'none' }}>
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -134,6 +143,13 @@ export default function Home() {
             {tab.label}
           </button>
         ))}
+        <button
+          onClick={() => setShowOrderEditor(true)}
+          className="shrink-0 ml-auto p-1.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          title="Arrange home screen"
+        >
+          <LayoutGrid className="w-4 h-4" />
+        </button>
       </div>
 
       <LibraryCategories allMedia={allMedia} />
@@ -141,32 +157,29 @@ export default function Home() {
       <div className="mt-6 space-y-2">
         <ServerStatusBar />
 
-        {activeTab === 'All' && (
-          <>
-            <HomeLiveTV />
-            <EmbyContinueWatching />
-            <EmbyRecentlyAdded />
-            <EmbyMediaRows />
-            {continueWatching.length > 0 && (
-              <MediaRow
-                title="Continue Watching"
-                items={continueWatching.map(c => c.media)}
-                watchHistory={watchHistory}
-                showProgress={true}
-              />
-            )}
-            <MediaRow title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} showProgress={true} />
-            {animeItems.length > 0 && (
-              <MediaRow title="Anime" items={animeItems} watchHistory={watchHistory} />
-            )}
-            {kidsItems.length > 0 && (
-              <MediaRow title="Kids" items={kidsItems} watchHistory={watchHistory} />
-            )}
-            {Object.entries(genreMap).slice(0, 4).map(([genre, items]) => (
-              <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
-            ))}
-          </>
-        )}
+        {activeTab === 'All' && homeOrder.filter(s => !s.hidden).map(section => {
+          switch (section.id) {
+            case 'live_tv':       return <HomeLiveTV key={section.id} />;
+            case 'continue_emby': return <EmbyContinueWatching key={section.id} />;
+            case 'recently_added': return <EmbyRecentlyAdded key={section.id} />;
+            case 'emby_rows':     return <EmbyMediaRows key={section.id} />;
+            case 'continue_watching':
+              return continueWatching.length > 0 ? (
+                <MediaRow key={section.id} title="Continue Watching" items={continueWatching.map(c => c.media)} watchHistory={watchHistory} showProgress={true} />
+              ) : null;
+            case 'local_recent':  return <MediaRow key={section.id} title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} showProgress={true} />;
+            case 'anime':         return animeItems.length > 0 ? <MediaRow key={section.id} title="Anime" items={animeItems} watchHistory={watchHistory} /> : null;
+            case 'kids':          return kidsItems.length > 0 ? <MediaRow key={section.id} title="Kids" items={kidsItems} watchHistory={watchHistory} /> : null;
+            case 'genres':        return (
+              <React.Fragment key={section.id}>
+                {Object.entries(genreMap).slice(0, 4).map(([genre, items]) => (
+                  <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
+                ))}
+              </React.Fragment>
+            );
+            default: return null;
+          }
+        })}
 
         {activeTab === 'Watchlist' && (
           visibleMedia.length === 0 ? (
@@ -179,6 +192,13 @@ export default function Home() {
         )}
       </div>
     </div>
+      {showOrderEditor && (
+        <HomeOrderEditor
+          sections={homeOrder}
+          onChange={handleOrderChange}
+          onClose={() => setShowOrderEditor(false)}
+        />
+      )}
     </PullToRefresh>
   );
 }
