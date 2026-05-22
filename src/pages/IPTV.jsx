@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Radio, Search, Play, Tv, Film, Star, X, Loader2, AlertCircle, ChevronDown, ChevronRight, Layers, ExternalLink as ExternalLinkIcon } from 'lucide-react';
+import { Radio, Search, Play, Tv, Film, Star, X, Loader2, AlertCircle, ChevronDown, ChevronRight, Layers, ExternalLink as ExternalLinkIcon, CalendarDays } from 'lucide-react';
+import EpgGuide from '@/components/iptv/EpgGuide';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
@@ -15,6 +16,7 @@ import {
 
 const TABS = [
   { id: 'live', label: 'Live TV', icon: Radio },
+  { id: 'epg', label: 'EPG Guide', icon: CalendarDays },
   { id: 'vod', label: 'Movies', icon: Film },
   { id: 'series', label: 'Series', icon: Tv },
 ];
@@ -269,6 +271,16 @@ export default function IPTV() {
         ))}
       </div>
 
+      {/* EPG tab renders its own UI */}
+      {tab === 'epg' && !xtreamServer && (
+        <div className="mx-4 sm:mx-6 flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-sm text-destructive">
+          <AlertCircle className="w-5 h-5 shrink-0" /><span>No IPTV server connected.</span>
+        </div>
+      )}
+
+      {tab !== 'epg' && (
+      <div>
+
       {/* Search */}
       <div className="px-4 sm:px-6 mb-4 relative">
         <Search className="absolute left-7 sm:left-9 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -359,6 +371,17 @@ export default function IPTV() {
             </>
           )}
         </div>
+      )}
+
+      </div>
+      )}{/* end tab !== epg */}
+
+      {/* EPG Guide tab */}
+      {tab === 'epg' && !loading && (
+        <EpgGuide server={xtreamServer} onPlayChannel={(ch) => {
+          const url = getLiveStreamUrl(xtreamServer, ch.stream_id, 'm3u8');
+          setPlaying({ url, name: ch.name, id: ch.stream_id });
+        }} />
       )}
 
       {/* Player — use a simple HTML5 video overlay for IPTV streams */}
