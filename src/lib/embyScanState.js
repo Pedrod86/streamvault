@@ -1,7 +1,7 @@
 import { base44 } from '@/api/base44Client';
 
 const CACHE_KEY = 'streamvault_emby_library';
-const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours — re-scan if older than this
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours — re-scan if older than this
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
 
@@ -127,25 +127,9 @@ async function fetchPage() {
     if (items?.length) {
       scanState.library = [...scanState.library, ...items];
       scanState.startIndex += items.length;
-
-      // Persist this page to DB so content survives page refresh / other devices
-      try {
-        const dbItems = items.map(item => ({
-          title: item.title,
-          media_type: item.type === 'Series' ? 'tv_show' : 'movie',
-          description: item.overview || '',
-          year: item.year || undefined,
-          rating: item.rating || undefined,
-          duration_minutes: item.duration || undefined,
-          poster_url: item.posterUrl || undefined,
-          backdrop_url: item.backdropUrl || undefined,
-          video_url: item.streamUrl || undefined,
-          genre: item.genres || [],
-          tags: ['emby'],
-        }));
-        // Fire-and-forget — don't block the scan
-        base44.functions.invoke('embySync', { server: scanState.server, items: dbItems }).catch(() => {});
-      } catch (_) {}
+      // NOTE: DB writes are handled by the manual Sync button (SyncProgressBar/embySync).
+      // This background scan is for in-memory display only — do NOT write to DB here
+      // to avoid hammering the Emby server and the database on every app load.
     }
 
     scanState.done = !hasMore || !items?.length;
