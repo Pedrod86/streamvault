@@ -89,35 +89,39 @@ function MediaCard({ item, onPlay, showRating }) {
 }
 
 function CategoryRow({ title, items, tab, onPlay }) {
-  const [expanded, setExpanded] = useState(false);
   if (!items.length) return null;
-  const shown = expanded ? items : items.slice(0, 12);
 
+  // Live TV: grid layout (like a channel grid)
+  if (tab === 'live') {
+    return (
+      <div className="mb-6">
+        <div className="flex items-center justify-between px-4 sm:px-6 mb-3">
+          <h2 className="font-heading font-bold text-sm text-foreground">{title}</h2>
+          <span className="text-xs text-muted-foreground">{items.length}</span>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 px-4 sm:px-6">
+          {items.map(item => (
+            <ChannelCard key={item.stream_id || item.num} item={item} onPlay={onPlay} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // VOD / Series: horizontal scroll row (same as Emby)
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between px-4 sm:px-6 mb-3">
-        <h2 className="font-heading font-bold text-sm text-foreground">{title}</h2>
+        <h2 className="font-heading font-bold text-base text-foreground">{title}</h2>
         <span className="text-xs text-muted-foreground">{items.length}</span>
       </div>
-      <div className={tab === 'live'
-        ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 px-4 sm:px-6'
-        : 'flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2'
-      } style={tab !== 'live' ? { scrollbarWidth: 'none' } : {}}>
-        {shown.map(item => tab === 'live'
-          ? <ChannelCard key={item.stream_id || item.num} item={item} onPlay={onPlay} />
-          : <div key={item.stream_id || item.series_id} className="shrink-0 w-[130px] sm:w-[150px]">
-              <MediaCard item={item} onPlay={onPlay} showRating />
-            </div>
-        )}
+      <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
+        {items.map(item => (
+          <div key={item.stream_id || item.series_id} className="shrink-0 w-[140px] sm:w-[160px]">
+            <MediaCard item={item} onPlay={onPlay} showRating />
+          </div>
+        ))}
       </div>
-      {items.length > 12 && (
-        <button
-          onClick={() => setExpanded(e => !e)}
-          className="mx-4 sm:mx-6 mt-3 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {expanded ? <><ChevronDown className="w-3 h-3" />Show less</> : <><ChevronRight className="w-3 h-3" />Show all {items.length}</>}
-        </button>
-      )}
     </div>
   );
 }
@@ -157,8 +161,12 @@ export default function IPTV() {
           [cats, items] = await Promise.all([getLiveCategories(xtreamServer), getLiveStreams(xtreamServer)]);
         } else if (tab === 'vod') {
           [cats, items] = await Promise.all([getVodCategories(xtreamServer), getVodStreams(xtreamServer)]);
-        } else {
+        } else if (tab === 'series') {
           [cats, items] = await Promise.all([getSeriesCategories(xtreamServer), getSeriesStreams(xtreamServer)]);
+        } else {
+          // epg tab — no streams to load
+          if (!cancelled) setLoading(false);
+          return;
         }
         if (!cancelled) {
           setCategories(cats || []);
@@ -377,7 +385,7 @@ export default function IPTV() {
       )}{/* end tab !== epg */}
 
       {/* EPG Guide tab */}
-      {tab === 'epg' && !loading && (
+      {tab === 'epg' && (
         <EpgGuide server={xtreamServer} onPlayChannel={(ch) => {
           const url = getLiveStreamUrl(xtreamServer, ch.stream_id, 'm3u8');
           setPlaying({ url, name: ch.name, id: ch.stream_id });
