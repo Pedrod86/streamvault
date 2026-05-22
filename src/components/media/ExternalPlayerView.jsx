@@ -42,12 +42,12 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
         <p className="text-white/30 text-xs mt-2 break-all">{['mpv','vlc'].includes(playerId) ? hdrStreamUrl : streamUrl}</p>
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <a
-          href={scheme}
+        <button
+          onClick={() => { window.location.href = scheme; }}
           className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2"
         >
           <ExternalLink className="w-4 h-4" /> Open in {playerLabel}
-        </a>
+        </button>
         <button
           onClick={() => navigator.clipboard.writeText(['mpv','vlc'].includes(playerId) ? hdrStreamUrl : streamUrl)}
           className="w-full py-3 rounded-xl bg-white/10 text-white font-medium text-sm"
