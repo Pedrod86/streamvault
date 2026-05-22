@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Database, Loader2, Radio } from 'lucide-react';
+import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Database, Loader2, Radio, Clapperboard, MonitorPlay } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { scanState, runScan } from '@/lib/embyScanState';
@@ -52,6 +52,8 @@ export default function LibraryCategories({ allMedia = [] }) {
 
   const embyMovies = embyScan.library.filter(i => i.type === 'Movie').length;
   const embyShows = embyScan.library.filter(i => i.type === 'Series').length;
+  const emby4kMovies = embyScan.library.filter(i => i.type === 'Movie' && IS_4K(i)).length;
+  const emby4kShows = embyScan.library.filter(i => i.type === 'Series' && IS_4K(i)).length;
   const embyLoading = embyScan.loading && embyScan.library.length === 0;
   const embySyncing = embyScan.loading;
 
@@ -95,8 +97,30 @@ export default function LibraryCategories({ allMedia = [] }) {
       syncing: embySyncing,
     },
     {
+      key: 'emby-4k-movies',
+      label: 'Emby 4K Movies',
+      icon: Clapperboard,
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-400/10',
+      border: 'border-yellow-400/20',
+      href: '/emby',
+      value: embyLoading ? '…' : emby4kMovies.toLocaleString(),
+      syncing: embySyncing,
+    },
+    {
+      key: 'emby-4k-tv',
+      label: 'Emby 4K TV',
+      icon: MonitorPlay,
+      color: 'text-orange-400',
+      bg: 'bg-orange-400/10',
+      border: 'border-orange-400/20',
+      href: '/emby',
+      value: embyLoading ? '…' : emby4kShows.toLocaleString(),
+      syncing: embySyncing,
+    },
+    {
       key: 'kids',
-      label: 'Kids',
+      label: 'Emby Kids TV',
       icon: Baby,
       color: 'text-pink-400',
       bg: 'bg-pink-400/10',
@@ -106,7 +130,7 @@ export default function LibraryCategories({ allMedia = [] }) {
     },
     {
       key: 'anime',
-      label: 'Anime',
+      label: 'Emby Anime',
       icon: Sparkles,
       color: 'text-rose-400',
       bg: 'bg-rose-400/10',
