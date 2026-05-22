@@ -151,7 +151,8 @@ export default function Settings() {
 
   const [selectedTheme, setSelectedTheme] = useState(0);
   const [syncInterval, setSyncInterval] = useState('0');
-  const [saved, setSaved] = useState(false);
+  const [savedTheme, setSavedTheme] = useState(false);
+  const [savedSync, setSavedSync] = useState(false);
 
   // Server sync states
   const [serverStatuses, setServerStatuses] = useState({});
@@ -175,25 +176,32 @@ export default function Settings() {
     applyTheme(t.primary, t.accent);
   }, [selectedTheme]);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
+  const saveSettings = async (patch, onDone) => {
+    const existing = settingsList[0];
+    if (existing?.id) {
+      await base44.entities.AppSettings.update(existing.id, patch);
+    } else {
+      await base44.entities.AppSettings.create(patch);
+    }
+    queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+    onDone();
+  };
+
+  const saveThemeMutation = useMutation({
+    mutationFn: () => {
       const t = THEMES[selectedTheme];
-      const payload = {
-        accent_color: t.primary,
-        secondary_color: t.accent,
-        sync_interval_minutes: parseInt(syncInterval, 10),
-      };
-      if (settings?.id) {
-        return base44.entities.AppSettings.update(settings.id, payload);
-      } else {
-        return base44.entities.AppSettings.create(payload);
-      }
+      return saveSettings({ accent_color: t.primary, secondary_color: t.accent }, () => {
+        setSavedTheme(true);
+        setTimeout(() => setSavedTheme(false), 2500);
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    },
+  });
+
+  const saveSyncMutation = useMutation({
+    mutationFn: () => saveSettings({ sync_interval_minutes: parseInt(syncInterval, 10) }, () => {
+      setSavedSync(true);
+      setTimeout(() => setSavedSync(false), 2500);
+    }),
   });
 
   const runSync = async (server) => {
@@ -248,7 +256,6 @@ export default function Settings() {
                   : 'border-border hover:border-border/80 hover:bg-secondary/50'
               }`}
             >
-              {/* Colour swatches */}
               <div className="flex gap-1 shrink-0">
                 <span className="w-4 h-4 rounded-full" style={{ background: theme.preview[0] }} />
                 <span className="w-4 h-4 rounded-full" style={{ background: theme.preview[1] }} />
@@ -258,6 +265,13 @@ export default function Settings() {
             </button>
           ))}
         </div>
+        <Button
+          className="w-full h-10 rounded-xl font-semibold bg-primary hover:bg-primary/90 gap-2 mt-1"
+          onClick={() => saveThemeMutation.mutate()}
+          disabled={saveThemeMutation.isPending}
+        >
+          {savedTheme ? <><CheckCircle2 className="w-4 h-4" />Saved!</> : <><Save className="w-4 h-4" />{saveThemeMutation.isPending ? 'Saving…' : 'Save Theme'}</>}
+        </Button>
       </motion.section>
 
       {/* ── Server Auto-Sync ── */}
@@ -286,6 +300,13 @@ export default function Settings() {
             </p>
           )}
         </div>
+        <Button
+          className="w-full h-10 rounded-xl font-semibold bg-primary hover:bg-primary/90 gap-2"
+          onClick={() => saveSyncMutation.mutate()}
+          disabled={saveSyncMutation.isPending}
+        >
+          {savedSync ? <><CheckCircle2 className="w-4 h-4" />Saved!</> : <><Save className="w-4 h-4" />{saveSyncMutation.isPending ? 'Saving…' : 'Save Interval'}</>}
+        </Button>
       </motion.section>
 
       {/* ── Manual Server Sync ── */}
@@ -391,21 +412,6 @@ export default function Settings() {
           </Link>
         </div>
       </motion.section>
-
-      {/* ── Save ── */}
-      <div>
-        <Button
-          className="w-full h-11 rounded-xl font-semibold bg-primary hover:bg-primary/90 gap-2"
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
-        >
-          {saved ? (
-            <><CheckCircle2 className="w-4 h-4" />Saved!</>
-          ) : (
-            <><Save className="w-4 h-4" />{saveMutation.isPending ? 'Saving…' : 'Save Settings'}</>
-          )}
-        </Button>
-      </div>
 
       {/* ── Account Management ── */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-4 p-5 rounded-xl bg-card border border-destructive/30 pb-8">
