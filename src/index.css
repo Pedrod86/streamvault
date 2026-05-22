@@ -131,6 +131,42 @@ button:focus-visible,
   outline-offset: 2px;
 }
 
+/* ── Cyberpunk theme extras ── */
+.theme-cyberpunk body {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(200, 0, 255, 0.03) 2px,
+      rgba(200, 0, 255, 0.03) 4px
+    );
+}
+
+.theme-cyberpunk button:focus-visible,
+.theme-cyberpunk a:focus-visible {
+  outline-color: hsl(57 100% 50%);
+  box-shadow: 0 0 0 3px hsl(57 100% 50% / 0.4), 0 0 12px hsl(300 100% 55% / 0.6);
+}
+
+/* Neon glow on primary-coloured elements */
+.theme-cyberpunk .bg-primary {
+  box-shadow: 0 0 18px hsl(300 100% 55% / 0.7), 0 0 6px hsl(57 100% 50% / 0.5);
+}
+
+.theme-cyberpunk .border-primary {
+  box-shadow: 0 0 8px hsl(300 100% 55% / 0.5);
+}
+
+/* Cyberpunk scrollbar */
+.theme-cyberpunk ::-webkit-scrollbar-thumb {
+  background: hsl(300 80% 35%);
+}
+.theme-cyberpunk ::-webkit-scrollbar-thumb:hover {
+  background: hsl(300 100% 55%);
+  box-shadow: 0 0 6px hsl(300 100% 55%);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

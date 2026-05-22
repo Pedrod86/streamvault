@@ -19,6 +19,7 @@ const THEMES = [
   { label: 'Pink & Rose',    primary: '330 81% 60%', accent: '346 77% 49%', preview: ['#ec4899', '#f43f5e'] },
   { label: 'Amber & Yellow', primary: '38 92% 50%',  accent: '48 96% 53%',  preview: ['#f59e0b', '#eab308'] },
   { label: 'Slate (Neutral)',primary: '215 25% 50%', accent: '215 20% 65%', preview: ['#64748b', '#94a3b8'] },
+  { label: '⚡ Cyberpunk',   primary: '300 100% 55%', accent: '57 100% 50%', preview: ['#cc00ff', '#ffee00'], cyberpunk: true },
 ];
 
 const INTERVALS = [
@@ -31,12 +32,53 @@ const INTERVALS = [
   { label: 'Every 24 hours', value: 1440 },
 ];
 
-function applyTheme(primary, accent) {
-  document.documentElement.style.setProperty('--primary', primary);
-  document.documentElement.style.setProperty('--ring', primary);
-  document.documentElement.style.setProperty('--chart-1', primary);
-  document.documentElement.style.setProperty('--accent', accent);
-  document.documentElement.style.setProperty('--chart-2', accent);
+function applyTheme(primary, accent, cyberpunk = false) {
+  const root = document.documentElement;
+  root.style.setProperty('--primary', primary);
+  root.style.setProperty('--ring', primary);
+  root.style.setProperty('--chart-1', primary);
+  root.style.setProperty('--accent', accent);
+  root.style.setProperty('--chart-2', accent);
+
+  if (cyberpunk) {
+    root.classList.add('theme-cyberpunk');
+    root.style.setProperty('--background', '270 100% 3%');
+    root.style.setProperty('--foreground', '57 100% 55%');
+    root.style.setProperty('--card', '270 80% 6%');
+    root.style.setProperty('--card-foreground', '57 100% 55%');
+    root.style.setProperty('--popover', '270 80% 6%');
+    root.style.setProperty('--popover-foreground', '57 100% 55%');
+    root.style.setProperty('--secondary', '270 60% 10%');
+    root.style.setProperty('--secondary-foreground', '57 100% 65%');
+    root.style.setProperty('--muted', '270 60% 10%');
+    root.style.setProperty('--muted-foreground', '270 30% 55%');
+    root.style.setProperty('--border', '300 80% 30%');
+    root.style.setProperty('--input', '270 60% 10%');
+    root.style.setProperty('--sidebar-background', '270 80% 6%');
+    root.style.setProperty('--sidebar-foreground', '57 100% 55%');
+    root.style.setProperty('--sidebar-primary', primary);
+    root.style.setProperty('--sidebar-border', '300 80% 30%');
+    root.style.setProperty('--primary-foreground', '270 100% 5%');
+  } else {
+    root.classList.remove('theme-cyberpunk');
+    root.style.setProperty('--background', '222 47% 6%');
+    root.style.setProperty('--foreground', '210 40% 96%');
+    root.style.setProperty('--card', '222 41% 9%');
+    root.style.setProperty('--card-foreground', '210 40% 96%');
+    root.style.setProperty('--popover', '222 41% 9%');
+    root.style.setProperty('--popover-foreground', '210 40% 96%');
+    root.style.setProperty('--secondary', '222 30% 14%');
+    root.style.setProperty('--secondary-foreground', '210 40% 96%');
+    root.style.setProperty('--muted', '222 30% 14%');
+    root.style.setProperty('--muted-foreground', '215 20% 55%');
+    root.style.setProperty('--border', '222 30% 18%');
+    root.style.setProperty('--input', '222 30% 18%');
+    root.style.setProperty('--sidebar-background', '222 41% 9%');
+    root.style.setProperty('--sidebar-foreground', '210 40% 96%');
+    root.style.setProperty('--sidebar-primary', primary);
+    root.style.setProperty('--sidebar-border', '222 30% 18%');
+    root.style.setProperty('--primary-foreground', '210 40% 98%');
+  }
 }
 
 function TvdbEnrichSection() {
@@ -162,18 +204,22 @@ export default function Settings() {
     queryFn: () => base44.entities.MediaServer.list('-created_date'),
   });
 
-  // Load existing settings
+  // Load existing settings and re-apply theme
   useEffect(() => {
     if (!settings) return;
     const themeIdx = THEMES.findIndex(t => t.primary === settings.accent_color);
-    if (themeIdx >= 0) setSelectedTheme(themeIdx);
+    if (themeIdx >= 0) {
+      setSelectedTheme(themeIdx);
+      const t = THEMES[themeIdx];
+      applyTheme(t.primary, t.accent, !!t.cyberpunk);
+    }
     setSyncInterval(String(settings.sync_interval_minutes ?? 0));
   }, [settings]);
 
   // Apply theme on selection change
   useEffect(() => {
     const t = THEMES[selectedTheme];
-    applyTheme(t.primary, t.accent);
+    applyTheme(t.primary, t.accent, !!t.cyberpunk);
   }, [selectedTheme]);
 
   const saveSettings = async (patch, onDone) => {
