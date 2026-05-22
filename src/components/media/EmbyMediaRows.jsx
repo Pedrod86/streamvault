@@ -1,11 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Play, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 import EmbySeriesBrowser from '@/components/media/EmbySeriesBrowser';
-import { scanState } from '@/lib/embyScanState';
 
 function EmbyCard({ item, onPlay }) {
   return (
@@ -61,23 +60,14 @@ export default function EmbyMediaRows() {
   const [playingItem, setPlayingItem] = useState(null);
   const [browsingItem, setBrowsingItem] = useState(null);
 
-  // Build title→embyId from in-memory scan state
-  const embyIdByTitle = useMemo(() => {
-    const map = new Map();
-    scanState.library.forEach(i => {
-      if (i.title) map.set(i.title.toLowerCase().trim(), i.id);
-    });
-    return map;
-  }, []);
-
   const handlePlay = (item) => {
+    // Extract real Emby ID from streamUrl (works for both movies and series)
+    const match = item.streamUrl?.match(/\/Videos\/([^/]+)\/stream/);
+    const embyId = match ? match[1] : item.id;
+
     if (item.type === 'Series') {
-      const embyId = embyIdByTitle.get(item.title?.toLowerCase().trim());
       setBrowsingItem({ ...item, embyId, media_type: 'tv_show', poster_url: item.posterUrl });
     } else {
-      // Extract real Emby ID from streamUrl
-      const match = item.streamUrl?.match(/\/Videos\/([^/]+)\/stream/);
-      const embyId = match ? match[1] : item.id;
       setPlayingItem({ ...item, id: embyId });
     }
   };
