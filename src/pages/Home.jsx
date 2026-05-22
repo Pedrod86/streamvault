@@ -5,7 +5,6 @@ import HeroBanner from '../components/media/HeroBanner';
 import MediaRow from '../components/media/MediaRow';
 import ServerStatusBar from '../components/server/ServerStatusBar';
 import PullToRefresh from '../components/layout/PullToRefresh';
-import SyncProgressBar from '../components/dashboard/SyncProgressBar';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import EmbyMediaRows from '../components/media/EmbyMediaRows';
@@ -124,8 +123,6 @@ export default function Home() {
     <PullToRefresh onRefresh={handleRefresh}>
     <div>
       <HeroBanner featured={featured.length > 0 ? featured : recentlyAdded.slice(0, 5)} />
-
-      <SyncProgressBar />
 
       {/* Filter tabs + arrange button */}
       <div className="px-4 sm:px-6 mt-5 flex gap-2 overflow-x-auto items-center" style={{ scrollbarWidth: 'none' }}>
