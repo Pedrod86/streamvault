@@ -183,13 +183,19 @@ function TvdbEnrichSection() {
 
 function QuickSyncSection() {
   const queryClient = useQueryClient();
-  const [status, setStatus] = useState('idle'); // idle | running | done | error
+  const [status, setStatus] = useState('idle');
   const [stats, setStats] = useState({ fetched: 0, created: 0, updated: 0 });
   const [error, setError] = useState(null);
 
   const { data: servers = [] } = useQuery({
     queryKey: ['mediaServers'],
     queryFn: () => base44.entities.MediaServer.list('-created_date'),
+  });
+
+  const { data: importedMedia = [] } = useQuery({
+    queryKey: ['media'],
+    queryFn: () => base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 5000),
+    staleTime: 60 * 1000,
   });
 
   const embyServers = servers.filter(s => s.server_type === 'emby' && s.is_active !== false);
@@ -255,6 +261,11 @@ function QuickSyncSection() {
       <div className="flex items-center gap-2 mb-1">
         <Zap className="w-4 h-4 text-yellow-400" />
         <h2 className="font-heading font-semibold text-foreground">Quick Sync</h2>
+        {importedMedia.length > 0 && (
+          <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400">
+            {importedMedia.length} imported
+          </span>
+        )}
       </div>
       <p className="text-xs text-muted-foreground -mt-2">
         Fetches your Emby library and adds only missing items to your database. Fast and non-destructive.
@@ -337,13 +348,19 @@ const COLOR_CLASSES = {
 
 function CategorySyncSection() {
   const queryClient = useQueryClient();
-  const [statuses, setStatuses] = useState({}); // { [categoryId]: 'idle' | 'running' | 'done' | 'error' }
-  const [stats, setStats] = useState({});       // { [categoryId]: { created, updated, fetched } }
+  const [statuses, setStatuses] = useState({});
+  const [stats, setStats] = useState({});
   const [errors, setErrors] = useState({});
 
   const { data: servers = [] } = useQuery({
     queryKey: ['mediaServers'],
     queryFn: () => base44.entities.MediaServer.list('-created_date'),
+  });
+
+  const { data: allMedia = [] } = useQuery({
+    queryKey: ['media'],
+    queryFn: () => base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 5000),
+    staleTime: 60 * 1000,
   });
 
   const embyServers = servers.filter(s => s.server_type === 'emby' && s.is_active !== false);
@@ -426,11 +443,22 @@ function CategorySyncSection() {
           const c = COLOR_CLASSES[cat.color];
           const Icon = cat.icon;
 
+          // Map DB media to the same shape the filter expects
+          const dbMapped = allMedia.map(m => ({
+            type: m.media_type === 'tv_show' ? 'Series' : 'Movie',
+            tags: m.tags || [],
+            genre: m.genre || [],
+            content_rating: m.content_rating,
+            title: m.title,
+          }));
+          const importedCount = dbMapped.filter(cat.filter).length;
+
           return (
             <div key={cat.id} className={`p-3 rounded-xl border ${c.border} bg-secondary/30 space-y-2`}>
               <div className="flex items-center gap-2">
                 <Icon className={`w-4 h-4 ${c.text} shrink-0`} />
                 <span className="text-sm font-medium text-foreground">{cat.label}</span>
+                <span className={`ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full ${c.badge}`}>{importedCount}</span>
               </div>
 
               {st === 'running' && (
