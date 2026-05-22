@@ -187,25 +187,25 @@ export default function LibraryCategories({ allMedia = [] }) {
           <span className="text-[10px] text-green-400">✓ {embyTotal.toLocaleString()} items</span>
         )}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
         {categories.map(({ key, label, icon: Icon, color, bg, border, href, value, syncing, live }) => (
           <Link
             key={key}
             to={href}
-            className={`relative flex flex-col gap-2 p-4 rounded-xl bg-card border ${border} hover:border-opacity-60 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200`}
+            className={`relative flex items-center gap-2 p-2.5 rounded-lg bg-card border ${border} hover:border-opacity-60 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200`}
           >
             {syncing && (
-              <Loader2 className="absolute top-2 right-2 w-3 h-3 text-accent animate-spin" />
+              <Loader2 className="absolute top-1.5 right-1.5 w-2.5 h-2.5 text-accent animate-spin" />
             )}
             {live && (
-              <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
             )}
-            <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-              <Icon className={`w-4 h-4 ${color}`} />
+            <div className={`w-7 h-7 rounded-md ${bg} flex items-center justify-center shrink-0`}>
+              <Icon className={`w-3.5 h-3.5 ${color}`} />
             </div>
-            <div>
-              <p className={`font-heading font-bold text-xl leading-none ${color}`}>{value}</p>
-              <p className="text-xs text-muted-foreground mt-1 leading-tight">{label}</p>
+            <div className="min-w-0">
+              <p className={`font-heading font-bold text-sm leading-none ${color}`}>{value}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight truncate">{label}</p>
             </div>
           </Link>
         ))}
