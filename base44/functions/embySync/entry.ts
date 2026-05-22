@@ -87,6 +87,23 @@ Deno.serve(async (req) => {
       started_at: startedAt,
     });
 
+    // Post Discord notification if new items were added
+    if (createdCount > 0) {
+      try {
+        await base44.asServiceRole.functions.invoke('discordSyncAlert', {
+          data: {
+            server_name: server.server_name || 'Emby',
+            server_type: 'emby',
+            status: 'success',
+            items_fetched: items.length,
+            items_created: createdCount,
+            items_updated: updatedCount,
+            duration_seconds: duration,
+          }
+        });
+      } catch (_) {}
+    }
+
     return Response.json({ success: true, fetched: items.length, created: createdCount, updated: updatedCount });
 
   } catch (error) {
