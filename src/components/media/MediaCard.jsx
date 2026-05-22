@@ -4,7 +4,19 @@ import { Star, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function MediaCard({ media, showProgress, progress }) {
-  const progressPercent = progress ? Math.round((progress.progress_seconds / progress.total_seconds) * 100) : 0;
+  const progressPercent =
+    progress && progress.total_seconds > 0
+      ? Math.min(100, Math.round((progress.progress_seconds / progress.total_seconds) * 100))
+      : 0;
+
+  const remainingSecs =
+    progress && progress.total_seconds > 0
+      ? Math.max(0, progress.total_seconds - progress.progress_seconds)
+      : 0;
+
+  const remainingLabel = remainingSecs > 60
+    ? `${Math.round(remainingSecs / 60)}m left`
+    : remainingSecs > 0 ? `<1m left` : null;
 
   return (
     <Link to={`/media/${media.id}`} className="block group">
@@ -49,14 +61,21 @@ export default function MediaCard({ media, showProgress, progress }) {
             </span>
           </div>
 
-          {/* Progress bar */}
-          {showProgress && progress && !progress.completed && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
-              <div
-                className="h-full bg-primary rounded-r-full"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
+          {/* Progress bar + time remaining */}
+          {showProgress && progress && !progress.completed && progressPercent > 0 && (
+            <>
+              {remainingLabel && (
+                <div className="absolute bottom-2 left-2 text-[10px] text-white/80 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded font-medium">
+                  {remainingLabel}
+                </div>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+                <div
+                  className="h-full bg-primary rounded-r-full"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </>
           )}
         </div>
 

@@ -152,10 +152,10 @@ export default function Home() {
                 title="Continue Watching"
                 items={continueWatching.map(c => c.media)}
                 watchHistory={watchHistory}
-                showProgress
+                showProgress={true}
               />
             )}
-            <MediaRow title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} />
+            <MediaRow title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} showProgress={true} />
             {animeItems.length > 0 && (
               <MediaRow title="Anime" items={animeItems} watchHistory={watchHistory} />
             )}
