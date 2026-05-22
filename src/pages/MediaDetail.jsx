@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
 import TrailerPlayer from '../components/media/TrailerPlayer';
 import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
+import VideoPlayer from '@/components/media/VideoPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
@@ -231,6 +232,15 @@ export default function MediaDetail() {
             url={getVodStreamUrl(xtreamServer, iptvVod.stream_id, iptvVod.container_extension || 'mp4')}
             title={media.title}
             onClose={() => setShowPlayer(false)}
+          />
+        ) : showPlayer && media.video_url ? (
+          <VideoPlayer
+            src={media.video_url}
+            title={media.title}
+            poster={media.poster_url || media.backdrop_url}
+            startAt={startAt}
+            onClose={() => setShowPlayer(false)}
+            onProgress={(p) => saveProgress.mutate(p)}
           />
         ) : showPlayer ? (
           <TrailerPlayer media={media} startAt={startAt} onClose={() => setShowPlayer(false)} onProgress={(p) => saveProgress.mutate(p)} />
