@@ -198,7 +198,7 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
       hlsRef.current = hls;
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch((_e) => {}); });
       hls.on(Hls.Events.FRAG_PARSED, (_e, data) => {
         const codec = data?.frag?.levelCodec || '';
         const level = hls.levels?.[hls.currentLevel];

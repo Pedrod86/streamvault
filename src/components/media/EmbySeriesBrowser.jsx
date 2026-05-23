@@ -11,8 +11,11 @@ export default function EmbySeriesBrowser({ item, server, onClose }) {
   const [error, setError] = useState(null);
   const [playingEpisode, setPlayingEpisode] = useState(null);
 
-  // item.embyId is the real Emby server ID
-  const embyId = item.embyId;
+  // Resolve the real Emby server ID from multiple possible sources
+  const embyId = item.embyId
+    || item.emby_id
+    || (item.tags || []).find(t => t?.startsWith('emby:') && t !== 'emby')?.replace('emby:', '')
+    || (item.video_url || '').match(/\/Videos\/([^/]+)\//)?.[1];
 
   useEffect(() => {
     if (!embyId) {
