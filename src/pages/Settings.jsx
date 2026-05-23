@@ -562,20 +562,45 @@ export default function Settings() {
   const runSync = async (server) => {
     setServerStatuses(s => ({ ...s, [server.id]: 'syncing' }));
     try {
-      const items = await fetchServerLibrary(server);
-      if (items.length > 0) {
-        const existing = await base44.entities.Media.list('-created_date', 500);
-        const existingMap = new Map(existing.map(m => [m.title.toLowerCase().trim(), m]));
-        const newItems = items.filter(item => !existingMap.has(item.title.toLowerCase().trim()));
-        const BATCH = 50;
-        for (let i = 0; i < newItems.length; i += BATCH) {
-          await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH));
+      if (server.server_type === 'emby') {
+        // Use the reliable embyLibrary + embySync pipeline (same as QuickSync)
+        let startIndex = 0;
+        let allItems = [];
+        while (true) {
+          const res = await base44.functions.invoke('embyLibrary', { startIndex, serverId: server.id });
+          if (res.data?.error) throw new Error(res.data.error);
+          const { items, hasMore } = res.data;
+          if (items?.length) allItems = [...allItems, ...items];
+          if (!hasMore || !items?.length) break;
+          startIndex += items.length;
         }
-        queryClient.invalidateQueries({ queryKey: ['media'] });
+        if (allItems.length > 0) {
+          const dbItems = allItems.map(item => ({
+            title: item.title,
+            media_type: item.type === 'Series' ? 'tv_show' : 'movie',
+            description: item.overview || '',
+            year: item.year || undefined,
+            rating: item.rating || undefined,
+            duration_minutes: item.duration || undefined,
+            poster_url: item.posterUrl || undefined,
+            backdrop_url: item.backdropUrl || undefined,
+            video_url: item.streamUrl || undefined,
+            genre: item.genres || [],
+            tags: ['emby'],
+          }));
+          await base44.functions.invoke('embySync', { server, items: dbItems });
+        }
+      } else {
+        // Other server types (Plex, Jellyfin, Xtream) use the client-side fetch
+        const items = await fetchServerLibrary(server);
+        if (items.length > 0) {
+          await base44.functions.invoke('embySync', { server, items });
+        }
       }
+      queryClient.invalidateQueries({ queryKey: ['media'] });
       setServerStatuses(s => ({ ...s, [server.id]: 'done' }));
       setTimeout(() => setServerStatuses(s => ({ ...s, [server.id]: 'idle' })), 3000);
-    } catch {
+    } catch (e) {
       setServerStatuses(s => ({ ...s, [server.id]: 'error' }));
       setTimeout(() => setServerStatuses(s => ({ ...s, [server.id]: 'idle' })), 4000);
     }
