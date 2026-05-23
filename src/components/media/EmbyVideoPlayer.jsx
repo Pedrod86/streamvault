@@ -175,6 +175,7 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
 
     if (playerId === 'direct') {
       video.src = directUrl;
+      video.load();
       video.play().catch(() => {});
       return;
     }
@@ -307,6 +308,7 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
         x5-playsinline="true"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
+        onError={() => {}}
         onLoadedMetadata={() => { if (videoRef.current) setDuration(videoRef.current.duration || 0); }}
         onTimeUpdate={() => {
           const v = videoRef.current;
@@ -315,13 +317,13 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
           if (v.buffered.length > 0) setBuffered(v.buffered.end(v.buffered.length - 1));
         }}
         onClick={() => {
-        if (!controlsVisible) {
-          showControls();
-        } else {
-          togglePlay();
-          showControls();
-        }
-      }}
+          if (!controlsVisible) {
+            showControls();
+          } else {
+            togglePlay();
+            showControls();
+          }
+        }}
       />
 
       {/* Bottom controls — always visible when paused */}
