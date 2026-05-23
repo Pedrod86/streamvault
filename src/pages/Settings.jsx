@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Zap, LayoutGrid, History, Film, Baby, Sparkles, Clapperboard, MonitorPlay } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
+import ApiKeysSection from '@/components/settings/ApiKeysSection';
 
 // Predefined colour themes (primary HSL, accent HSL)
 const THEMES = [
@@ -722,6 +723,9 @@ export default function Settings() {
 
       {/* ── TVDB Bulk Enrich ── */}
       <TvdbEnrichSection />
+
+      {/* ── API Keys ── */}
+      <ApiKeysSection />
 
       {/* ── Quick Links ── */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="space-y-3 p-5 rounded-xl bg-card border border-border">
