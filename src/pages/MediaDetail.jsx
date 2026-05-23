@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap, Radio } from 'lucide-react';
+import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap, Radio, Subtitles, ChevronDown, Layers } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
@@ -15,6 +15,7 @@ import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
 import { fetchEmbyFullLibrary } from '../lib/embyApi';
+import { PLAYERS } from '../components/media/PlayerPicker';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
 import IptvDetailPlayer from '../components/media/IptvDetailPlayer';
 
@@ -29,6 +30,12 @@ export default function MediaDetail() {
   const [showCollections, setShowCollections] = useState(false);
   const [resumePrompt, setResumePrompt] = useState(false);
   const [startAt, setStartAt] = useState(0);
+  const [selectedPlayerId, setSelectedPlayerId] = useState('direct');
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
+  const [showPlayerPicker, setShowPlayerPicker] = useState(false);
+  const [embySubtitles, setEmbySubtitles] = useState([]); // loaded from Emby PlaybackInfo
+  const [selectedSubIndex, setSelectedSubIndex] = useState(-1);
+  const [showSubPicker, setShowSubPicker] = useState(false);
 
   const saveProgress = useMutation({
     mutationFn: async ({ progressSeconds, totalSeconds, completed }) => {
@@ -110,6 +117,25 @@ export default function MediaDetail() {
       return streams.find(s => s.name?.toLowerCase().trim() === q) || null;
     },
   });
+
+  // Fetch subtitle tracks from Emby when item is known
+  useEffect(() => {
+    if (!embyItem || !embyServer) return;
+    const base = embyServer.server_url?.replace(/\/$/, '');
+    const token = embyServer.api_token;
+    fetch(`${base}/Items/${embyItem.id}/PlaybackInfo?api_key=${token}`, {
+      headers: { 'X-Emby-Token': token }
+    })
+      .then(r => r.json())
+      .then(data => {
+        const streams = data?.MediaSources?.[0]?.MediaStreams || [];
+        const subs = streams
+          .filter(s => s.Type === 'Subtitle')
+          .map(s => ({ index: s.Index, label: s.DisplayTitle || s.Language || `Subtitle` }));
+        setEmbySubtitles(subs);
+      })
+      .catch(() => {});
+  }, [embyItem?.id, embyServer?.id]);
 
   const isInWatchlist = watchlist.some(w => w.media_id === mediaId);
 
@@ -226,7 +252,13 @@ export default function MediaDetail() {
 
         {/* Video player */}
         {showPlayer && playerSource === 'emby' && embyItem && embyServer ? (
-          <EmbyVideoPlayer item={embyItem} server={embyServer} onClose={() => setShowPlayer(false)} />
+          <EmbyVideoPlayer
+            item={embyItem}
+            server={embyServer}
+            onClose={() => setShowPlayer(false)}
+            initialPlayerId={selectedPlayerId}
+            initialSubtitleIndex={subtitlesEnabled ? selectedSubIndex : -1}
+          />
         ) : showPlayer && playerSource === 'iptv' && iptvVod && xtreamServer ? (
           <IptvDetailPlayer
             url={getVodStreamUrl(xtreamServer, iptvVod.stream_id, iptvVod.container_extension || 'mp4')}
@@ -408,6 +440,76 @@ export default function MediaDetail() {
                     {g}
                   </Badge>
                 ))}
+              </div>
+            )}
+
+            {/* Playback options — only shown for Emby items */}
+            {embyItem && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {/* Player picker */}
+                <div className="relative">
+                  <button
+                    onClick={() => { setShowPlayerPicker(p => !p); setShowSubPicker(false); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    {PLAYERS.find(p => p.id === selectedPlayerId)?.label || 'Direct'}
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {showPlayerPicker && (
+                    <div className="absolute top-10 left-0 w-64 bg-card border border-border rounded-xl overflow-hidden shadow-2xl z-30">
+                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                        <span className="text-foreground text-sm font-semibold">Player</span>
+                        <button onClick={() => setShowPlayerPicker(false)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+                      </div>
+                      <div className="p-1.5 space-y-0.5">
+                        {PLAYERS.map(p => (
+                          <button key={p.id} onClick={() => { setSelectedPlayerId(p.id); setShowPlayerPicker(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${selectedPlayerId === p.id ? 'bg-primary/20 text-primary' : 'text-foreground hover:bg-secondary'}`}>
+                            <div className="font-semibold">{p.label}</div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{p.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Subtitles toggle */}
+                {embySubtitles.length > 0 && (
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowSubPicker(p => !p); setShowPlayerPicker(false); }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${subtitlesEnabled ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-secondary border-border text-foreground hover:bg-secondary/80'}`}
+                    >
+                      <Subtitles className="w-3.5 h-3.5" />
+                      {subtitlesEnabled && selectedSubIndex !== -1
+                        ? embySubtitles.find(s => s.index === selectedSubIndex)?.label || 'On'
+                        : 'Subtitles'}
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                    {showSubPicker && (
+                      <div className="absolute top-10 left-0 w-56 bg-card border border-border rounded-xl overflow-hidden shadow-2xl z-30">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                          <span className="text-foreground text-sm font-semibold">Subtitles</span>
+                          <button onClick={() => setShowSubPicker(false)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+                        </div>
+                        <div className="p-1.5 space-y-0.5">
+                          <button onClick={() => { setSubtitlesEnabled(false); setSelectedSubIndex(-1); setShowSubPicker(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${!subtitlesEnabled ? 'bg-primary/20 text-primary' : 'text-foreground hover:bg-secondary'}`}>
+                            Off
+                          </button>
+                          {embySubtitles.map(s => (
+                            <button key={s.index} onClick={() => { setSubtitlesEnabled(true); setSelectedSubIndex(s.index); setShowSubPicker(false); }}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${subtitlesEnabled && selectedSubIndex === s.index ? 'bg-primary/20 text-primary' : 'text-foreground hover:bg-secondary'}`}>
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

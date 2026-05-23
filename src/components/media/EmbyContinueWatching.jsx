@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Play, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 
-function ContinueCard({ item, server, onPlay }) {
+function ContinueCard({ item, allMedia, onNavigate }) {
+  const handleClick = () => {
+    const match = allMedia?.find(m => {
+      const t = m.title?.toLowerCase().trim();
+      const s = (item.seriesName || item.title)?.toLowerCase().trim();
+      return t === s || t === item.title?.toLowerCase().trim();
+    });
+    if (match) onNavigate(`/media/${match.id}`);
+  };
+
   return (
-    <div
-      className="shrink-0 w-[160px] sm:w-[180px] cursor-pointer group"
-      onClick={() => onPlay(item)}
-    >
+    <div className="shrink-0 w-[160px] sm:w-[180px] cursor-pointer group" onClick={handleClick}>
       <div className="relative rounded-xl overflow-hidden bg-secondary aspect-video mb-2">
         {item.backdropUrl || item.posterUrl ? (
           <img
@@ -24,22 +30,16 @@ function ContinueCard({ item, server, onPlay }) {
             <Play className="w-8 h-8 text-muted-foreground" />
           </div>
         )}
-        {/* Play overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity w-10 h-10 rounded-full bg-primary flex items-center justify-center">
             <Play className="w-5 h-5 fill-white text-white ml-0.5" />
           </div>
         </div>
-        {/* Progress bar */}
         {item.progressPercent > 0 && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-            <div
-              className="h-full bg-primary transition-all"
-              style={{ width: `${Math.min(item.progressPercent, 100)}%` }}
-            />
+            <div className="h-full bg-primary transition-all" style={{ width: `${Math.min(item.progressPercent, 100)}%` }} />
           </div>
         )}
-        {/* Time remaining */}
         {item.progressPercent > 0 && item.duration > 0 && (
           <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/70 rounded-full px-1.5 py-0.5">
             <Clock className="w-2.5 h-2.5 text-white/70" />
@@ -53,17 +53,14 @@ function ContinueCard({ item, server, onPlay }) {
         {item.seriesName || item.title}
       </p>
       <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-        {item.seasonEpisode
-          ? `${item.seasonEpisode} · ${item.episodeName || ''}`
-          : item.year || ''}
+        {item.seasonEpisode ? `${item.seasonEpisode} · ${item.episodeName || ''}` : item.year || ''}
       </p>
     </div>
   );
 }
 
 export default function EmbyContinueWatching() {
-  const [playingItem, setPlayingItem] = useState(null);
-  const [playingServer, setPlayingServer] = useState(null);
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ['embyContinueWatching'],
@@ -75,8 +72,13 @@ export default function EmbyContinueWatching() {
     retry: false,
   });
 
+  const { data: allMedia = [] } = useQuery({
+    queryKey: ['media'],
+    queryFn: () => base44.entities.Media.list('-created_date', 500),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const items = data?.items || [];
-  const server = data?.server;
 
   if (isLoading) {
     return (
@@ -94,30 +96,15 @@ export default function EmbyContinueWatching() {
   if (!items.length) return null;
 
   return (
-    <>
-      <div className="mb-6">
-        <h2 className="font-heading font-bold text-base text-foreground px-4 sm:px-6 mb-3">
-          Continue Watching
-        </h2>
-        <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
-          {items.map(item => (
-            <ContinueCard
-              key={item.id}
-              item={item}
-              server={server}
-              onPlay={(i) => { setPlayingItem(i); setPlayingServer(server); }}
-            />
-          ))}
-        </div>
+    <div className="mb-6">
+      <h2 className="font-heading font-bold text-base text-foreground px-4 sm:px-6 mb-3">
+        Continue Watching
+      </h2>
+      <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
+        {items.map(item => (
+          <ContinueCard key={item.id} item={item} allMedia={allMedia} onNavigate={navigate} />
+        ))}
       </div>
-
-      {playingItem && playingServer && (
-        <EmbyVideoPlayer
-          item={playingItem}
-          server={playingServer}
-          onClose={() => { setPlayingItem(null); setPlayingServer(null); }}
-        />
-      )}
-    </>
+    </div>
   );
 }

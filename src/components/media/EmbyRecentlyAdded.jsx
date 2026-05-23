@@ -1,14 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Play, Star, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
 
-function RecentCard({ item, onPlay }) {
+function RecentCard({ item, embyItemId, allMedia, onNavigate }) {
+  const handleClick = () => {
+    // Try to find matching media in the library by title
+    const match = allMedia?.find(m => m.title?.toLowerCase().trim() === item.title?.toLowerCase().trim());
+    if (match) {
+      onNavigate(`/media/${match.id}`);
+    }
+    // If no match, do nothing — item isn't in local library yet
+  };
+
   return (
-    <div className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group" onClick={() => onPlay(item)}>
+    <div className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group" onClick={handleClick}>
       <div className="relative rounded-xl overflow-hidden bg-secondary aspect-[2/3] mb-2">
         {item.posterUrl ? (
           <img
@@ -50,7 +59,7 @@ function RecentCard({ item, onPlay }) {
 }
 
 export default function EmbyRecentlyAdded() {
-  const [playingItem, setPlayingItem] = useState(null);
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['embyRecentlyAdded'],
@@ -63,8 +72,13 @@ export default function EmbyRecentlyAdded() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: allMedia = [] } = useQuery({
+    queryKey: ['media'],
+    queryFn: () => base44.entities.Media.list('-created_date', 500),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const items = data?.items || [];
-  const embyServer = data?.server;
 
   if (error || (!isLoading && items.length === 0)) return null;
 
@@ -73,8 +87,8 @@ export default function EmbyRecentlyAdded() {
       <div className="flex items-center gap-2 px-4 sm:px-6 mb-3">
         <Sparkles className="w-4 h-4 text-accent" />
         <h2 className="font-heading font-bold text-base text-foreground">Recently Added</h2>
-        {embyServer?.server_name && (
-          <span className="text-xs text-muted-foreground ml-1">from {embyServer.server_name}</span>
+        {data?.server?.server_name && (
+          <span className="text-xs text-muted-foreground ml-1">from {data.server.server_name}</span>
         )}
       </div>
 
@@ -87,17 +101,9 @@ export default function EmbyRecentlyAdded() {
       ) : (
         <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
           {items.map(item => (
-            <RecentCard key={item.id} item={item} onPlay={setPlayingItem} />
+            <RecentCard key={item.id} item={item} allMedia={allMedia} onNavigate={navigate} />
           ))}
         </div>
-      )}
-
-      {playingItem && embyServer && (
-        <EmbyVideoPlayer
-          item={playingItem}
-          server={embyServer}
-          onClose={() => setPlayingItem(null)}
-        />
       )}
     </div>
   );

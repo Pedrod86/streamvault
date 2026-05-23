@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import dashjs from 'dashjs';
-import { X, Layers, Volume2, VolumeX, Maximize, Minimize, Subtitles, ChevronDown, Play, Pause, SkipBack, SkipForward, PictureInPicture2 } from 'lucide-react';
-import PlayerPicker, { PLAYERS } from './PlayerPicker';
+import { X, Volume2, VolumeX, Maximize, Minimize, Subtitles, ChevronDown, Play, Pause, SkipBack, SkipForward, PictureInPicture2 } from 'lucide-react';
+import { PLAYERS } from './PlayerPicker';
 import ExternalPlayerView from './ExternalPlayerView';
 
 function formatTime(secs) {
@@ -13,19 +13,18 @@ function formatTime(secs) {
   return `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export default function EmbyVideoPlayer({ item, server, onClose }) {
+export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId, initialSubtitleIndex }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const dashRef = useRef(null);
-  const [playerId, setPlayerId] = useState('hls'); // default: HLS (audio always transcoded to AAC)
-  const [showPicker, setShowPicker] = useState(false);
+  const [playerId, setPlayerId] = useState(initialPlayerId || 'direct');
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
 
   // Always show inline controls regardless of device type
   const [codecLabel, setCodecLabel] = useState('');
   const [subtitles, setSubtitles] = useState([]); // { index, label, language }
-  const [activeSub, setActiveSub] = useState(-1); // -1 = off
+  const [activeSub, setActiveSub] = useState(initialSubtitleIndex ?? -1); // -1 = off
   const [showSubPicker, setShowSubPicker] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [playing, setPlaying] = useState(false);
@@ -282,22 +281,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Player picker */}
-          <div className="relative">
-            <button
-              onClick={() => { setShowPicker(p => !p); setShowSubPicker(false); }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
-            >
-              <Layers className="w-3.5 h-3.5" /> {playerLabel}
-            </button>
-            {showPicker && (
-              <PlayerPicker
-                current={playerId}
-                onChange={(p) => { setPlayerId(p); setShowPicker(false); }}
-                onClose={() => setShowPicker(false)}
-              />
-            )}
-          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/50 uppercase">{playerLabel}</span>
         </div>
       </div>
 
@@ -377,7 +361,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
           {/* Subtitles / CC picker — always shown */}
           <div className="relative">
             <button
-              onClick={() => { setShowSubPicker(p => !p); setShowPicker(false); }}
+              onClick={() => { setShowSubPicker(p => !p); }}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${activeSub !== -1 ? 'bg-primary/80 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
               title="Subtitles / CC"
             >
