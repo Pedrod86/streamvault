@@ -209,24 +209,20 @@ function QuickSyncSection() {
 
     try {
       for (const server of embyServers) {
-        // Fetch all items from Emby via the existing embyLibrary function (paginated)
         let startIndex = 0;
-        let allItems = [];
+        const PAGE = 500; // larger pages = fewer round trips
+
         while (true) {
-          const res = await base44.functions.invoke('embyLibrary', { startIndex, serverId: server.id });
+          const res = await base44.functions.invoke('embyLibrary', { startIndex, pageSize: PAGE });
           if (res.data?.error) throw new Error(res.data.error);
           const { items, hasMore } = res.data;
-          if (items?.length) allItems = [...allItems, ...items];
-          if (!hasMore || !items?.length) break;
-          startIndex += items.length;
-        }
+          if (!items?.length) break;
 
-        totalFetched += allItems.length;
-        setStats(s => ({ ...s, fetched: totalFetched }));
+          totalFetched += items.length;
+          setStats(s => ({ ...s, fetched: totalFetched }));
 
-        if (allItems.length > 0) {
-          // Map to DB format
-          const dbItems = allItems.map(item => ({
+          // Sync this page immediately — don't accumulate the whole library
+          const dbItems = items.map(item => ({
             title: item.title,
             media_type: item.type === 'Series' ? 'tv_show' : 'movie',
             description: item.overview || '',
@@ -244,6 +240,9 @@ function QuickSyncSection() {
           totalCreated += res2.data?.created || 0;
           totalUpdated += res2.data?.updated || 0;
           setStats({ fetched: totalFetched, created: totalCreated, updated: totalUpdated });
+
+          if (!hasMore) break;
+          startIndex += items.length;
         }
       }
 
@@ -372,43 +371,43 @@ function CategorySyncSection() {
 
     try {
       for (const server of embyServers) {
-        // Fetch full library
         let startIndex = 0;
-        let allItems = [];
+        const PAGE = 500;
+        let totalFiltered = 0, totalCreated = 0, totalUpdated = 0;
+
         while (true) {
-          const res = await base44.functions.invoke('embyLibrary', { startIndex, serverId: server.id });
+          const res = await base44.functions.invoke('embyLibrary', { startIndex, pageSize: PAGE });
           if (res.data?.error) throw new Error(res.data.error);
           const { items, hasMore } = res.data;
-          if (items?.length) allItems = [...allItems, ...items];
-          if (!hasMore || !items?.length) break;
+          if (!items?.length) break;
+
+          // Filter to this category
+          const filtered = items.filter(cat.filter);
+          totalFiltered += filtered.length;
+
+          if (filtered.length > 0) {
+            const dbItems = filtered.map(item => ({
+              title: item.title,
+              media_type: item.type === 'Series' ? 'tv_show' : 'movie',
+              description: item.overview || '',
+              year: item.year || undefined,
+              rating: item.rating || undefined,
+              duration_minutes: item.duration || undefined,
+              poster_url: item.posterUrl || undefined,
+              backdrop_url: item.backdropUrl || undefined,
+              video_url: item.streamUrl || undefined,
+              genre: item.genres || [],
+              tags: ['emby'],
+            }));
+
+            const res2 = await base44.functions.invoke('embySync', { server, items: dbItems });
+            totalCreated += res2.data?.created || 0;
+            totalUpdated += res2.data?.updated || 0;
+            setStats(s => ({ ...s, [cat.id]: { fetched: totalFiltered, created: totalCreated, updated: totalUpdated } }));
+          }
+
+          if (!hasMore) break;
           startIndex += items.length;
-        }
-
-        // Filter to this category
-        const filtered = allItems.filter(cat.filter);
-        setStats(s => ({ ...s, [cat.id]: { ...s[cat.id], fetched: filtered.length } }));
-
-        if (filtered.length > 0) {
-          const dbItems = filtered.map(item => ({
-            title: item.title,
-            media_type: item.type === 'Series' ? 'tv_show' : 'movie',
-            description: item.overview || '',
-            year: item.year || undefined,
-            rating: item.rating || undefined,
-            duration_minutes: item.duration || undefined,
-            poster_url: item.posterUrl || undefined,
-            backdrop_url: item.backdropUrl || undefined,
-            video_url: item.streamUrl || undefined,
-            genre: item.genres || [],
-            tags: ['emby'],
-          }));
-
-          const res2 = await base44.functions.invoke('embySync', { server, items: dbItems });
-          setStats(s => ({ ...s, [cat.id]: {
-            fetched: filtered.length,
-            created: res2.data?.created || 0,
-            updated: res2.data?.updated || 0,
-          }}));
         }
       }
 
@@ -563,19 +562,14 @@ export default function Settings() {
     setServerStatuses(s => ({ ...s, [server.id]: 'syncing' }));
     try {
       if (server.server_type === 'emby') {
-        // Use the reliable embyLibrary + embySync pipeline (same as QuickSync)
         let startIndex = 0;
-        let allItems = [];
+        const PAGE = 500;
         while (true) {
-          const res = await base44.functions.invoke('embyLibrary', { startIndex, serverId: server.id });
+          const res = await base44.functions.invoke('embyLibrary', { startIndex, pageSize: PAGE });
           if (res.data?.error) throw new Error(res.data.error);
           const { items, hasMore } = res.data;
-          if (items?.length) allItems = [...allItems, ...items];
-          if (!hasMore || !items?.length) break;
-          startIndex += items.length;
-        }
-        if (allItems.length > 0) {
-          const dbItems = allItems.map(item => ({
+          if (!items?.length) break;
+          const dbItems = items.map(item => ({
             title: item.title,
             media_type: item.type === 'Series' ? 'tv_show' : 'movie',
             description: item.overview || '',
@@ -589,6 +583,8 @@ export default function Settings() {
             tags: ['emby'],
           }));
           await base44.functions.invoke('embySync', { server, items: dbItems });
+          if (!hasMore) break;
+          startIndex += items.length;
         }
       } else {
         // Other server types (Plex, Jellyfin, Xtream) use the client-side fetch
