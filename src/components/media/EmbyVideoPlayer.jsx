@@ -94,7 +94,7 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
       artwork: item.posterUrl ? [{ src: item.posterUrl, sizes: '512x512', type: 'image/jpeg' }] : [],
     });
     const skip = (offset) => { if (videoRef.current) videoRef.current.currentTime += offset; };
-    navigator.mediaSession.setActionHandler('play', () => videoRef.current?.play());
+    navigator.mediaSession.setActionHandler('play', () => videoRef.current?.play().catch(() => {}));
     navigator.mediaSession.setActionHandler('pause', () => videoRef.current?.pause());
     navigator.mediaSession.setActionHandler('seekbackward', () => skip(-10));
     navigator.mediaSession.setActionHandler('seekforward', () => skip(10));
@@ -108,7 +108,7 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) v.play(); else v.pause();
+    if (v.paused) v.play().catch(() => {}); else v.pause();
   }, []);
 
   const skip = useCallback((secs) => {
