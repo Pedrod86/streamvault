@@ -90,10 +90,6 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
   const [showSubPicker, setShowSubPicker] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [playing, setPlaying] = useState(false);
-
-  // Sync playback progress back to Emby server (implements E2PL-style session reporting)
-  useEmbyPlaybackReporter({ base, token, itemId: item?.id, videoRef, playing });
-
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -103,6 +99,9 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
 
   const base = server?.server_url?.replace(/\/$/, '') || '';
   const token = server?.api_token || '';
+
+  // Sync playback progress back to Emby server (implements E2PL-style session reporting)
+  useEmbyPlaybackReporter({ base, token, itemId: item?.id, videoRef, playing });
 
   const subParam = activeSub !== -1 ? `&SubtitleStreamIndex=${activeSub}&SubtitleMethod=Encode` : '';
   // HLS: transcode audio to AAC (handles AC3/EAC3/DTS/TrueHD), allow video copy for h264/hevc/av1
