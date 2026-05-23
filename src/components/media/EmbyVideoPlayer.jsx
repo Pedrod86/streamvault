@@ -39,9 +39,10 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const token = server?.api_token || '';
 
   const subParam = activeSub !== -1 ? `&SubtitleStreamIndex=${activeSub}&SubtitleMethod=Encode` : '';
-  const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3,ac3,eac3,flac,opus${subParam}&RequireAvc=false&EnableAdaptiveBitrateStreaming=true&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&AudioBitRate=320000`;
+  const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3${subParam}&RequireAvc=false&EnableAdaptiveBitrateStreaming=true&AllowVideoStreamCopy=true&AllowAudioStreamCopy=false&VideoBitDepth=10&AudioBitRate=320000`;
   const dashUrl = `${base}/Videos/${item.id}/master.mpd?api_key=${token}&VideoCodec=h264,hevc,av1&AudioCodec=aac,ac3,eac3,flac,opus&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&EnableAdaptiveBitrateStreaming=true&AudioBitRate=320000`;
-  const directUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true&AudioCodec=aac`;
+  // Direct play with audio transcoded to AAC to ensure browser compatibility
+  const directUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=false&AudioCodec=aac,mp3&VideoCodec=h264,hevc,av1,vp9&AllowVideoStreamCopy=true&AllowAudioStreamCopy=false&AudioBitRate=320000`;
 
   // Fetch subtitle streams from Emby MediaInfo
   useEffect(() => {
