@@ -17,7 +17,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const dashRef = useRef(null);
-  const [playerId, setPlayerId] = useState('direct'); // default: Direct Play
+  const [playerId, setPlayerId] = useState('hls'); // default: HLS (audio always transcoded to AAC)
   const [showPicker, setShowPicker] = useState(false);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
