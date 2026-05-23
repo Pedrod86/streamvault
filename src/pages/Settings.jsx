@@ -20,6 +20,7 @@ const THEMES = [
   { label: 'Amber & Yellow', primary: '38 92% 50%',  accent: '48 96% 53%',  preview: ['#f59e0b', '#eab308'] },
   { label: 'Slate (Neutral)',primary: '215 25% 50%', accent: '215 20% 65%', preview: ['#64748b', '#94a3b8'] },
   { label: '⚡ Cyberpunk',   primary: '300 100% 55%', accent: '57 100% 50%', preview: ['#cc00ff', '#ffee00'], cyberpunk: true },
+  { label: '📺 Sky UK',      primary: '349 100% 46%', accent: '210 100% 56%', preview: ['#e8002d', '#1a8fe8'] },
 ];
 
 const INTERVALS = [
