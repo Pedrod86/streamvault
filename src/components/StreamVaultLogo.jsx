@@ -1,12 +1,13 @@
 import React from 'react';
 
-const LOGO_URL = 'https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvault.png?rlkey=png0dj93b0c1m3ksls5t5b7wn&st=4nd7duli&dl=1';
+const LOGO_URL = 'https://media.base44.com/images/public/69fe35055df988e0955e5c11/6a6f0ca7a_generated_image.png';
 
 export default function StreamVaultLogo({ size = 'md', showName = true }) {
   const sizes = {
-    sm: { img: 'w-8 h-8', text: 'text-base' },
+    sm: { img: 'w-8 h-8',   text: 'text-base' },
     md: { img: 'w-12 h-12', text: 'text-xl' },
-    lg: { img: 'w-20 h-20', text: 'text-3xl' },
+    lg: { img: 'w-24 h-24', text: 'text-4xl' },
+    xl: { img: 'w-32 h-32', text: 'text-5xl' },
   };
   const s = sizes[size] || sizes.md;
 
@@ -15,10 +16,10 @@ export default function StreamVaultLogo({ size = 'md', showName = true }) {
       <img
         src={LOGO_URL}
         alt="StreamVault"
-        className={`${s.img} rounded-2xl object-cover shadow-lg shadow-primary/30`}
+        className={`${s.img} rounded-2xl object-cover shadow-2xl shadow-primary/40 ring-1 ring-primary/20`}
       />
       {showName && (
-        <span className={`font-heading font-bold ${s.text} bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent`}>
+        <span className={`font-heading font-bold ${s.text} bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent tracking-wide`}>
           StreamVault
         </span>
       )}
