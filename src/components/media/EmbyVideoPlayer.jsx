@@ -13,6 +13,67 @@ function formatTime(secs) {
   return `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// Report playback events to Emby so watch progress syncs server-side
+function useEmbyPlaybackReporter({ base, token, itemId, videoRef, playing }) {
+  const sessionIdRef = useRef(`streamvault-${Date.now()}`);
+  const reportedStart = useRef(false);
+  const intervalRef = useRef(null);
+
+  const getPositionTicks = () => {
+    const secs = videoRef.current?.currentTime || 0;
+    return Math.floor(secs * 10_000_000); // seconds → 100-nanosecond ticks
+  };
+
+  const report = (endpoint, extra = {}) => {
+    if (!base || !token || !itemId) return;
+    fetch(`${base}${endpoint}`, {
+      method: 'POST',
+      headers: { 'X-Emby-Token': token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ItemId: itemId,
+        SessionId: sessionIdRef.current,
+        PositionTicks: getPositionTicks(),
+        IsPaused: false,
+        IsMuted: false,
+        ...extra,
+      }),
+    }).catch(() => {});
+  };
+
+  // Start session when first playing
+  useEffect(() => {
+    if (playing && !reportedStart.current) {
+      reportedStart.current = true;
+      report('/Sessions/Playing');
+    }
+  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Progress ping every 10s while playing
+  useEffect(() => {
+    if (playing) {
+      intervalRef.current = setInterval(() => {
+        report('/Sessions/Playing/Progress', { IsPaused: false });
+      }, 10_000);
+    } else {
+      clearInterval(intervalRef.current);
+      if (reportedStart.current) {
+        report('/Sessions/Playing/Progress', { IsPaused: true });
+      }
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Stop session on unmount
+  useEffect(() => {
+    return () => {
+      clearInterval(intervalRef.current);
+      if (reportedStart.current) {
+        report('/Sessions/Playing/Stopped');
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId, initialSubtitleIndex }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
@@ -29,6 +90,10 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
   const [showSubPicker, setShowSubPicker] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [playing, setPlaying] = useState(false);
+
+  // Sync playback progress back to Emby server (implements E2PL-style session reporting)
+  useEmbyPlaybackReporter({ base, token, itemId: item?.id, videoRef, playing });
+
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
