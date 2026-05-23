@@ -62,6 +62,9 @@ export default function EmbyLibrary() {
   const [playingItem, setPlayingItem] = useState(null);
   const [browsingItem, setBrowsingItem] = useState(null);
 
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [scanProgress, setScanProgress] = useState({ loading: scanState.loading, done: scanState.done, total: scanState.total, count: scanState.library.length });
+
   // Build a title→embyId lookup from the in-memory scan state
   const embyIdByTitle = useMemo(() => {
     const map = new Map();
@@ -80,8 +83,6 @@ export default function EmbyLibrary() {
       setPlayingItem(item);
     }
   };
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [scanProgress, setScanProgress] = useState({ loading: scanState.loading, done: scanState.done, total: scanState.total, count: scanState.library.length });
 
   // Subscribe to scan state for progress indicator only
   useEffect(() => {
