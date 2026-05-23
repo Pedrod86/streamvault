@@ -175,13 +175,13 @@ export default function VideoPlayer({ src, title, poster, onClose, onProgress, s
     setSubtitles(tracks);
   };
 
-  // ── Volume sync (desktop only — mobile OS controls volume hardware) ───────
+  // ── Volume sync — apply on all devices including Android TV ──────────────
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (!isMobile) v.volume = volume;
+    try { v.volume = muted ? 0 : volume; } catch (_) {}
     v.muted = muted;
-  }, [volume, muted, isMobile]);
+  }, [volume, muted]);
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   const skip = useCallback((secs) => {

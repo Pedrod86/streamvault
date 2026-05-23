@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import dashjs from 'dashjs';
-import { X, Layers, Volume2, VolumeX, Maximize, Subtitles, ChevronDown, Play, Pause, SkipBack, SkipForward, PictureInPicture2 } from 'lucide-react';
+import { X, Layers, Volume2, VolumeX, Maximize, Minimize, Subtitles, ChevronDown, Play, Pause, SkipBack, SkipForward, PictureInPicture2 } from 'lucide-react';
 import PlayerPicker, { PLAYERS } from './PlayerPicker';
 import ExternalPlayerView from './ExternalPlayerView';
 
@@ -38,10 +38,10 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
   const base = server?.server_url?.replace(/\/$/, '') || '';
   const token = server?.api_token || '';
 
-  const subParam = activeSub !== -1 ? `&SubtitleStreamIndex=${activeSub}&SubtitleMethod=Encode` : '&SubtitleMethod=Encode';
-  const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3,ac3,eac3,flac,opus${subParam}&TranscodingMaxAudioChannels=2&RequireAvc=false&EnableAdaptiveBitrateStreaming=true&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10`;
-  const dashUrl = `${base}/Videos/${item.id}/master.mpd?api_key=${token}&VideoCodec=h264,hevc,av1&AudioCodec=aac,ac3,eac3,flac,opus&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&EnableAdaptiveBitrateStreaming=true`;
-  const directUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true`;
+  const subParam = activeSub !== -1 ? `&SubtitleStreamIndex=${activeSub}&SubtitleMethod=Encode` : '';
+  const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3,ac3,eac3,flac,opus${subParam}&RequireAvc=false&EnableAdaptiveBitrateStreaming=true&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&AudioBitRate=320000`;
+  const dashUrl = `${base}/Videos/${item.id}/master.mpd?api_key=${token}&VideoCodec=h264,hevc,av1&AudioCodec=aac,ac3,eac3,flac,opus&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&EnableAdaptiveBitrateStreaming=true&AudioBitRate=320000`;
+  const directUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true&AudioCodec=aac`;
 
   // Fetch subtitle streams from Emby MediaInfo
   useEffect(() => {
@@ -213,13 +213,28 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
     };
   }, [playerId, hlsUrl, dashUrl, directUrl]);
 
-  // Sync volume to video element (desktop only — mobile OS controls volume hardware)
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    const fn = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', fn);
+    return () => document.removeEventListener('fullscreenchange', fn);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = document.querySelector('.emby-player-container') || document.documentElement;
+    if (!fullscreen) el.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }, [fullscreen]);
+
+  // Sync volume to video element — works on ALL devices including Android TV
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (!isMobile) video.volume = volume;
+    // Try to set volume — some browsers/WebViews ignore this but it never hurts to try
+    try { video.volume = muted ? 0 : volume; } catch (_) {}
     video.muted = muted;
-  }, [volume, muted, isMobile]);
+  }, [volume, muted]);
 
   // Auto-hide controls after 3s of inactivity
   const showControls = useCallback(() => {
@@ -250,7 +265,7 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black flex flex-col"
+      className="emby-player-container fixed inset-0 z-50 bg-black flex flex-col"
       onMouseMove={showControls}
       onTouchStart={showControls}
     >
@@ -377,39 +392,41 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
 
           <div className="flex-1" />
 
-          {/* Subtitles picker */}
-          {subtitles.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => { setShowSubPicker(p => !p); setShowPicker(false); }}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${activeSub !== -1 ? 'bg-primary/80 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-              >
-                <Subtitles className="w-3.5 h-3.5" />
-                <span>{activeSubLabel}</span>
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              {showSubPicker && (
-                <div className="absolute bottom-10 right-0 w-56 bg-black/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20">
-                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
-                    <span className="text-white text-sm font-semibold">Subtitles</span>
-                    <button onClick={() => setShowSubPicker(false)} className="text-white/50 hover:text-white text-xs">✕</button>
-                  </div>
-                  <div className="p-1.5 space-y-0.5 max-h-60 overflow-y-auto">
-                    <button onClick={() => { setActiveSub(-1); setShowSubPicker(false); }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${activeSub === -1 ? 'bg-primary/20 text-primary' : 'text-white/80 hover:bg-white/10'}`}>
-                      Off
-                    </button>
-                    {subtitles.map(s => (
-                      <button key={s.index} onClick={() => { setActiveSub(s.index); setShowSubPicker(false); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${activeSub === s.index ? 'bg-primary/20 text-primary' : 'text-white/80 hover:bg-white/10'}`}>
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
+          {/* Subtitles / CC picker — always shown */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowSubPicker(p => !p); setShowPicker(false); }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${activeSub !== -1 ? 'bg-primary/80 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+              title="Subtitles / CC"
+            >
+              <Subtitles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{activeSubLabel}</span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showSubPicker && (
+              <div className="absolute bottom-10 right-0 w-56 bg-black/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
+                  <span className="text-white text-sm font-semibold">Subtitles / CC</span>
+                  <button onClick={() => setShowSubPicker(false)} className="text-white/50 hover:text-white text-xs">✕</button>
                 </div>
-              )}
-            </div>
-          )}
+                <div className="p-1.5 space-y-0.5 max-h-60 overflow-y-auto">
+                  <button onClick={() => { setActiveSub(-1); setShowSubPicker(false); }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${activeSub === -1 ? 'bg-primary/20 text-primary' : 'text-white/80 hover:bg-white/10'}`}>
+                    Off
+                  </button>
+                  {subtitles.length === 0 && (
+                    <p className="text-white/40 text-xs px-3 py-2">No subtitle tracks found</p>
+                  )}
+                  {subtitles.map(s => (
+                    <button key={s.index} onClick={() => { setActiveSub(s.index); setShowSubPicker(false); }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${activeSub === s.index ? 'bg-primary/20 text-primary' : 'text-white/80 hover:bg-white/10'}`}>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* PiP */}
           {typeof document !== 'undefined' && document.pictureInPictureEnabled && (
@@ -418,9 +435,9 @@ export default function EmbyVideoPlayer({ item, server, onClose }) {
             </button>
           )}
 
-          {/* Fullscreen */}
-          <button onClick={() => videoRef.current?.requestFullscreen?.()} className="text-white/70 hover:text-white transition-colors">
-            <Maximize className="w-5 h-5" />
+          {/* Fullscreen toggle */}
+          <button onClick={toggleFullscreen} className="text-white/70 hover:text-white transition-colors" title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+            {fullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </button>
         </div>
       </div>
