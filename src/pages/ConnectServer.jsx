@@ -489,7 +489,9 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
       try {
         res = await base44.functions.invoke('plexAuth', { username, password, serverUrl: url });
       } catch (err) {
-        setAuthError('Cannot connect to Plex. Check your credentials and server URL.');
+        // Extract the error message from the response body if available
+        const msg = err?.response?.data?.error || err?.message || 'Cannot connect to Plex. Check your credentials and server URL.';
+        setAuthError(msg);
         return;
       }
       if (res.data?.error) {
