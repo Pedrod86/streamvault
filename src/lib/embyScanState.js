@@ -149,8 +149,8 @@ async function fetchPage() {
     if (scanState.done) {
       clearProgress();
     } else {
-      // 2s delay between pages to avoid hitting rate limits
-      setTimeout(() => fetchPage(), 2000);
+      // 5s delay between pages to avoid hitting rate limits
+      setTimeout(() => fetchPage(), 5000);
     }
   } catch (err) {
     // Persist the current index so resume starts from the last completed page
@@ -158,13 +158,15 @@ async function fetchPage() {
     scanState.error = err.message || 'Failed to load library';
     scanState.loading = false;
     notifyListeners();
-    // Auto-retry after 10s on transient errors (rate limits, timeouts)
+    // Rate limit: back off 5 minutes. Other errors: retry after 30s.
+    const isRateLimit = err.message?.includes('429') || err.message?.toLowerCase().includes('rate limit');
+    const retryDelay = isRateLimit ? 5 * 60 * 1000 : 30_000;
     setTimeout(() => {
       if (!scanState.done && !scanState.loading) {
         scanState.error = null;
         fetchPage();
       }
-    }, 10000);
+    }, retryDelay);
   }
 }
 
