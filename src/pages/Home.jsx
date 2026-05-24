@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
 import MediaRow from '../components/media/MediaRow';
-import ServerStatusBar from '../components/server/ServerStatusBar';
 import PullToRefresh from '../components/layout/PullToRefresh';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
@@ -152,7 +151,6 @@ export default function Home() {
       <LibraryCategories allMedia={allMedia} />
 
       <div className="mt-6 space-y-2">
-        <ServerStatusBar />
 
         {activeTab === 'All' && (
           <>

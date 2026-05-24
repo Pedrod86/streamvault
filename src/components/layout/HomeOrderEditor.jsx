@@ -3,12 +3,9 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Eye, EyeOff, X } from 'lucide-react';
 
 export const DEFAULT_SECTIONS = [
-  { id: 'live_tv',           label: 'Live TV' },
-  { id: 'continue_emby',     label: 'Continue Watching (Emby)' },
-  { id: 'recently_added',    label: 'Recently Added (Emby)' },
   { id: 'emby_rows',         label: 'Emby Library' },
-  { id: 'continue_watching', label: 'Continue Watching' },
-  { id: 'local_recent',      label: 'Recently Added', hidden: true },
+  { id: 'continue_watching', label: 'Continue Watching (Local)' },
+  { id: 'local_recent',      label: 'Recently Added (Local)', hidden: true },
   { id: 'anime',             label: 'Anime' },
   { id: 'kids',              label: 'Kids' },
   { id: 'genres',            label: 'Genres', hidden: true },

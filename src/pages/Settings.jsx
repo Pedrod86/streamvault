@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Zap, LayoutGrid, History, Film, Baby, Sparkles, Clapperboard, MonitorPlay } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Zap, LayoutGrid, History, Film, Baby, Sparkles, Clapperboard, MonitorPlay, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
@@ -491,6 +491,91 @@ function CategorySyncSection() {
   );
 }
 
+function ExportLibrarySection() {
+  const [status, setStatus] = useState('idle');
+
+  const { data: allMedia = [] } = useQuery({
+    queryKey: ['media'],
+    queryFn: () => base44.entities.Media.list('-created_date', 5000),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const exportJson = () => {
+    setStatus('exporting');
+    const json = JSON.stringify(allMedia, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `streamvault-library-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('done');
+    setTimeout(() => setStatus('idle'), 3000);
+  };
+
+  const exportCsv = () => {
+    setStatus('exporting');
+    const headers = ['title', 'media_type', 'year', 'rating', 'genre', 'director', 'studio', 'content_rating', 'season_count', 'episode_count', 'description'];
+    const rows = allMedia.map(m =>
+      headers.map(h => {
+        const val = m[h];
+        if (Array.isArray(val)) return `"${val.join(', ')}"`;
+        if (typeof val === 'string' && val.includes(',')) return `"${val}"`;
+        return val ?? '';
+      }).join(',')
+    );
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `streamvault-library-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('done');
+    setTimeout(() => setStatus('idle'), 3000);
+  };
+
+  return (
+    <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }} className="space-y-4 p-5 rounded-xl bg-card border border-border">
+      <div className="flex items-center gap-2 mb-1">
+        <Download className="w-4 h-4 text-accent" />
+        <h2 className="font-heading font-semibold text-foreground">Export Library</h2>
+        <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+          {allMedia.length} items
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Download your entire media library as JSON or CSV.
+      </p>
+      {status === 'done' && (
+        <div className="flex items-center gap-2 text-sm text-green-400 bg-green-500/10 rounded-lg px-3 py-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> Export downloaded successfully.
+        </div>
+      )}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          className="flex-1 h-10 border-accent/40 text-accent hover:bg-accent/10 hover:border-accent gap-2"
+          onClick={exportJson}
+          disabled={status === 'exporting' || allMedia.length === 0}
+        >
+          <Download className="w-4 h-4" /> Export JSON
+        </Button>
+        <Button
+          variant="outline"
+          className="flex-1 h-10 border-accent/40 text-accent hover:bg-accent/10 hover:border-accent gap-2"
+          onClick={exportCsv}
+          disabled={status === 'exporting' || allMedia.length === 0}
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </Button>
+      </div>
+    </motion.section>
+  );
+}
+
 export default function Settings() {
   const queryClient = useQueryClient();
 
@@ -744,6 +829,9 @@ export default function Settings() {
 
       {/* ── TVDB Bulk Enrich ── */}
       <TvdbEnrichSection />
+
+      {/* ── Export Library ── */}
+      <ExportLibrarySection />
 
       {/* ── API Keys ── */}
       <ApiKeysSection />
