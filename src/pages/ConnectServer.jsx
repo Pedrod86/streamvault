@@ -594,8 +594,9 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
           <TabsContent value="credentials">
             <form onSubmit={handleCredentials} className="space-y-4">
               {server.id === 'plex' && (
-                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-300 leading-relaxed">
-                  Sign in with your <strong>Plex account</strong> (plex.tv) username &amp; password. A token will be fetched automatically.
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-300 leading-relaxed space-y-1">
+                  <p>Sign in with your <strong>plex.tv</strong> account credentials. A token will be fetched automatically.</p>
+                  <p className="text-yellow-300/70">⚠️ Server URL must be your <strong>local or remote server address</strong>, e.g. <code className="bg-black/20 px-1 rounded">http://192.168.1.100:32400</code> — not app.plex.tv.</p>
                 </div>
               )}
               <div>
@@ -605,11 +606,13 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
                 <Input
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder={server.id === 'plex' ? 'http://localhost:32400' : 'http://192.168.1.10:8096'}
+                  placeholder={server.id === 'plex' ? 'http://192.168.1.100:32400' : 'http://192.168.1.10:8096'}
                   className="mt-1 bg-secondary border-border h-11 font-mono text-sm"
                   required
                 />
-                <p className="text-xs text-muted-foreground mt-1">Include port number if not on standard ports</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {server.id === 'plex' ? 'Your local IP or remote access URL — must include port 32400' : 'Include port number if not on standard ports'}
+                </p>
               </div>
               <div>
                 <Label className="text-foreground text-sm">Server Name (optional)</Label>

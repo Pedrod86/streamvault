@@ -44,21 +44,29 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Could not retrieve Plex token from response.' }, { status: 400 });
     }
 
-    // Step 2: If a server URL was provided, verify connectivity
+    // Step 2: If a server URL was provided, verify it looks like a real Plex server (not app.plex.tv)
     if (serverUrl) {
       const base = serverUrl.replace(/\/$/, '');
+
+      // Reject cloud/web URLs — these are not Plex media servers
+      if (/app\.plex\.tv|plex\.tv\/web|plex\.tv\/desktop/i.test(base)) {
+        return Response.json({
+          error: 'That URL is the Plex web app, not your media server. Enter your local server address (e.g. http://192.168.1.100:32400) or your remote access URL from Plex Settings → Remote Access.',
+        }, { status: 400 });
+      }
+
       try {
         const pingRes = await fetch(`${base}/?X-Plex-Token=${plexToken}`, {
           signal: AbortSignal.timeout(8000),
         });
         if (!pingRes.ok) {
           return Response.json({
-            error: `Connected to Plex.tv but could not reach your server at ${base}. Check the URL and port.`,
+            error: `Connected to Plex.tv but could not reach your server at ${base}. Check the URL and port (Plex default is 32400).`,
           }, { status: 400 });
         }
       } catch {
         return Response.json({
-          error: `Got Plex token but cannot reach server at ${base}. Check the URL and ensure the server is online.`,
+          error: `Got Plex token but cannot reach server at ${base}. Make sure your server is online and the URL includes the port (e.g. http://192.168.1.100:32400).`,
         }, { status: 400 });
       }
     }
