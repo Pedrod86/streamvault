@@ -17,19 +17,19 @@ async function doFetch(url) {
 }
 
 function buildImageUrl(base, itemId, token, type = 'Primary') {
-  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&maxWidth=400`;
+  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&MaxWidth=400`;
 }
 
 async function resolveUserId(base, token) {
+  try {
+    const me = await doFetch(`${base}/Users/Me?api_key=${token}`);
+    if (me?.Id) return me.Id;
+  } catch (_) {}
   try {
     const users = await doFetch(`${base}/Users?api_key=${token}`);
     const list = Array.isArray(users) ? users : (users?.Items || []);
     const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
     if (admin?.Id) return admin.Id;
-  } catch (_) {}
-  try {
-    const me = await doFetch(`${base}/Users/Me?api_key=${token}`);
-    if (me?.Id) return me.Id;
   } catch (_) {}
   throw new Error('Could not authenticate with Emby.');
 }

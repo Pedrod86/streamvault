@@ -17,7 +17,7 @@ async function doFetch(url) {
 }
 
 function buildImageUrl(base, itemId, token, type = 'Primary') {
-  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&maxWidth=400`;
+  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&MaxWidth=400`;
 }
 
 function buildStreamUrl(base, itemId, token) {

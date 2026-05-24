@@ -23,7 +23,7 @@ export async function embyProxyFetch(url, headers = {}) {
 }
 
 export function buildImageUrl(base, itemId, token, type = 'Primary') {
-  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&maxWidth=400`;
+  return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&MaxWidth=400`;
 }
 
 export function buildStreamUrl(base, itemId, token) {

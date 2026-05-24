@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       name: s.Name,
       index: s.IndexNumber || 0,
       posterUrl: s.ImageTags?.Primary
-        ? `${base}/Items/${s.Id}/Images/Primary?api_key=${token}&maxWidth=300`
+        ? `${base}/Items/${s.Id}/Images/Primary?api_key=${token}&MaxWidth=300`
         : null,
     }));
 
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       overview: e.Overview || '',
       durationMinutes: e.RunTimeTicks ? Math.round(e.RunTimeTicks / 600000000) : null,
       thumbUrl: e.ImageTags?.Primary
-        ? `${base}/Items/${e.Id}/Images/Primary?api_key=${token}&maxWidth=400`
+        ? `${base}/Items/${e.Id}/Images/Primary?api_key=${token}&MaxWidth=400`
         : null,
       streamUrl: `${base}/Videos/${e.Id}/stream?api_key=${token}&Static=true`,
     }));
