@@ -482,7 +482,31 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
   const handleCredentials = async (e) => {
     e.preventDefault();
     setAuthError('');
-    // For Emby/Jellyfin, authenticate via proxy to avoid CORS issues
+
+    // Plex: exchange username/password for a Plex token via plex.tv
+    if (server.id === 'plex') {
+      let res;
+      try {
+        res = await base44.functions.invoke('plexAuth', { username, password, serverUrl: url });
+      } catch (err) {
+        setAuthError('Cannot connect to Plex. Check your credentials and server URL.');
+        return;
+      }
+      if (res.data?.error) {
+        setAuthError(res.data.error);
+        return;
+      }
+      onSave({
+        server_url: url,
+        username: res.data.username || username,
+        plex_token: res.data.plexToken,
+        server_name: serverName || 'My Plex Server',
+        auth_method: 'credentials',
+      });
+      return;
+    }
+
+    // Emby/Jellyfin: authenticate via proxy to avoid CORS issues
     if (server.id === 'emby' || server.id === 'jellyfin') {
       const base = url.replace(/\/$/, '');
       let res;
@@ -518,6 +542,7 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
       });
       return;
     }
+
     onSave({
       server_url: url,
       username,
@@ -568,6 +593,11 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
           {/* Credentials Tab */}
           <TabsContent value="credentials">
             <form onSubmit={handleCredentials} className="space-y-4">
+              {server.id === 'plex' && (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-300 leading-relaxed">
+                  Sign in with your <strong>Plex account</strong> (plex.tv) username &amp; password. A token will be fetched automatically.
+                </div>
+              )}
               <div>
                 <Label className="text-foreground text-sm flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Server URL
