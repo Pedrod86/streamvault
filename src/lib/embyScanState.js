@@ -177,8 +177,8 @@ async function fetchPage() {
     if (scanState.done) {
       clearProgress();
     } else {
-      // Small delay between pages to avoid rate limits
-      setTimeout(() => fetchPage(), 3000);
+      // Delay between pages — give the DB rate limiter room to breathe
+      setTimeout(() => fetchPage(), 8000);
     }
   } catch (err) {
     // Persist the current index so resume starts from the last completed page

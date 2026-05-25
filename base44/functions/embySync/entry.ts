@@ -21,33 +21,33 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, fetched: 0, created: 0, updated: 0 });
     }
 
-    // Pull ALL existing emby tags in ONE query (tag prefix "emby:")
-    // We fetch up to 5000 existing records and build a Set of known emby IDs
-    const existing = await base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 5000);
+    // Build the list of specific emby: tags we need to check for THIS batch only
+    const embyIds = items.map(i => i.emby_id).filter(Boolean);
+
+    // Check in chunks of 10 sequentially — avoids rate limit spikes
     const existingEmbyIds = new Set();
-    for (const m of existing) {
-      for (const t of (m.tags || [])) {
-        if (t.startsWith('emby:')) existingEmbyIds.add(t.slice(5));
-      }
+    for (let i = 0; i < embyIds.length; i += 10) {
+      const chunk = embyIds.slice(i, i + 10);
+      const checks = await Promise.all(
+        chunk.map(eid =>
+          base44.entities.Media.filter({ tags: `emby:${eid}` }, '-created_date', 1)
+            .then(r => r.length > 0 ? eid : null)
+            .catch(() => null)
+        )
+      );
+      checks.forEach(eid => { if (eid) existingEmbyIds.add(eid); });
+      if (i + 10 < embyIds.length) await sleep(300);
     }
 
     // Filter to only genuinely new items
     const newItems = items.filter(item => item.emby_id && !existingEmbyIds.has(item.emby_id));
 
-    // Bulk create in parallel batches of 100
+    // Bulk create sequentially to avoid rate limits
     let createdCount = 0;
-    const batches = [];
     for (let i = 0; i < newItems.length; i += BATCH) {
-      batches.push(newItems.slice(i, i + BATCH));
-    }
-
-    // Run up to 3 batch creates in parallel
-    for (let i = 0; i < batches.length; i += 3) {
-      await Promise.all(
-        batches.slice(i, i + 3).map(b => base44.entities.Media.bulkCreate(b))
-      );
-      createdCount += batches.slice(i, i + 3).reduce((sum, b) => sum + b.length, 0);
-      if (i + 3 < batches.length) await sleep(100);
+      await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH));
+      createdCount += Math.min(BATCH, newItems.length - i);
+      if (i + BATCH < newItems.length) await sleep(500);
     }
 
     const duration = Math.round((Date.now() - t0) / 1000);

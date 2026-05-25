@@ -418,7 +418,15 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
         x5-playsinline="true"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onError={() => {}}
+        onError={(e) => {
+          const v = videoRef.current;
+          const code = v?.error?.code;
+          const msg = code === 4 ? 'Format not supported — try Direct Play or HLS'
+            : code === 3 ? 'Stream decode error — try switching player mode'
+            : code === 2 ? 'Network error — check your server URL'
+            : 'Stream failed to load';
+          setStreamError(msg);
+        }}
         onLoadedMetadata={() => { if (videoRef.current) setDuration(videoRef.current.duration || 0); }}
         onTimeUpdate={() => {
           const v = videoRef.current;
