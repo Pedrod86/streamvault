@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Database, BookmarkPlus, Radio, Settings } from 'lucide-react';
+import { Home, Database, BookmarkPlus, Radio, Settings, LogIn } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 function FourKIcon({ className }) {
   return (
@@ -24,6 +25,11 @@ export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const prevPathRef = useRef(location.pathname);
+  const [isAuthed, setIsAuthed] = useState(null);
+
+  useEffect(() => {
+    base44.auth.isAuthenticated().then(setIsAuthed).catch(() => setIsAuthed(false));
+  }, []);
 
   // Save scroll position of current tab before leaving it
   useEffect(() => {
@@ -60,6 +66,26 @@ export default function BottomNav() {
       navigate(to);
     }
   }, [location.pathname, navigate]);
+
+  // Show login button if not authenticated
+  if (isAuthed === false) {
+    return (
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-md border-t border-border"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-stretch">
+          <Link
+            to="/login"
+            className="flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 select-none text-primary"
+          >
+            <LogIn className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Sign In</span>
+          </Link>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav

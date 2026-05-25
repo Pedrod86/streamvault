@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   Play, Pause, SkipBack, SkipForward, X, List,
-  Timer, Gauge, ChevronLeft, ChevronRight, BookOpen
+  Timer, Gauge, ChevronLeft, ChevronRight, BookOpen, Volume2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -26,6 +26,7 @@ export default function AudiobookPlayer({ book, onClose }) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(book.durationSeconds || 0);
+  const [volume, setVolume] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [speedIdx, setSpeedIdx] = useState(1);
   const [sleepMin, setSleepMin] = useState(0);
@@ -92,6 +93,12 @@ export default function AudiobookPlayer({ book, onClose }) {
   const seek = (val) => {
     if (audioRef.current) audioRef.current.currentTime = val[0];
     setCurrentTime(val[0]);
+  };
+
+  const onVolumeChange = (val) => {
+    const v = val[0];
+    setVolume(v);
+    if (audioRef.current) audioRef.current.volume = v;
   };
 
   const skip = (secs) => {
@@ -171,6 +178,19 @@ export default function AudiobookPlayer({ book, onClose }) {
             <span>{formatTime(currentTime)}</span>
             <span>-{formatTime(duration - currentTime)}</span>
           </div>
+        </div>
+
+        {/* Volume */}
+        <div className="w-full flex items-center gap-3">
+          <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Slider
+            min={0}
+            max={1}
+            step={0.05}
+            value={[volume]}
+            onValueChange={onVolumeChange}
+            className="flex-1"
+          />
         </div>
 
         {/* Controls */}
