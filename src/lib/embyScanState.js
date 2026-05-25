@@ -1,7 +1,7 @@
 import { base44 } from '@/api/base44Client';
 
 const CACHE_KEY = 'streamvault_emby_library';
-const DB_FLUSH_THRESHOLD = 58; // auto-save to DB once we have this many new items buffered
+const DB_FLUSH_THRESHOLD = 200; // auto-save to DB once we have this many new items buffered
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours — re-scan if older than this
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ async function fetchPage() {
   notifyListeners();
 
   try {
-    const res = await base44.functions.invoke('embyLibrary', { startIndex: scanState.startIndex });
+    const res = await base44.functions.invoke('embyLibrary', { startIndex: scanState.startIndex, pageSize: 500 });
     if (res.data?.error) throw new Error(res.data.error);
 
     const { items, hasMore, total, server } = res.data;
@@ -177,8 +177,8 @@ async function fetchPage() {
     if (scanState.done) {
       clearProgress();
     } else {
-      // 30s delay between pages to avoid hitting rate limits
-      setTimeout(() => fetchPage(), 30000);
+      // Small delay between pages to avoid rate limits
+      setTimeout(() => fetchPage(), 3000);
     }
   } catch (err) {
     // Persist the current index so resume starts from the last completed page

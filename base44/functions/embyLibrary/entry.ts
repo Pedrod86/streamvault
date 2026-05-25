@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const startIndex = parseInt(body.startIndex || 0);
-    const PAGE = parseInt(body.pageSize || 200);
+    const PAGE = parseInt(body.pageSize || 500);
     // itemType: 'Movie' | 'Series' | '' (both)
     const itemType = body.itemType || '';
     // search: free-text filter
