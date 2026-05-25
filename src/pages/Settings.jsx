@@ -210,10 +210,15 @@ function QuickSyncSection() {
     try {
       for (const server of embyServers) {
         let startIndex = 0;
-        const PAGE = 500; // larger pages = fewer round trips
+        const PAGE = 200; // smaller pages so we can stop early
 
         while (true) {
-          const res = await base44.functions.invoke('embyLibrary', { startIndex, pageSize: PAGE });
+          // Sort by DateCreated descending — newest items arrive first
+          const res = await base44.functions.invoke('embyLibrary', {
+            startIndex,
+            pageSize: PAGE,
+            sortBy: 'DateCreated,Descending',
+          });
           if (res.data?.error) throw new Error(res.data.error);
           const { items, hasMore } = res.data;
           if (!items?.length) break;
@@ -221,7 +226,6 @@ function QuickSyncSection() {
           totalFetched += items.length;
           setStats(s => ({ ...s, fetched: totalFetched }));
 
-          // Sync this page immediately — don't accumulate the whole library
           const dbItems = items.map(item => {
             const tags = ['emby', `emby:${item.id}`];
             if (item.is4k) tags.push('4k');
@@ -242,10 +246,13 @@ function QuickSyncSection() {
           });
 
           const res2 = await base44.functions.invoke('embySync', { server, items: dbItems });
-          totalCreated += res2.data?.created || 0;
+          const pageCreated = res2.data?.created || 0;
+          totalCreated += pageCreated;
           totalUpdated += res2.data?.updated || 0;
           setStats({ fetched: totalFetched, created: totalCreated, updated: totalUpdated });
 
+          // Stop early: if this whole page had zero new items, we've caught up
+          if (pageCreated === 0) break;
           if (!hasMore) break;
           startIndex += items.length;
         }
@@ -271,7 +278,7 @@ function QuickSyncSection() {
         )}
       </div>
       <p className="text-xs text-muted-foreground -mt-2">
-        Fetches your Emby library and adds only missing items to your database. Fast and non-destructive.
+        Fetches newest Emby items first and stops as soon as it reaches items already in your database. Fast incremental sync — great for picking up recently added content.
       </p>
 
       {embyServers.length === 0 && (
