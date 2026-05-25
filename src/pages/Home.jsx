@@ -5,7 +5,6 @@ import HeroBanner from '../components/media/HeroBanner';
 import MediaRow from '../components/media/MediaRow';
 import PullToRefresh from '../components/layout/PullToRefresh';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
-import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import EmbyMediaRows from '../components/media/EmbyMediaRows';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import HomeOrderEditor, { loadHomeOrder, saveHomeOrder } from '../components/layout/HomeOrderEditor';
@@ -154,7 +153,6 @@ export default function Home() {
 
         {activeTab === 'All' && (
           <>
-            <EmbyRecentlyAdded />
             <EmbyContinueWatching />
             {homeOrder.filter(s => !s.hidden).map(section => {
               switch (section.id) {
