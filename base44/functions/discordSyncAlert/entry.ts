@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
     const duration = data?.duration_seconds ? `${data.duration_seconds}s` : 'N/A';
     const status = data?.status || 'unknown';
 
+    const totalInDb = data?.total_in_db;
     const color = status === 'success' ? 0x57F287 : status === 'partial' ? 0xFEE75C : 0xED4245;
     const emoji = status === 'success' ? '✅' : status === 'partial' ? '⚠️' : '❌';
 
@@ -33,6 +34,7 @@ Deno.serve(async (req) => {
         { name: 'Items Fetched', value: String(itemsFetched), inline: true },
         { name: 'New Items', value: String(itemsCreated), inline: true },
         { name: 'Updated', value: String(itemsUpdated), inline: true },
+        ...(totalInDb != null ? [{ name: '📦 Total in Library', value: String(totalInDb), inline: false }] : []),
       ],
       timestamp: new Date().toISOString(),
       footer: { text: 'StreamVault Sync' },

@@ -52,6 +52,10 @@ Deno.serve(async (req) => {
 
     const duration = Math.round((Date.now() - t0) / 1000);
 
+    // Count total items in DB after sync (fetch just IDs with high limit)
+    const allMedia = await base44.entities.Media.list('-created_date', 10000).catch(() => []);
+    const totalInDb = allMedia.length;
+
     // Fire-and-forget log + discord
     base44.entities.SyncLog.create({
       server_id: server?.id || 'unknown',
@@ -63,6 +67,7 @@ Deno.serve(async (req) => {
       items_updated: 0,
       duration_seconds: duration,
       started_at: startedAt,
+      description: `Total in library: ${totalInDb}`,
     }).catch(() => {});
 
     if (createdCount > 0) {
@@ -75,11 +80,12 @@ Deno.serve(async (req) => {
           items_created: createdCount,
           items_updated: 0,
           duration_seconds: duration,
+          total_in_db: totalInDb,
         }
       }).catch(() => {});
     }
 
-    return Response.json({ success: true, fetched: items.length, created: createdCount, updated: 0 });
+    return Response.json({ success: true, fetched: items.length, created: createdCount, updated: 0, total_in_db: totalInDb });
 
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

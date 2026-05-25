@@ -68,11 +68,14 @@ function LogRow({ log }) {
           >
             <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className={`grid gap-2 ${log.description ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 {[
                   { label: 'Fetched', value: log.items_fetched ?? '—', color: 'text-foreground' },
                   { label: 'Created', value: log.items_created ?? '—', color: 'text-green-400' },
                   { label: 'Updated', value: log.items_updated ?? '—', color: 'text-accent' },
+                  ...(log.description?.startsWith('Total in library:')
+                    ? [{ label: 'Total in DB', value: log.description.replace('Total in library: ', ''), color: 'text-primary' }]
+                    : []),
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-secondary rounded-lg p-3 text-center">
                     <p className={`text-lg font-bold ${color}`}>{value}</p>
