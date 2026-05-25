@@ -19,6 +19,8 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
     vlc: `vlc://${hdrStreamUrl}`,
     infuse: `infuse://x-callback-url/play?url=${encodedUrl}`,
     mx: mxIntent,
+    moviplayer: `https://moviplayer.com/?src=${encodeURIComponent(hdrStreamUrl)}`,
+    onlineplayer: `https://onlineplayer.app/en?autoload=${encodeURIComponent(hdrStreamUrl)}&theme=dark`,
   };
 
   const scheme = schemeMap[playerId] || `vlc://${streamUrl}`;
@@ -40,8 +42,14 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
     }
   }, [playerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isWebPlayer = ['moviplayer', 'onlineplayer'].includes(playerId);
+
   const handleLaunch = () => {
-    window.location.href = scheme;
+    if (isWebPlayer) {
+      window.open(scheme, '_blank');
+    } else {
+      window.location.href = scheme;
+    }
     setLaunched(true);
   };
 

@@ -139,10 +139,8 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
     // Clear container
     containerRef.current.innerHTML = '';
 
-    const external = ['mpv', 'vlc', 'infuse', 'mx', 'moviplayer'];
+    const external = ['mpv', 'vlc', 'infuse', 'mx', 'moviplayer', 'onlineplayer'];
     if (external.includes(playerId)) { setReady(true); return; }
-
-    if (playerId === 'onlineplayer') { setReady(true); return; }
 
     if (playerId === 'videojs') initVideoJs();
     else if (playerId === 'plyr') initPlyr();
@@ -293,13 +291,9 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
   }
 
   const playerLabel = PLAYERS.find(p => p.id === playerId)?.label || playerId;
-  const external = ['mpv', 'vlc', 'infuse', 'mx', 'moviplayer'];
+  const external = ['mpv', 'vlc', 'infuse', 'mx', 'moviplayer', 'onlineplayer'];
 
   if (external.includes(playerId)) {
-    // MoviPlayer: open in new tab
-    if (playerId === 'moviplayer') {
-      window.open(`https://moviplayer.com/?src=${encodeURIComponent(hlsUrl)}`, '_blank');
-    }
     return (
       <ExternalPlayerView
         item={item}
@@ -308,33 +302,6 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
         onClose={onClose}
         onSwitchPlayer={setPlayerId}
       />
-    );
-  }
-
-  // OnlinePlayer: embedded iframe
-  if (playerId === 'onlineplayer') {
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col">
-        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/90 to-transparent">
-          <button onClick={onClose} className="text-white/80 hover:text-white transition-colors p-1">
-            <X className="w-6 h-6" />
-          </button>
-          <span className="text-white/80 text-sm font-medium truncate max-w-[180px]">{item.title}</span>
-          <button
-            onClick={() => setPlayerId('videojs')}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors text-[10px] font-bold uppercase"
-          >
-            <Tv2 className="w-3.5 h-3.5" /> Switch Player
-          </button>
-        </div>
-        <iframe
-          src={`https://onlineplayer.app/en?autoload=${encodeURIComponent(hlsUrl)}&theme=dark`}
-          className="w-full h-full border-0"
-          allowFullScreen
-          allow="autoplay; fullscreen; picture-in-picture"
-          title={item.title}
-        />
-      </div>
     );
   }
 
