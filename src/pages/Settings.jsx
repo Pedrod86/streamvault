@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Zap, LayoutGrid, History, Film, Baby, Sparkles, Clapperboard, MonitorPlay, Download } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Zap, LayoutGrid, History, Film, Baby, Sparkles, Clapperboard, MonitorPlay, Download, ArrowUpCircle, PackageCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
@@ -584,6 +584,92 @@ function ExportLibrarySection() {
   );
 }
 
+const CURRENT_VERSION = '1.0.0';
+
+function CheckForUpdatesSection() {
+  const [status, setStatus] = useState('idle'); // idle | checking | uptodate | update-available | error
+  const [latestVersion, setLatestVersion] = useState(null);
+  const [releaseUrl, setReleaseUrl] = useState(null);
+  const [releaseNotes, setReleaseNotes] = useState(null);
+
+  const check = async () => {
+    setStatus('checking');
+    setLatestVersion(null);
+    setReleaseUrl(null);
+    setReleaseNotes(null);
+    try {
+      const res = await fetch('https://api.github.com/repos/Streamvault-io/streamvault/releases/latest', {
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+      if (!res.ok) throw new Error(`GitHub returned ${res.status}`);
+      const data = await res.json();
+      const tag = (data.tag_name || '').replace(/^v/, '');
+      setLatestVersion(tag);
+      setReleaseUrl(data.html_url || null);
+      setReleaseNotes(data.body ? data.body.slice(0, 300) : null);
+      setStatus(tag && tag !== CURRENT_VERSION ? 'update-available' : 'uptodate');
+    } catch (e) {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.145 }} className="space-y-4 p-5 rounded-xl bg-card border border-border">
+      <div className="flex items-center gap-2 mb-1">
+        <PackageCheck className="w-4 h-4 text-primary" />
+        <h2 className="font-heading font-semibold text-foreground">App Updates</h2>
+        <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">v{CURRENT_VERSION}</span>
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2">Check if a newer version of StreamVault is available.</p>
+
+      {status === 'uptodate' && (
+        <div className="flex items-center gap-2 text-sm text-green-400 bg-green-500/10 rounded-lg px-3 py-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>You're on the latest version (v{latestVersion}).</span>
+        </div>
+      )}
+
+      {status === 'update-available' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-yellow-400 bg-yellow-500/10 rounded-lg px-3 py-2">
+            <ArrowUpCircle className="w-4 h-4 shrink-0" />
+            <span>Update available: <strong>v{latestVersion}</strong></span>
+          </div>
+          {releaseNotes && (
+            <p className="text-xs text-muted-foreground bg-secondary rounded-lg px-3 py-2 line-clamp-3">{releaseNotes}</p>
+          )}
+          {releaseUrl && (
+            <a href={releaseUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-primary underline underline-offset-2">
+              <ArrowUpCircle className="w-3 h-3" /> View release on GitHub
+            </a>
+          )}
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>Couldn't reach GitHub. Check your connection and try again.</span>
+        </div>
+      )}
+
+      <Button
+        variant="outline"
+        className="w-full h-10 border-primary/40 text-primary hover:bg-primary/10 hover:border-primary gap-2"
+        onClick={check}
+        disabled={status === 'checking'}
+      >
+        {status === 'checking' ? (
+          <><RefreshCw className="w-4 h-4 animate-spin" />Checking…</>
+        ) : (
+          <><PackageCheck className="w-4 h-4" />Check for Updates</>
+        )}
+      </Button>
+    </motion.section>
+  );
+}
+
 export default function Settings() {
   const queryClient = useQueryClient();
 
@@ -847,6 +933,9 @@ export default function Settings() {
 
       {/* ── API Keys ── */}
       <ApiKeysSection />
+
+      {/* ── Check for Updates ── */}
+      <CheckForUpdatesSection />
 
       {/* ── Quick Links ── */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="space-y-3 p-5 rounded-xl bg-card border border-border">
