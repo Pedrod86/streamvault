@@ -1,6 +1,7 @@
 import { base44 } from '@/api/base44Client';
 
 const CACHE_KEY = 'streamvault_emby_library';
+const DB_FLUSH_THRESHOLD = 58; // auto-save to DB once we have this many new items buffered
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours — re-scan if older than this
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ export const scanState = {
   error: null,
   fromCache: false,
   listeners: new Set(),
+  _pendingDbItems: [], // items buffered for auto-flush to DB
 };
 
 // Restore progress from localStorage so we resume where we left off
@@ -131,9 +133,27 @@ async function fetchPage() {
     if (items?.length) {
       scanState.library = [...scanState.library, ...items];
       scanState.startIndex += items.length;
-      // NOTE: DB writes are handled by the manual Sync button (SyncProgressBar/embySync).
-      // This background scan is for in-memory display only — do NOT write to DB here
-      // to avoid hammering the Emby server and the database on every app load.
+
+      // Buffer items for auto-flush to DB
+      const dbItems = items.map(item => {
+        const tags = ['emby', `emby:${item.id}`];
+        if (item.is4k) tags.push('4k');
+        return {
+          emby_id: item.id,
+          title: item.title,
+          media_type: item.type === 'Series' ? 'tv_show' : 'movie',
+          description: item.overview || '',
+          year: item.year || undefined,
+          rating: item.rating || undefined,
+          duration_minutes: item.duration || undefined,
+          poster_url: item.posterUrl || undefined,
+          backdrop_url: item.backdropUrl || undefined,
+          video_url: item.streamUrl || undefined,
+          genre: item.genres || [],
+          tags,
+        };
+      });
+      scanState._pendingDbItems = [...scanState._pendingDbItems, ...dbItems];
     }
 
     scanState.done = !hasMore || !items?.length;
@@ -144,6 +164,14 @@ async function fetchPage() {
     saveCache(scanState);
     saveProgress(scanState.startIndex, scanState.total, scanState.server);
     notifyListeners();
+
+    // Auto-flush to DB once we have 58+ items buffered, or when scan is done
+    const shouldFlush = scanState._pendingDbItems.length >= DB_FLUSH_THRESHOLD || (scanState.done && scanState._pendingDbItems.length > 0);
+    if (shouldFlush && scanState.server) {
+      const toFlush = [...scanState._pendingDbItems];
+      scanState._pendingDbItems = [];
+      base44.functions.invoke('embySync', { server: scanState.server, items: toFlush }).catch(() => {});
+    }
 
     // Clear progress when scan is fully complete — next run starts fresh
     if (scanState.done) {

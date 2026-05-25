@@ -2,11 +2,17 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Database, BookmarkPlus, Radio, Settings } from 'lucide-react';
 
+function FourKIcon({ className }) {
+  return (
+    <span className={`font-bold text-[11px] leading-none ${className}`}>4K</span>
+  );
+}
+
 const TABS = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/emby', label: 'Library', icon: Database },
+  { to: '/4k', label: '4K', icon: FourKIcon, is4k: true },
   { to: '/iptv', label: 'IPTV', icon: Radio },
-  { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -61,7 +67,8 @@ export default function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-stretch">
-        {TABS.map(({ to, label, icon: Icon }) => {
+        {TABS.map((tab) => {
+          const { to, label, icon: Icon } = tab;
           const active = location.pathname === to;
           return (
             <Link
@@ -69,7 +76,7 @@ export default function BottomNav() {
               to={to}
               onClick={(e) => handleTabPress(e, to)}
               className={`flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 select-none transition-colors ${
-                active ? 'text-primary' : 'text-muted-foreground'
+                active ? (tab.is4k ? 'text-yellow-400' : 'text-primary') : 'text-muted-foreground'
               }`}
             >
               <Icon className="w-5 h-5" />
