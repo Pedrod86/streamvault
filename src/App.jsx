@@ -34,6 +34,7 @@ import IPTV from './pages/IPTV';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import FourK from './pages/FourK';
+import Audiobooks from './pages/Audiobooks';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -94,6 +95,7 @@ const AuthenticatedApp = () => {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/4k" element={<FourK />} />
+          <Route path="/audiobooks" element={<Audiobooks />} />
         </Route>
       </Route>
 
