@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
     let url =
       `${base}/Users/${userId}/Items?IncludeItemTypes=${types}&Recursive=true` +
-      `&Fields=Overview,Genres,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount,ImageTags,BackdropImageTags,MediaStreams,Height,Width` +
+      `&Fields=Overview,Genres,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount,ImageTags,BackdropImageTags,MediaStreams,Height,Width,Tags` +
       `&SortBy=${sortField}&SortOrder=${sortOrder}&Limit=${PAGE}&StartIndex=${startIndex}&api_key=${token}`;
 
     if (searchTerm) url += `&SearchTerm=${encodeURIComponent(searchTerm)}`;
@@ -84,14 +84,16 @@ Deno.serve(async (req) => {
     const total = json?.TotalRecordCount || 0;
 
     const items = rawItems.map(item => {
-      // Detect 4K: check Height field, MediaStreams, or title keywords
+      // Detect 4K: check Height field, MediaStreams, Emby Tags, or title keywords
       const height = item.Height || 0;
       const videoStream = (item.MediaStreams || []).find(s => s.Type === 'Video');
       const streamHeight = videoStream?.Height || 0;
       const maxHeight = Math.max(height, streamHeight);
+      const embyTags = (item.Tags || []).map(t => t.toLowerCase());
       const is4k = maxHeight >= 2160 ||
         /\b(4K|UHD|2160p)\b/i.test(item.Name || '') ||
-        (item.MediaStreams || []).some(s => s.Type === 'Video' && (s.Width >= 3840 || s.Height >= 2160));
+        (item.MediaStreams || []).some(s => s.Type === 'Video' && (s.Width >= 3840 || s.Height >= 2160)) ||
+        embyTags.some(t => /4k|uhd|2160p/.test(t));
 
       return {
         id: item.Id,
