@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
 
     const duration = Math.round((Date.now() - t0) / 1000);
 
-    // Count total items in DB after sync (fetch just IDs with high limit)
-    const allMedia = await base44.entities.Media.list('-created_date', 10000).catch(() => []);
+    // Count total items in DB after sync using service role to bypass RLS
+    const allMedia = await base44.asServiceRole.entities.Media.list('-created_date', 10000).catch(() => []);
     const totalInDb = allMedia.length;
 
     // Fire-and-forget log + discord
