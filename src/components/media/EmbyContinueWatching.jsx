@@ -68,7 +68,8 @@ export default function EmbyContinueWatching() {
       const res = await base44.functions.invoke('embyContinueWatching', {});
       return res.data;
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
     retry: false,
   });
 

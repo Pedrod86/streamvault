@@ -68,8 +68,9 @@ export default function EmbyRecentlyAdded() {
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
     },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 
   const { data: allMedia = [] } = useQuery({
