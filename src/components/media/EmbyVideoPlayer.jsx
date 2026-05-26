@@ -72,7 +72,7 @@ function loadLink(href, id) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId }) {
-  const [playerId, setPlayerId] = useState(initialPlayerId || 'videojs');
+  const [playerId, setPlayerId] = useState(initialPlayerId || 'directplay');
   const [showPlayerPicker, setShowPlayerPicker] = useState(false);
   const [subtitles, setSubtitles] = useState([]);
   const [activeSub, setActiveSub] = useState(-1);
@@ -89,6 +89,7 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
   const token = server?.api_token || '';
 
   const subParam = activeSub !== -1 ? `&SubtitleStreamIndex=${activeSub}&SubtitleMethod=Encode` : '';
+  const directPlayUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true&MediaSourceId=${item.id}`;
   const hlsUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=h264,hevc,av1,vp9&AudioCodec=aac,mp3&RequireAvc=false&EnableAdaptiveBitrateStreaming=true&AllowVideoStreamCopy=true&AllowAudioStreamCopy=false&VideoBitDepth=10&AudioBitRate=320000&MediaSourceId=${item.id}${subParam}`;
   const dashUrl = `${base}/Videos/${item.id}/master.mpd?api_key=${token}&VideoCodec=h264,hevc,av1&AudioCodec=aac&AllowVideoStreamCopy=true&AllowAudioStreamCopy=false&VideoBitDepth=10&EnableAdaptiveBitrateStreaming=true&AudioBitRate=320000&MediaSourceId=${item.id}`;
 
@@ -142,13 +143,32 @@ export default function EmbyVideoPlayer({ item, server, onClose, initialPlayerId
     const external = ['mpv', 'vlc', 'infuse', 'mx', 'moviplayer', 'onlineplayer'];
     if (external.includes(playerId)) { setReady(true); return; }
 
-    if (playerId === 'videojs') initVideoJs();
+    if (playerId === 'directplay') initDirectPlay();
+    else if (playerId === 'videojs') initVideoJs();
     else if (playerId === 'plyr') initPlyr();
     else if (playerId === 'shaka') initShaka();
     else if (playerId === 'mediaelement') initMediaElement();
 
     return () => destroyPlayer();
   }, [playerId, hlsUrl, dashUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Direct Play ───────────────────────────────────────────────────────────
+  function initDirectPlay() {
+    const video = document.createElement('video');
+    video.style.cssText = 'width:100%;height:100%;position:absolute;inset:0;background:#000;';
+    video.setAttribute('playsinline', '');
+    video.setAttribute('controls', '');
+    video.autoplay = true;
+    video.src = directPlayUrl;
+    containerRef.current.appendChild(video);
+
+    video.addEventListener('play', () => setPlaying(true));
+    video.addEventListener('pause', () => setPlaying(false));
+    video.addEventListener('error', () => setError('Direct Play: browser cannot play this format. Try another player.'));
+    getCurrentTimeRef.current = () => video.currentTime || 0;
+    playerInstanceRef.current = { dispose: () => { video.pause(); video.src = ''; } };
+    setReady(true);
+  }
 
   // ── Video.js ──────────────────────────────────────────────────────────────
   async function initVideoJs() {

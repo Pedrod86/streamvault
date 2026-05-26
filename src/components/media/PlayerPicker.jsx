@@ -3,6 +3,12 @@ import { Monitor, Tv2, ExternalLink, Check, Zap, Play } from 'lucide-react';
 
 export const PLAYERS = [
   {
+    id: 'directplay',
+    label: 'Direct Play',
+    description: 'Native browser playback — zero transcoding, maximum quality (default)',
+    icon: Zap,
+  },
+  {
     id: 'videojs',
     label: 'Video.js',
     description: 'Most popular open-source player — great HLS/ABR support',
