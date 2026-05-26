@@ -9,7 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
 import TrailerPlayer from '../components/media/TrailerPlayer';
-import EmbyVideoPlayer from '@/components/media/EmbyVideoPlayer';
+import ExoPlayer from '@/components/media/ExoPlayer';
 import VideoPlayer from '@/components/media/VideoPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
@@ -252,12 +252,12 @@ export default function MediaDetail() {
 
         {/* Video player */}
         {showPlayer && playerSource === 'emby' && embyItem && embyServer ? (
-          <EmbyVideoPlayer
-            item={embyItem}
-            server={embyServer}
+          <ExoPlayer
+            src={`${embyServer.server_url?.replace(/\/$/, '')}/Videos/${embyItem.id}/stream?api_key=${embyServer.api_token}&Static=true&MediaSourceId=${embyItem.id}`}
+            title={media.title}
+            startAt={startAt}
             onClose={() => setShowPlayer(false)}
-            initialPlayerId={selectedPlayerId}
-            initialSubtitleIndex={subtitlesEnabled ? selectedSubIndex : -1}
+            onProgress={(p) => saveProgress.mutate(p)}
           />
         ) : showPlayer && playerSource === 'iptv' && iptvVod && xtreamServer ? (
           <IptvDetailPlayer
