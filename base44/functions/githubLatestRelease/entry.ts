@@ -12,6 +12,7 @@ Deno.serve(async (req) => {
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'StreamVault-App',
+        Authorization: `Bearer ${Deno.env.get('GITHUB_TOKEN')}`,
       },
     });
 
