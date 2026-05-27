@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
 
     // Fetch existing media to build dedup sets (title+type and emby: tag)
     // Use service role to bypass RLS and get a reliable full picture
-    const existingMedia = await base44.asServiceRole.entities.Media.list('-created_date', 10000).catch(() => []);
+    const existingMedia = await base44.asServiceRole.entities.Media.list('-created_date', 5000).catch(() => []);
 
     // Build lookup sets
     const existingEmbyIds = new Set();
@@ -57,10 +57,6 @@ Deno.serve(async (req) => {
 
     const duration = Math.round((Date.now() - t0) / 1000);
 
-    // Count total items in DB after sync using service role to bypass RLS
-    const allMedia = await base44.asServiceRole.entities.Media.list('-created_date', 10000).catch(() => []);
-    const totalInDb = allMedia.length;
-
     // Fire-and-forget log + discord
     base44.entities.SyncLog.create({
       server_id: server?.id || 'unknown',
@@ -72,7 +68,7 @@ Deno.serve(async (req) => {
       items_updated: 0,
       duration_seconds: duration,
       started_at: startedAt,
-      description: `Total in library: ${totalInDb}`,
+      description: `Synced ${createdCount} new items`,
     }).catch(() => {});
 
     if (createdCount > 0) {
@@ -85,12 +81,11 @@ Deno.serve(async (req) => {
           items_created: createdCount,
           items_updated: 0,
           duration_seconds: duration,
-          total_in_db: totalInDb,
         }
       }).catch(() => {});
     }
 
-    return Response.json({ success: true, fetched: items.length, created: createdCount, updated: 0, total_in_db: totalInDb });
+    return Response.json({ success: true, fetched: items.length, created: createdCount, updated: 0 });
 
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
