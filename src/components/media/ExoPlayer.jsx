@@ -26,7 +26,16 @@ function Btn({ children, onClick }) {
   );
 }
 
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem('sv_player_prefs') || '{}'); } catch { return {}; }
+}
+
 export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0 }) {
+  const prefs = loadPrefs();
+  const skipSecs = parseInt(prefs.skipSeconds || '10', 10);
+  const fitMode = prefs.fitMode || 'contain';
+  const initVol = parseFloat(prefs.defaultVolume || '1');
+
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const hideTimer = useRef(null);
@@ -36,7 +45,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
 
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [volume, setVolume] = useState(1);
+  const [volume, setVolume] = useState(initVol);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -97,8 +106,8 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
     navigator.mediaSession.metadata = new MediaMetadata({ title: title || 'StreamVault' });
     navigator.mediaSession.setActionHandler('play', () => videoRef.current?.play());
     navigator.mediaSession.setActionHandler('pause', () => videoRef.current?.pause());
-    navigator.mediaSession.setActionHandler('seekbackward', () => skip(-10));
-    navigator.mediaSession.setActionHandler('seekforward', () => skip(10));
+    navigator.mediaSession.setActionHandler('seekbackward', () => skip(-skipSecs));
+    navigator.mediaSession.setActionHandler('seekforward', () => skip(skipSecs));
     return () => {
       ['play','pause','seekbackward','seekforward'].forEach(a => {
         try { navigator.mediaSession.setActionHandler(a, null); } catch(_) {}
@@ -208,8 +217,8 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
     if (now - lastTap.current < 300) {
       const x = e.clientX;
       const w = containerRef.current?.offsetWidth || window.innerWidth;
-      if (x < w / 3) { skip(-10); flash('left'); }
-      else if (x > (2 * w) / 3) { skip(10); flash('right'); }
+      if (x < w / 3) { skip(-skipSecs); flash('left'); }
+      else if (x > (2 * w) / 3) { skip(skipSecs); flash('right'); }
       else { togglePlay(); flash('center'); }
     } else {
       if (playing) {
@@ -232,7 +241,11 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
       <video
         ref={videoRef}
         src={src}
-        className="w-full h-full object-contain"
+        className={`w-full h-full object-${fitMode}`}
+        autoPlay
+        playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
         onPlay={() => setPlaying(true)}
         onPause={() => { setPlaying(false); saveProgress(false); }}
         onTimeUpdate={handleTimeUpdate}
@@ -321,8 +334,8 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
               <Btn onClick={togglePlay}>
                 {playing ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white" />}
               </Btn>
-              <Btn onClick={() => { skip(-10); flash('left'); }}><SkipBack className="w-4 h-4" /></Btn>
-              <Btn onClick={() => { skip(10); flash('right'); }}><SkipForward className="w-4 h-4" /></Btn>
+              <Btn onClick={() => { skip(-skipSecs); flash('left'); }}><SkipBack className="w-4 h-4" /></Btn>
+              <Btn onClick={() => { skip(skipSecs); flash('right'); }}><SkipForward className="w-4 h-4" /></Btn>
               <div className="flex items-center gap-1 group/vol">
                 <Btn onClick={toggleMute}>
                   {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
