@@ -56,18 +56,25 @@ export default function Login() {
   if (tvLayout) {
     return (
       <div
-        className="bg-background flex items-center justify-center"
-        style={{ width: '100vw', height: '100vh', minHeight: '100vh', overflow: 'hidden' }}
+        className="bg-background"
+        style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflowY: 'auto',
+          zIndex: 9999,
+        }}
       >
-        <div className="w-full max-w-lg px-10 py-10 bg-card rounded-2xl border border-border shadow-2xl mx-4">
+        <div style={{ width: '100%', maxWidth: 520, padding: '40px', margin: '0 auto' }}
+          className="bg-card rounded-2xl border border-border shadow-2xl">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-3">
               <StreamVaultLogo size="lg" />
             </div>
             <h1 className="font-heading font-bold text-3xl text-foreground mt-2">Sign In</h1>
-            <p className="text-muted-foreground text-base mt-1">
-              {isTV ? 'Use your remote to navigate' : 'Sign in to your account'}
-            </p>
+            <p className="text-muted-foreground text-base mt-1">Use your remote to navigate</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -114,14 +121,6 @@ export default function Login() {
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
             </Button>
-
-            {!isTV && (
-              <div className="text-right -mt-2">
-                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-            )}
           </form>
         </div>
       </div>
