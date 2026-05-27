@@ -82,10 +82,9 @@ export default function EmbyMediaRows() {
   const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
 
   const { data: library = [], isLoading } = useQuery({
-    queryKey: ['embyMedia'],
-    queryFn: () => base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 2000),
+    queryKey: ['media'],
+    queryFn: () => base44.entities.Media.list('-created_date', 2000),
     staleTime: 5 * 60 * 1000,
-    enabled: !!embyServer,
   });
 
   if (isLoading) {
