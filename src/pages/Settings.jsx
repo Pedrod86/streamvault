@@ -672,12 +672,10 @@ function CheckForUpdatesSection() {
     setReleaseUrl(null);
     setReleaseNotes(null);
     try {
-      const res = await fetch('https://api.github.com/repos/Streamvault-io/streamvault/releases/latest', {
-        headers: { Accept: 'application/vnd.github+json' },
-      });
-      if (!res.ok) throw new Error(`GitHub returned ${res.status}`);
-      const data = await res.json();
-      const tag = (data.tag_name || '').replace(/^v/, '');
+      const res = await base44.functions.invoke('githubLatestRelease', {});
+      const data = res.data;
+      if (data?.error) throw new Error(data.error);
+      const tag = (data.tag || '').replace(/^v/, '');
       setLatestVersion(tag);
       setReleaseUrl(data.html_url || null);
       setReleaseNotes(data.body ? data.body.slice(0, 300) : null);
