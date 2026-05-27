@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import shaka from 'shaka-player';
+import shaka from 'shaka-player/dist/shaka-player.compiled.js';
 import {
   X, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Settings, PictureInPicture2,
