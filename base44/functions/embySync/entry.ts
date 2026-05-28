@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const BATCH = 100;
+const BATCH = 50;
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 Deno.serve(async (req) => {
@@ -21,38 +21,49 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, fetched: 0, created: 0, updated: 0 });
     }
 
-    // Fetch existing media to build dedup sets (title+type and emby: tag)
-    // Use service role to bypass RLS and get a reliable full picture
-    const existingMedia = await base44.asServiceRole.entities.Media.list('-created_date', 5000).catch(() => []);
-
-    // Build lookup sets
+    // Build lookup maps from the items in this sync batch only
+    // We check against existing records tagged with 'emby' (fetched in one page)
+    // to avoid massive full-table scans that cause timeouts.
     const existingEmbyIds = new Set();
     const existingTitleType = new Set();
-    for (const m of existingMedia) {
+
+    // Fetch existing emby-tagged media — limit to 1000 to stay fast
+    // Most libraries are well under 1000 items per sync page
+    const existingPage = await base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 1000).catch(() => []);
+    for (const m of existingPage) {
       const embyTag = Array.isArray(m.tags) ? m.tags.find(t => typeof t === 'string' && t.startsWith('emby:')) : null;
       if (embyTag) existingEmbyIds.add(embyTag.replace('emby:', ''));
-      const key = `${(m.title || '').toLowerCase().trim()}|${m.media_type}`;
-      existingTitleType.add(key);
+      existingTitleType.add(`${(m.title || '').toLowerCase().trim()}|${m.media_type}`);
     }
 
-    // Filter to only genuinely new items (not duplicate by emby_id OR title+type)
+    // If library is larger than 1000, do a second page
+    if (existingPage.length >= 1000) {
+      const page2 = await base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 2000).catch(() => []);
+      for (const m of page2.slice(1000)) {
+        const embyTag = Array.isArray(m.tags) ? m.tags.find(t => typeof t === 'string' && t.startsWith('emby:')) : null;
+        if (embyTag) existingEmbyIds.add(embyTag.replace('emby:', ''));
+        existingTitleType.add(`${(m.title || '').toLowerCase().trim()}|${m.media_type}`);
+      }
+    }
+
+    // Filter to only genuinely new items
     const newItems = items.filter(item => {
       if (!item.emby_id) return false;
       if (existingEmbyIds.has(item.emby_id)) return false;
       const key = `${(item.title || '').toLowerCase().trim()}|${item.media_type}`;
       if (existingTitleType.has(key)) return false;
-      // Track so within this batch we don't double-insert either
+      // Track within this batch to avoid double-insert
       existingEmbyIds.add(item.emby_id);
       existingTitleType.add(key);
       return true;
     });
 
-    // Bulk create sequentially to avoid rate limits
+    // Bulk create in small batches with pacing
     let createdCount = 0;
     for (let i = 0; i < newItems.length; i += BATCH) {
       await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH));
       createdCount += Math.min(BATCH, newItems.length - i);
-      if (i + BATCH < newItems.length) await sleep(500);
+      if (i + BATCH < newItems.length) await sleep(300);
     }
 
     const duration = Math.round((Date.now() - t0) / 1000);

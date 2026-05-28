@@ -129,18 +129,10 @@ export default function Audiobooks() {
       setLoading(true);
       setError(null);
       try {
-        let all = [];
-        let startIndex = 0;
-        const pageSize = 100;
-        while (true) {
-          const res = await base44.functions.invoke('embyAudiobooks', { startIndex, pageSize });
-          if (res.data?.error) throw new Error(res.data.error);
-          const { items, hasMore } = res.data;
-          all = [...all, ...(items || [])];
-          if (!hasMore) break;
-          startIndex += items.length;
-        }
-        setBooks(all);
+        // Fetch up to 500 at once — avoids rapid-fire requests that hit rate limits
+        const res = await base44.functions.invoke('embyAudiobooks', { startIndex: 0, pageSize: 500 });
+        if (res.data?.error) throw new Error(res.data.error);
+        setBooks(res.data?.items || []);
       } catch (e) {
         setError(e.message);
       } finally {
