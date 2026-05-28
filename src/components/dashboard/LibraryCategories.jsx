@@ -47,6 +47,8 @@ export default function LibraryCategories({ allMedia = [] }) {
   const embyShows = embyScan.library.filter(i => i.type === 'Series').length;
   const emby4kMovies = embyScan.library.filter(i => i.type === 'Movie' && IS_4K(i)).length;
   const emby4kShows = embyScan.library.filter(i => i.type === 'Series' && IS_4K(i)).length;
+  const embyKids = embyScan.library.filter(i => IS_KIDS(i)).length;
+  const embyAnime = embyScan.library.filter(i => IS_ANIME(i)).length;
   const embyLoading = embyScan.loading && embyScan.library.length === 0;
   const embySyncing = embyScan.loading;
 
@@ -111,7 +113,8 @@ export default function LibraryCategories({ allMedia = [] }) {
       bg: 'bg-pink-400/10',
       border: 'border-pink-400/20',
       href: '/shows',
-      value: allMedia.filter(IS_KIDS).length.toLocaleString(),
+      value: embyLoading ? '…' : embyKids.toLocaleString(),
+      syncing: embySyncing,
     },
     {
       key: 'anime',
@@ -121,7 +124,8 @@ export default function LibraryCategories({ allMedia = [] }) {
       bg: 'bg-rose-400/10',
       border: 'border-rose-400/20',
       href: '/shows',
-      value: allMedia.filter(IS_ANIME).length.toLocaleString(),
+      value: embyLoading ? '…' : embyAnime.toLocaleString(),
+      syncing: embySyncing,
     },
     {
       key: 'watchtime',
