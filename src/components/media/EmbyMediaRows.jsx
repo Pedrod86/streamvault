@@ -33,6 +33,11 @@ function EmbyCard({ item, onPlay }) {
             <span className="text-white text-[10px] font-medium">{item.rating.toFixed(1)}</span>
           </div>
         )}
+        {item.is4k && (
+          <div className="absolute top-2 right-2 bg-yellow-500/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded">
+            4K
+          </div>
+        )}
       </div>
       <p className="text-xs text-foreground font-medium truncate leading-tight">{item.title}</p>
       {item.year && <p className="text-[10px] text-muted-foreground mt-0.5">{item.year}</p>}
@@ -56,12 +61,15 @@ function EmbyRow({ title, items, onPlay }) {
   );
 }
 
+const is4K = (m) =>
+  m.tags?.some(t => /^(4k|uhd|2160p)$/i.test(t)) ||
+  m.genre?.some(g => /^(4k|uhd)$/i.test(g));
+
 export default function EmbyMediaRows() {
   const [playingItem, setPlayingItem] = useState(null);
   const [browsingItem, setBrowsingItem] = useState(null);
 
   const handlePlay = (item) => {
-    // Extract real Emby ID from streamUrl (works for both movies and series)
     const streamUrl = item.streamUrl || item.video_url || '';
     const match = streamUrl.match(/\/Videos\/([^/]+)\/stream/);
     const embyId = match ? match[1] : item.id;
@@ -106,7 +114,7 @@ export default function EmbyMediaRows() {
 
   if (!library.length) return null;
 
-  // Map Media entity shape to what EmbyCard expects
+  // Map Media entity → EmbyCard shape
   const mapped = library.map(m => ({
     id: m.id,
     title: m.title,
@@ -115,30 +123,38 @@ export default function EmbyMediaRows() {
     rating: m.rating,
     overview: m.description,
     genres: m.genre || [],
+    tags: m.tags || [],
     posterUrl: m.poster_url,
     backdropUrl: m.backdrop_url,
     streamUrl: m.video_url,
+    is4k: is4K(m),
   }));
 
-  const movies = mapped.filter(i => i.type === 'Movie');
-  const shows = mapped.filter(i => i.type === 'Series');
+  const movies  = mapped.filter(i => i.type === 'Movie');
+  const shows   = mapped.filter(i => i.type === 'Series');
+  const fourKMovies = movies.filter(i => i.is4k);
+  const fourKShows  = shows.filter(i => i.is4k);
 
+  // Build genre rows — merge movies + shows, dedupe by id
   const genreMap = {};
   mapped.forEach(item => {
     item.genres?.forEach(g => {
-      if (!genreMap[g]) genreMap[g] = [];
-      genreMap[g].push(item);
+      if (!genreMap[g]) genreMap[g] = new Map();
+      genreMap[g].set(item.id, item);
     });
   });
   const genreRows = Object.entries(genreMap)
+    .map(([g, itemMap]) => [g, [...itemMap.values()]])
     .sort((a, b) => b[1].length - a[1].length)
     .filter(([, items]) => items.length >= 3)
-    .slice(0, 6);
+    .slice(0, 8);
 
   return (
     <>
-      <EmbyRow title="Emby Movies" items={movies} onPlay={handlePlay} />
-      <EmbyRow title="Emby TV Shows" items={shows} onPlay={handlePlay} />
+      <EmbyRow title="Movies" items={movies} onPlay={handlePlay} />
+      <EmbyRow title="TV Shows" items={shows} onPlay={handlePlay} />
+      {fourKMovies.length > 0 && <EmbyRow title="4K Movies" items={fourKMovies} onPlay={handlePlay} />}
+      {fourKShows.length > 0  && <EmbyRow title="4K TV Shows" items={fourKShows}  onPlay={handlePlay} />}
       {genreRows.map(([genre, items]) => (
         <EmbyRow key={genre} title={genre} items={items} onPlay={handlePlay} />
       ))}

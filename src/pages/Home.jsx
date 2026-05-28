@@ -167,13 +167,7 @@ export default function Home() {
                 case 'local_recent':  return <MediaRow key={section.id} title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} showProgress={true} />;
                 case 'anime':         return animeItems.length > 0 ? <MediaRow key={section.id} title="Anime" items={animeItems} watchHistory={watchHistory} /> : null;
                 case 'kids':          return kidsItems.length > 0 ? <MediaRow key={section.id} title="Kids" items={kidsItems} watchHistory={watchHistory} /> : null;
-                case 'genres':        return (
-                  <React.Fragment key={section.id}>
-                    {Object.entries(genreMap).slice(0, 4).map(([genre, items]) => (
-                      <MediaRow key={genre} title={genre} items={items} watchHistory={watchHistory} />
-                    ))}
-                  </React.Fragment>
-                );
+                case 'genres':        return null; // handled inside EmbyMediaRows to avoid duplicates
                 case 'recommendations': return (
                   <GenreRecommendations key={section.id} allMedia={allMedia} watchHistory={watchHistory} />
                 );
