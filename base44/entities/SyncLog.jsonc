@@ -60,7 +60,9 @@
   ],
   "rls": {
     "create": {
-      "created_by_id": "{{user.id}}"
+      "user_condition": {
+        "role": "user"
+      }
     },
     "read": {
       "created_by_id": "{{user.id}}"
@@ -69,6 +71,9 @@
       "created_by_id": "{{user.id}}"
     },
     "delete": {
+      "created_by_id": "{{user.id}}"
+    },
+    "write": {
       "created_by_id": "{{user.id}}"
     }
   }
