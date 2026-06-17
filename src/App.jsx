@@ -35,6 +35,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import FourK from './pages/FourK';
 import Audiobooks from './pages/Audiobooks';
+import MetadataBrowser from './pages/MetadataBrowser';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -99,6 +100,7 @@ const AuthenticatedApp = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/4k" element={<FourK />} />
           <Route path="/audiobooks" element={<Audiobooks />} />
+          <Route path="/browse" element={<MetadataBrowser />} />
         </Route>
       </Route>
 

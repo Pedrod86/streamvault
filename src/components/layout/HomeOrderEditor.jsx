@@ -5,6 +5,7 @@ import { GripVertical, Eye, EyeOff, X } from 'lucide-react';
 export const DEFAULT_SECTIONS = [
   { id: 'emby_rows',         label: 'Emby Library' },
   { id: 'continue_watching', label: 'Continue Watching (Local)' },
+  { id: 'tmdb_trending',     label: 'Trending (TMDb)' },
   { id: 'local_recent',      label: 'Recently Added (Local)', hidden: true },
   { id: 'anime',             label: 'Anime' },
   { id: 'kids',              label: 'Kids' },

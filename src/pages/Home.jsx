@@ -9,8 +9,11 @@ import EmbyMediaRows from '../components/media/EmbyMediaRows';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import HomeOrderEditor, { loadHomeOrder, saveHomeOrder } from '../components/layout/HomeOrderEditor';
 import GenreRecommendations from '../components/media/GenreRecommendations';
+import TmdbRow from '../components/discover/TmdbRow';
+import TmdbDetailSheet from '../components/discover/TmdbDetailSheet';
+import { tmdb } from '@/lib/metadataService';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, TrendingUp, Flame } from 'lucide-react';
 
 const IS_ANIME = (m) =>
   m.tags?.some(t => /^anime$/.test(t)) ||
@@ -31,6 +34,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('All');
   const [showOrderEditor, setShowOrderEditor] = useState(false);
   const [homeOrder, setHomeOrder] = useState(() => loadHomeOrder());
+  const [tmdbSelected, setTmdbSelected] = useState(null);
 
   const handleOrderChange = (updated) => {
     setHomeOrder(updated);
@@ -171,6 +175,12 @@ export default function Home() {
                 case 'recommendations': return (
                   <GenreRecommendations key={section.id} allMedia={allMedia} watchHistory={watchHistory} />
                 );
+                case 'tmdb_trending': return (
+                  <React.Fragment key={section.id}>
+                    <TmdbRow title="Trending Movies" queryKey={['tmdb_trending_movies']} queryFn={() => tmdb.trending('movie')} icon={TrendingUp} onSelect={setTmdbSelected} />
+                    <TmdbRow title="Trending TV" queryKey={['tmdb_trending_tv']} queryFn={() => tmdb.trending('tv')} icon={Flame} onSelect={setTmdbSelected} />
+                  </React.Fragment>
+                );
                 default: return null;
               }
             })}
@@ -195,6 +205,7 @@ export default function Home() {
           onClose={() => setShowOrderEditor(false)}
         />
       )}
+      {tmdbSelected && <TmdbDetailSheet item={tmdbSelected} onClose={() => setTmdbSelected(null)} />}
     </PullToRefresh>
   );
 }
