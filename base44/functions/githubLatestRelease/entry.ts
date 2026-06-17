@@ -16,8 +16,11 @@ Deno.serve(async (req) => {
       },
     });
 
+    if (res.status === 404) {
+      return Response.json({ error: 'No releases found on GitHub yet.' }, { status: 200 });
+    }
     if (!res.ok) {
-      return Response.json({ error: `GitHub returned ${res.status}` }, { status: 502 });
+      return Response.json({ error: `GitHub returned ${res.status}` }, { status: 200 });
     }
 
     const data = await res.json();

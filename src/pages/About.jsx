@@ -11,13 +11,18 @@ function ApkDownloadSection() {
   const fetchRelease = async () => {
     setStatus('loading');
     setError(null);
-    const res = await base44.functions.invoke('githubLatestRelease', {});
-    if (res.data?.error) {
-      setError(res.data.error);
+    try {
+      const res = await base44.functions.invoke('githubLatestRelease', {});
+      if (res.data?.error) {
+        setError(res.data.error);
+        setStatus('error');
+      } else {
+        setRelease(res.data);
+        setStatus('done');
+      }
+    } catch (e) {
+      setError('Could not fetch release info. Try again later.');
       setStatus('error');
-    } else {
-      setRelease(res.data);
-      setStatus('done');
     }
   };
 
