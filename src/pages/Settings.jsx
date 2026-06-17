@@ -328,8 +328,10 @@ function QuickSyncSection() {
 }
 
 const IS_4K = (item) =>
-  item.tags?.some(t => /4k|2160p|uhd/i.test(t)) ||
-  item.title?.match(/\b(4K|UHD|2160p)\b/i);
+  !!item && (
+    item.tags?.some(t => /4k|2160p|uhd/i.test(t)) ||
+    !!(item.title?.match(/\b(4K|UHD|2160p)\b/i))
+  );
 
 const IS_KIDS = (item) =>
   item.genre?.some(g => /kids?|children|family/i.test(g)) ||
