@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap, Radio, Subtitles, ChevronDown, Layers } from 'lucide-react';
+import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap, Subtitles, ChevronDown, Layers } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
@@ -28,7 +28,6 @@ export default function MediaDetail() {
   const queryClient = useQueryClient();
   const [showPlayer, setShowPlayer] = useState(false);
   const [playerSource, setPlayerSource] = useState('emby'); // 'emby' | 'iptv'
-  const [showSourcePicker, setShowSourcePicker] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
   const [resumePrompt, setResumePrompt] = useState(false);
   const [startAt, setStartAt] = useState(0);
@@ -177,24 +176,8 @@ export default function MediaDetail() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
   });
 
-  const handlePlay = (source = null) => {
-    if (source) {
-      setPlayerSource(source);
-      setShowSourcePicker(false);
-      if (historyEntry?.progress_seconds > 30) {
-        setResumePrompt(true);
-      } else {
-        setStartAt(0);
-        setShowPlayer(true);
-      }
-      return;
-    }
-    // Show picker if multiple sources available
-    if (embyItem && iptvVod) {
-      setShowSourcePicker(true);
-      return;
-    }
-    // Single source
+  const handlePlay = () => {
+    // Always prefer Emby; fall back to IPTV then direct URL
     setPlayerSource(embyItem ? 'emby' : 'iptv');
     if (historyEntry?.progress_seconds > 30) {
       setResumePrompt(true);
@@ -306,56 +289,6 @@ export default function MediaDetail() {
           }
           return <TrailerPlayer media={activeMedia} startAt={startAt} onClose={() => setShowPlayer(false)} onProgress={(p) => saveProgress.mutate(p)} />;
         })()}
-
-        {/* Source picker */}
-        <AnimatePresence>
-          {showSourcePicker && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
-              onClick={() => setShowSourcePicker(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl"
-                onClick={e => e.stopPropagation()}
-              >
-                <h3 className="font-heading font-bold text-lg text-foreground mb-1 text-center">Choose Source</h3>
-                <p className="text-muted-foreground text-sm mb-5 text-center">Where would you like to play from?</p>
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => handlePlay('emby')}
-                    className="flex items-center gap-3 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl px-4 py-3 transition-colors text-left"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                      <Tv className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground text-sm">Play with Emby</p>
-                      <p className="text-muted-foreground text-xs">Stream from your Emby server</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handlePlay('iptv')}
-                    className="flex items-center gap-3 bg-secondary hover:bg-secondary/80 border border-border rounded-xl px-4 py-3 transition-colors text-left"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                      <Radio className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground text-sm">Play with IPTV</p>
-                      <p className="text-muted-foreground text-xs">Stream from your IPTV provider</p>
-                    </div>
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Resume prompt */}
         <AnimatePresence>
@@ -539,7 +472,7 @@ export default function MediaDetail() {
                 onClick={handlePlay}
               >
                 <Play className="w-4 h-4 fill-current" />
-                {embyItem && iptvVod ? 'Play…' : embyItem ? 'Play with Emby' : iptvVod ? 'Play with IPTV' : activeMedia.video_url ? 'Play' : 'Watch Trailer'}
+                {embyItem ? 'Play' : iptvVod ? 'Play with IPTV' : activeMedia.video_url ? 'Play' : 'Watch Trailer'}
               </Button>
               <Button
                 variant="outline"
