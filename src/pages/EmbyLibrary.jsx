@@ -279,22 +279,26 @@ export default function EmbyLibrary() {
         </div>
       </div>
 
-      {library.length === 0 && !isLoading ? (
+      {library.length === 0 && !isLoading && scanProgress.loading ? (
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center px-6">
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+          <h2 className="font-heading font-bold text-xl text-foreground">Scanning your library…</h2>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            {scanProgress.count > 0 ? `${scanProgress.count} items loaded so far` : 'Connecting to Emby…'}
+          </p>
+        </div>
+      ) : library.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center px-6">
           <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
             <Database className="w-8 h-8 text-muted-foreground" />
           </div>
           <h2 className="font-heading font-bold text-xl text-foreground">No Emby content yet</h2>
           <p className="text-sm text-muted-foreground max-w-sm">
-            {scanProgress.loading
-              ? `Scanning your Emby library… ${scanProgress.count} items loaded so far`
-              : 'Use "Sync All Libraries" on the Home page to import your Emby content.'}
+            Connect your Emby server and tap "Start Scan" to import your library.
           </p>
-          {!scanProgress.loading && (
-            <Button variant="outline" onClick={handleRescan} className="gap-2">
-              <RefreshCw className="w-4 h-4" /> Start Scan
-            </Button>
-          )}
+          <Button variant="outline" onClick={handleRescan} className="gap-2">
+            <RefreshCw className="w-4 h-4" /> Start Scan
+          </Button>
         </div>
       ) : search.trim() ? (
         <div>
