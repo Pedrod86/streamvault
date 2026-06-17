@@ -123,29 +123,33 @@ export default function Audiobooks() {
   const [savingIds, setSavingIds] = useState(new Set());
   const [savedIds, setSavedIds] = useState(new Set());
 
-  // Load Emby audiobooks
+  // Load Emby audiobooks — fetch first 100 immediately, then load more in background
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch up to 500 at once — avoids rapid-fire requests that hit rate limits
-        // Fetch in batches to avoid response size limits
-        const allItems = [];
-        let startIdx = 0;
-        const batchSize = 100;
-        while (true) {
-          const res = await base44.functions.invoke('embyAudiobooks', { startIndex: startIdx, pageSize: batchSize });
-          if (res.data?.error) throw new Error(res.data.error);
-          const batch = res.data?.items || [];
-          allItems.push(...batch);
-          if (!res.data?.hasMore || batch.length < batchSize) break;
-          startIdx += batchSize;
+        const res = await base44.functions.invoke('embyAudiobooks', { startIndex: 0, pageSize: 100 });
+        if (res.data?.error) throw new Error(res.data.error);
+        const firstBatch = res.data?.items || [];
+        setBooks(firstBatch);
+        setLoading(false);
+
+        // Load remaining pages in background
+        if (res.data?.hasMore) {
+          let startIdx = 100;
+          while (true) {
+            const more = await base44.functions.invoke('embyAudiobooks', { startIndex: startIdx, pageSize: 100 });
+            if (more.data?.error) break;
+            const batch = more.data?.items || [];
+            if (!batch.length) break;
+            setBooks(prev => [...prev, ...batch]);
+            if (!more.data?.hasMore || batch.length < 100) break;
+            startIdx += 100;
+          }
         }
-        setBooks(allItems);
       } catch (e) {
         setError(e.message);
-      } finally {
         setLoading(false);
       }
     };
