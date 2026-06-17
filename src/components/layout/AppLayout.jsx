@@ -44,15 +44,9 @@ export default function AppLayout() {
     }
   }, [settingsList]);
 
-  // Auto-apply dark mode based on OS preference
+  // App is always dark — ensure the class is set
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = (e) => {
-      document.documentElement.classList.toggle('dark', e.matches);
-    };
-    apply(mq);
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    document.documentElement.classList.add('dark');
   }, []);
 
   const isTV = useTvDevice();
