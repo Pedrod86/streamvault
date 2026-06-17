@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   Play, Pause, SkipBack, SkipForward, X, List,
-  Timer, Gauge, ChevronLeft, ChevronRight, BookOpen, Volume2
+  Timer, Gauge, ChevronLeft, ChevronRight, BookOpen, Volume2, Loader2
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -36,6 +35,8 @@ export default function AudiobookPlayer({ book, onClose }) {
   const [showSleep, setShowSleep] = useState(false);
   const [showSpeed, setShowSpeed] = useState(false);
   const [currentChapterIdx, setCurrentChapterIdx] = useState(0);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [audioError, setAudioError] = useState(null);
 
   // Fetch chapters
   useEffect(() => {
@@ -78,8 +79,16 @@ export default function AudiobookPlayer({ book, onClose }) {
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) { audio.pause(); setPlaying(false); }
-    else { audio.play(); setPlaying(true); }
+    setAudioError(null);
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      setLoadingAudio(true);
+      audio.play()
+        .then(() => { setPlaying(true); setLoadingAudio(false); })
+        .catch(err => { setLoadingAudio(false); setAudioError('Playback failed: ' + err.message); });
+    }
   };
 
   const onTimeUpdate = useCallback(() => {
@@ -201,9 +210,15 @@ export default function AudiobookPlayer({ book, onClose }) {
           </button>
           <button
             onClick={togglePlay}
-            className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors"
+            disabled={loadingAudio || !!audioError}
+            className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
           >
-            {playing ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
+            {loadingAudio
+              ? <Loader2 className="w-8 h-8 animate-spin" />
+              : playing
+                ? <Pause className="w-8 h-8" />
+                : <Play className="w-8 h-8 ml-1" />
+            }
           </button>
           <button onClick={() => skip(30)} className="text-muted-foreground hover:text-foreground transition-colors flex flex-col items-center gap-0.5">
             <SkipForward className="w-7 h-7" />
@@ -229,6 +244,11 @@ export default function AudiobookPlayer({ book, onClose }) {
               Next Chapter <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+        )}
+
+        {/* Audio error */}
+        {audioError && (
+          <p className="text-destructive text-xs text-center px-4">{audioError}</p>
         )}
 
         {/* Speed / Sleep / Chapters buttons */}
@@ -314,7 +334,9 @@ export default function AudiobookPlayer({ book, onClose }) {
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={() => setPlaying(false)}
+        onError={() => setAudioError('Could not load audio. Make sure your Emby server is publicly accessible.')}
         preload="metadata"
+        crossOrigin="anonymous"
       />
     </div>
   );
