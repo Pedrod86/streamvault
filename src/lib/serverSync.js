@@ -335,6 +335,75 @@ async function pingServer(server) {
   return [];
 }
 
+// ─── RECENTLY ADDED (quick sync) ──────────────────────────────────────────────
+
+async function fetchEmbyRecentlyAdded(server) {
+  const base = server.server_url.replace(/\/$/, '');
+  const token = server.api_token;
+
+  let userId;
+  try {
+    const users = await proxyFetch(`${base}/Users?api_key=${token}`, {});
+    const list = Array.isArray(users) ? users : (users?.Items || []);
+    const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
+    userId = admin?.Id;
+  } catch (_) {}
+  if (!userId) {
+    try {
+      const me = await proxyFetch(`${base}/Users/Me`, { 'X-Emby-Token': token });
+      userId = me?.Id;
+    } catch (_) {}
+  }
+  if (!userId) throw new Error('Could not authenticate with Emby.');
+
+  const json = await proxyFetch(
+    `${base}/Users/${userId}/Items/Latest?IncludeItemTypes=Movie,Series` +
+    `&Fields=Overview,Genres,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount,ImageTags,BackdropImageTags` +
+    `&Limit=50&api_key=${token}`,
+    {}
+  );
+  const rawItems = Array.isArray(json) ? json : (json?.Items || []);
+  return rawItems.map(item => mapEmbyItemForSync(item, base, token));
+}
+
+async function fetchPlexRecentlyAdded(server) {
+  const base = server.server_url.replace(/\/$/, '');
+  const token = server.plex_token || server.api_token;
+  const json = await proxyFetch(`${base}/library/recentlyAdded?X-Plex-Token=${token}&limit=50`);
+  const list = json?.MediaContainer?.Metadata || [];
+  const sectionMap = {};
+  for (const item of list) {
+    if (!sectionMap[item.librarySectionID]) {
+      try {
+        const secJson = await proxyFetch(`${base}/library/sections/${item.librarySectionID}?X-Plex-Token=${token}`);
+        sectionMap[item.librarySectionID] = secJson?.MediaContainer?.Directory?.[0]?.type || 'movie';
+      } catch (_) {
+        sectionMap[item.librarySectionID] = 'movie';
+      }
+    }
+    item._sectionType = sectionMap[item.librarySectionID];
+  }
+  return list.map(item => mapPlexItem(item, base, token, item._sectionType));
+}
+
+async function fetchJellyfinRecentlyAdded(server) {
+  const base = server.server_url.replace(/\/$/, '');
+  const token = server.api_token;
+  const authHeaders = { 'X-Emby-Token': token, 'X-MediaBrowser-Token': token };
+
+  const users = await proxyFetch(`${base}/Users`, authHeaders);
+  const userList = Array.isArray(users) ? users : (users?.Items || []);
+  if (!userList.length) throw new Error('Jellyfin auth failed.');
+  const userId = (userList.find(u => u.Policy?.IsAdministrator) || userList[0]).Id;
+
+  const json = await proxyFetch(
+    `${base}/Users/${userId}/Items/Latest?IncludeItemTypes=Movie,Series&Fields=Overview,Genres,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount&Limit=50`,
+    authHeaders
+  );
+  const rawItems = Array.isArray(json) ? json : (json?.Items || []);
+  return rawItems.map(item => mapJellyfinItem(item, base, token));
+}
+
 // ─── PUBLIC API ───────────────────────────────────────────────────────────────
 
 function normaliseUrl(url) {
@@ -342,6 +411,20 @@ function normaliseUrl(url) {
   url = url.trim();
   if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
   return url.replace(/\/$/, '');
+}
+
+export async function fetchRecentlyAdded(server) {
+  if (server.server_url) {
+    server = { ...server, server_url: normaliseUrl(server.server_url) };
+  }
+  switch (server.server_type) {
+    case 'plex':     return fetchPlexRecentlyAdded(server);
+    case 'jellyfin': return fetchJellyfinRecentlyAdded(server);
+    case 'emby':     return fetchEmbyRecentlyAdded(server);
+    case 'xtream':   return fetchXtreamLibrary(server); // Xtream has no "recent" API, fall back to full list
+    default:
+      throw new Error(`Unknown server type "${server.server_type}".`);
+  }
 }
 
 export async function fetchServerLibrary(server, onProgress) {
