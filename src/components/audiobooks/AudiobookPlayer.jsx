@@ -87,7 +87,10 @@ export default function AudiobookPlayer({ book, onClose }) {
       setLoadingAudio(true);
       audio.play()
         .then(() => { setPlaying(true); setLoadingAudio(false); })
-        .catch(err => { setLoadingAudio(false); setAudioError('Playback failed: ' + err.message); });
+        .catch(err => {
+          setLoadingAudio(false);
+          setAudioError('Playback failed: ' + (err.message || 'Unknown error') + '. Tap to retry.');
+        });
     }
   };
 
@@ -128,8 +131,9 @@ export default function AudiobookPlayer({ book, onClose }) {
     if (audioRef.current) {
       audioRef.current.currentTime = ch.startSeconds;
       setCurrentTime(ch.startSeconds);
-      audioRef.current.play();
-      setPlaying(true);
+      audioRef.current.play()
+        .then(() => setPlaying(true))
+        .catch(() => {});
     }
     setShowChapters(false);
   };
@@ -210,7 +214,7 @@ export default function AudiobookPlayer({ book, onClose }) {
           </button>
           <button
             onClick={togglePlay}
-            disabled={loadingAudio || !!audioError}
+            disabled={loadingAudio}
             className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
           >
             {loadingAudio
@@ -219,6 +223,7 @@ export default function AudiobookPlayer({ book, onClose }) {
                 ? <Pause className="w-8 h-8" />
                 : <Play className="w-8 h-8 ml-1" />
             }
+
           </button>
           <button onClick={() => skip(30)} className="text-muted-foreground hover:text-foreground transition-colors flex flex-col items-center gap-0.5">
             <SkipForward className="w-7 h-7" />
@@ -327,16 +332,19 @@ export default function AudiobookPlayer({ book, onClose }) {
         )}
       </div>
 
-      {/* Hidden audio element */}
+      {/* Hidden audio element — no crossOrigin so CORS doesn't block direct Emby streams */}
       <audio
         ref={audioRef}
         src={book.streamUrl}
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={() => setPlaying(false)}
-        onError={() => setAudioError('Could not load audio. Make sure your Emby server is publicly accessible.')}
+        onError={(e) => {
+          setPlaying(false);
+          setLoadingAudio(false);
+          setAudioError('Could not load audio — check your Emby server is reachable. Tap play to retry.');
+        }}
         preload="metadata"
-        crossOrigin="anonymous"
       />
     </div>
   );
