@@ -4,17 +4,15 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap, Subtitles, ChevronDown, Layers } from 'lucide-react';
+import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Zap, Subtitles, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
 import TrailerPlayer from '../components/media/TrailerPlayer';
 import ExoPlayer from '@/components/media/ExoPlayer';
-import ShakaPlayer from '@/components/media/ShakaPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
-import PlayerPicker, { PLAYERS } from '../components/media/PlayerPicker';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
 
 export default function MediaDetail() {
@@ -30,9 +28,7 @@ export default function MediaDetail() {
   const [showCollections, setShowCollections] = useState(false);
   const [resumePrompt, setResumePrompt] = useState(false);
   const [startAt, setStartAt] = useState(0);
-  const [selectedPlayerId, setSelectedPlayerId] = useState('exoplayer');
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
-  const [showPlayerPicker, setShowPlayerPicker] = useState(false);
   const [embySubtitles, setEmbySubtitles] = useState([]); // loaded from Emby PlaybackInfo
   const [selectedSubIndex, setSelectedSubIndex] = useState(-1);
   const [showSubPicker, setShowSubPicker] = useState(false);
@@ -258,7 +254,7 @@ export default function MediaDetail() {
         {/* Video player */}
         {(() => {
           if (!showPlayer) return null;
-          const PlayerComponent = selectedPlayerId === 'shaka' ? ShakaPlayer : ExoPlayer;
+          const PlayerComponent = ExoPlayer;
           if (playerSource === 'emby' && embyItem && embyServer) {
             return (
               <PlayerComponent
@@ -409,32 +405,13 @@ export default function MediaDetail() {
             )}
 
             {/* Playback options — only shown for Emby items */}
-            {embyItem && (
+            {embyItem && embySubtitles.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
-                {/* Player picker */}
-                <div className="relative">
-                  <button
-                    onClick={() => { setShowPlayerPicker(p => !p); setShowSubPicker(false); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    {PLAYERS.find(p => p.id === selectedPlayerId)?.label || 'Direct'}
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                  {showPlayerPicker && (
-                    <PlayerPicker
-                      current={selectedPlayerId}
-                      onChange={(id) => { setSelectedPlayerId(id); setShowPlayerPicker(false); }}
-                      onClose={() => setShowPlayerPicker(false)}
-                    />
-                  )}
-                </div>
-
                 {/* Subtitles toggle */}
                 {embySubtitles.length > 0 && (
                   <div className="relative">
                     <button
-                      onClick={() => { setShowSubPicker(p => !p); setShowPlayerPicker(false); }}
+                      onClick={() => setShowSubPicker(p => !p)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${subtitlesEnabled ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-secondary border-border text-foreground hover:bg-secondary/80'}`}
                     >
                       <Subtitles className="w-3.5 h-3.5" />
