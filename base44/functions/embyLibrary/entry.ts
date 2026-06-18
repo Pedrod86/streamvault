@@ -68,6 +68,8 @@ Deno.serve(async (req) => {
     const searchTerm = (body.search || '').trim();
     // genre filter
     const genreFilter = (body.genre || '').trim();
+    // years filter — comma-separated list of years (e.g. for a decade)
+    const yearsFilter = (body.years || '').trim();
 
     const server = await getEmbyServer(base44);
     if (!server) return Response.json({ error: 'No active Emby server found' }, { status: 404 });
@@ -91,6 +93,7 @@ Deno.serve(async (req) => {
 
     if (searchTerm) url += `&SearchTerm=${encodeURIComponent(searchTerm)}`;
     if (genreFilter) url += `&Genres=${encodeURIComponent(genreFilter)}`;
+    if (yearsFilter) url += `&Years=${encodeURIComponent(yearsFilter)}`;
 
     const json = await doFetch(url);
 

@@ -7,6 +7,7 @@ import { Search, Film, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDebounce } from '../hooks/useDebounce';
 import EmbyBrowseGrid from '../components/media/EmbyBrowseGrid';
+import LibraryFilterBar from '../components/media/LibraryFilterBar';
 
 const PAGE_SIZE = 48;
 
@@ -14,14 +15,15 @@ export default function Movies() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [genre, setGenre] = useState('');
+  const [years, setYears] = useState('');
   const [sortBy, setSortBy] = useState('SortName');
   const debouncedSearch = useDebounce(search, 400);
 
   // Reset to page 0 on filter change
-  useEffect(() => { setPage(0); }, [debouncedSearch, genre, sortBy]);
+  useEffect(() => { setPage(0); }, [debouncedSearch, genre, years, sortBy]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['embyMovies', page, debouncedSearch, genre, sortBy],
+    queryKey: ['embyMovies', page, debouncedSearch, genre, years, sortBy],
     queryFn: async () => {
       const res = await base44.functions.invoke('embyLibrary', {
         startIndex: page * PAGE_SIZE,
@@ -29,6 +31,7 @@ export default function Movies() {
         itemType: 'Movie',
         search: debouncedSearch,
         genre,
+        years,
         sortBy,
       });
       if (res.data?.error) throw new Error(res.data.error);
@@ -81,8 +84,8 @@ export default function Movies() {
         </Select>
       </div>
 
-      {/* Search + Genre */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      {/* Search */}
+      <div className="mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -92,18 +95,16 @@ export default function Movies() {
             className="pl-9 bg-secondary border-border"
           />
         </div>
-        {genreData?.length > 0 && (
-          <Select value={genre || '__all__'} onValueChange={v => setGenre(v === '__all__' ? '' : v)}>
-            <SelectTrigger className="w-48 bg-secondary border-border text-sm">
-              <SelectValue placeholder="All Genres" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border max-h-64">
-              <SelectItem value="__all__">All Genres</SelectItem>
-              {genreData.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
       </div>
+
+      {/* Genre + Year filter buttons */}
+      <LibraryFilterBar
+        genres={genreData || []}
+        genre={genre}
+        onGenreChange={setGenre}
+        years={years}
+        onYearsChange={setYears}
+      />
 
       <EmbyBrowseGrid items={items} server={server} isLoading={isLoading || isFetching} />
 
