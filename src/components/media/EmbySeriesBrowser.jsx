@@ -42,7 +42,7 @@ export default function EmbySeriesBrowser({ item, server, onClose }) {
   if (playingEpisode) {
     const base = server?.server_url?.replace(/\/$/, '');
     const token = server?.api_token;
-    const src = `${base}/Videos/${playingEpisode.id}/stream?api_key=${token}&Static=true&MediaSourceId=${playingEpisode.id}`;
+    const src = `${base}/Videos/${playingEpisode.id}/stream?api_key=${token}&Static=true`;
     return (
       <ExoPlayer
         src={src}

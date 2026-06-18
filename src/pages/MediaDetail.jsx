@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
 import TrailerPlayer from '../components/media/TrailerPlayer';
 import ExoPlayer from '@/components/media/ExoPlayer';
+import EmbySeriesBrowser from '@/components/media/EmbySeriesBrowser';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
@@ -255,6 +256,16 @@ export default function MediaDetail() {
         {(() => {
           if (!showPlayer) return null;
           const PlayerComponent = ExoPlayer;
+          // TV series have no playable stream on the series id — browse episodes instead
+          if (playerSource === 'emby' && embyItem && embyServer && activeMedia.media_type === 'tv_show') {
+            return (
+              <EmbySeriesBrowser
+                item={{ ...embyItem, title: activeMedia.title, poster_url: activeMedia.poster_url, year: activeMedia.year }}
+                server={embyServer}
+                onClose={() => setShowPlayer(false)}
+              />
+            );
+          }
           if (playerSource === 'emby' && embyItem && embyServer) {
             return (
               <PlayerComponent
