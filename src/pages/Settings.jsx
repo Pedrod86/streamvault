@@ -677,6 +677,10 @@ function CheckForUpdatesSection() {
       const res = await base44.functions.invoke('githubLatestRelease', {});
       const data = res.data;
       if (data?.error) throw new Error(data.error);
+      if (data.error) {
+        setStatus('no-releases');
+        return;
+      }
       const tag = (data.tag || '').replace(/^v/, '');
       setLatestVersion(tag);
       setReleaseUrl(data.html_url || null);
@@ -718,6 +722,13 @@ function CheckForUpdatesSection() {
               <ArrowUpCircle className="w-3 h-3" /> View release on GitHub
             </a>
           )}
+        </div>
+      )}
+
+      {status === 'no-releases' && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary rounded-lg px-3 py-2">
+          <Info className="w-4 h-4 shrink-0" />
+          <span>No releases published yet on GitHub.</span>
         </div>
       )}
 
