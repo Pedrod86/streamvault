@@ -112,9 +112,9 @@ export default function MediaDetail() {
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const streams = await getVodStreams(xtreamServer);
-      if (!streams) return null;
+      if (!Array.isArray(streams) || !media?.title) return null;
       const q = media.title.toLowerCase().trim();
-      return streams.find(s => s.name?.toLowerCase().trim() === q) || null;
+      return streams.find(s => s?.name?.toLowerCase?.().trim() === q) || null;
     },
   });
 
