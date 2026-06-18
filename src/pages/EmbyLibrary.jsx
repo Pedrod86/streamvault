@@ -12,16 +12,27 @@ import { scanState, resetScan, runScan } from '@/lib/embyScanState';
 
 const IS_4K = (item) =>
   !!item && (
+    item.is4k === true ||
     item.tags?.some(t => /^4k$/i.test(t) || /4k|2160p|uhd/i.test(t)) ||
     !!(item.title?.match(/\b(4K|UHD|2160p)\b/i))
   );
 
+// Normalise items from either scan state or DB so filtering always works
+const normalise = (item) => ({
+  ...item,
+  media_type: item.media_type || (item.type === 'Series' ? 'tv_show' : 'movie'),
+  poster_url: item.poster_url || item.posterUrl,
+  genre: item.genre || item.genres || [],
+});
+
 function MediaCard({ item, onPlay }) {
+  const poster = item.poster_url || item.posterUrl;
+  const year = item.year || item.ProductionYear;
   return (
     <div className="shrink-0 w-[140px] sm:w-[160px] cursor-pointer group" onClick={() => onPlay(item)}>
       <div className="relative rounded-xl overflow-hidden bg-secondary aspect-[2/3] mb-2">
-        {item.poster_url ? (
-          <img src={item.poster_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+        {poster ? (
+          <img src={poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Play className="w-8 h-8 text-muted-foreground" />
@@ -35,11 +46,11 @@ function MediaCard({ item, onPlay }) {
         {item.rating && (
           <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/70 rounded-full px-1.5 py-0.5">
             <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
-            <span className="text-white text-[10px] font-medium">{item.rating.toFixed(1)}</span>
+            <span className="text-white text-[10px] font-medium">{Number(item.rating).toFixed(1)}</span>
           </div>
         )}
         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-          {item.media_type === 'tv_show' && (
+          {(item.media_type === 'tv_show' || item.type === 'Series') && (
             <Badge className="text-[9px] px-1 py-0 bg-accent text-accent-foreground">TV</Badge>
           )}
           {IS_4K(item) && (
@@ -48,7 +59,7 @@ function MediaCard({ item, onPlay }) {
         </div>
       </div>
       <p className="text-xs text-foreground font-medium truncate leading-tight">{item.title}</p>
-      {item.year && <p className="text-[10px] text-muted-foreground mt-0.5">{item.year}</p>}
+      {year && <p className="text-[10px] text-muted-foreground mt-0.5">{year}</p>}
     </div>
   );
 }
@@ -119,11 +130,25 @@ export default function EmbyLibrary() {
   });
   const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
 
-  const { data: library = [], isLoading } = useQuery({
+  // Primary source: in-memory scan state (populated from localStorage cache immediately,
+  // then filled live from the scan). Falls back to DB query only when scan state is empty.
+  const [liveLibrary, setLiveLibrary] = useState(scanState.library);
+
+  useEffect(() => {
+    // Also sync liveLibrary whenever scanProgress changes (scan brought in more items)
+    setLiveLibrary([...scanState.library]);
+  }, [scanProgress]);
+
+  const { data: dbLibrary = [], isLoading } = useQuery({
     queryKey: ['embyMedia'],
     queryFn: () => base44.entities.Media.filter({ tags: 'emby' }, 'title', 5000),
     staleTime: 2 * 60 * 1000,
+    // Only hit the DB if scan state has nothing
+    enabled: liveLibrary.length === 0 && !scanProgress.loading,
   });
+
+  // Prefer live scan data; fall back to DB records
+  const library = liveLibrary.length > 0 ? liveLibrary : dbLibrary;
 
   const filters = [
     { id: 'All', label: 'All' },
@@ -134,7 +159,7 @@ export default function EmbyLibrary() {
   ];
 
   const filtered = useMemo(() => {
-    let items = library;
+    let items = library.map(normalise);
     if (activeFilter === 'Movies') items = items.filter(i => i.media_type === 'movie' && !IS_4K(i));
     if (activeFilter === 'TV Shows') items = items.filter(i => i.media_type === 'tv_show' && !IS_4K(i));
     if (activeFilter === '4K Movies') items = items.filter(i => i.media_type === 'movie' && IS_4K(i));
@@ -163,7 +188,7 @@ export default function EmbyLibrary() {
     const shows4k = filtered.filter(i => i.media_type === 'tv_show' && IS_4K(i));
     const genreMap = {};
     filtered.filter(i => !IS_4K(i)).forEach(item => {
-      item.genre?.forEach(g => {
+      (item.genre || []).forEach(g => {
         if (!genreMap[g]) genreMap[g] = [];
         genreMap[g].push(item);
       });
@@ -174,7 +199,7 @@ export default function EmbyLibrary() {
     if (activeFilter !== 'Movies' && shows.length) rows.push({ title: 'TV Shows', items: shows });
     if (activeFilter !== 'TV Shows' && movies4k.length) rows.push({ title: '4K Movies', items: movies4k, badge: '4K' });
     if (activeFilter !== 'Movies' && shows4k.length) rows.push({ title: '4K TV Shows', items: shows4k, badge: '4K' });
-    topGenres.forEach(([g, items]) => rows.push({ title: g, items }));
+    topGenres.forEach(([g, gItems]) => rows.push({ title: g, items: gItems }));
     return rows;
   }, [filtered, activeFilter, search]);
 
