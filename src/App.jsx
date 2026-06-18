@@ -36,6 +36,7 @@ import Contact from './pages/Contact';
 import FourK from './pages/FourK';
 import Audiobooks from './pages/Audiobooks';
 import MetadataBrowser from './pages/MetadataBrowser';
+import ServerDashboard from './pages/ServerDashboard';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -101,6 +102,7 @@ const AuthenticatedApp = () => {
           <Route path="/4k" element={<FourK />} />
           <Route path="/audiobooks" element={<Audiobooks />} />
           <Route path="/browse" element={<MetadataBrowser />} />
+          <Route path="/server-dashboard" element={<ServerDashboard />} />
         </Route>
       </Route>
 

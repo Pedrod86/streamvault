@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, Server, Key, User, Globe, CheckCircle2, ExternalLink, Plus, Trash2, Wifi } from 'lucide-react';
+import { ArrowLeft, Loader2, Server, Key, User, Globe, CheckCircle2, ExternalLink, Plus, Trash2, Wifi, LayoutDashboard } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SyncServerButton from '@/components/server/SyncServerButton';
 import ServerHealthBadge from '@/components/server/ServerHealthBadge';
@@ -156,9 +157,14 @@ export default function ConnectServer() {
           <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground">Connections</h1>
           <p className="text-muted-foreground text-sm mt-1">Manage Plex, Emby, Jellyfin, Xtream IPTV & Trakt connections</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 rounded-xl gap-2" onClick={() => setAdding(true)}>
-          <Plus className="w-4 h-4" /> Add Server
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild className="rounded-xl gap-2 border-border">
+            <Link to="/server-dashboard"><LayoutDashboard className="w-4 h-4" /> Dashboard</Link>
+          </Button>
+          <Button className="bg-primary hover:bg-primary/90 rounded-xl gap-2" onClick={() => setAdding(true)}>
+            <Plus className="w-4 h-4" /> Add Server
+          </Button>
+        </div>
       </div>
 
       {/* Media Servers */}
