@@ -15,8 +15,8 @@ export default function TmdbWatchActions({ item, details, type }) {
   const totalSeconds = Math.max(60, (details?.runtime || item?.runtime || 60) * 60);
 
   const { data: localMedia = [] } = useQuery({
-    queryKey: ['media'],
-    queryFn: () => base44.entities.Media.list('-created_date', 2000),
+    queryKey: ['tmdbLocalMedia'],
+    queryFn: () => base44.entities.Media.list('-created_date', 300),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -75,7 +75,7 @@ export default function TmdbWatchActions({ item, details, type }) {
       return base44.entities.Watchlist.create({ media_id: media.id });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['media'] });
+      queryClient.invalidateQueries({ queryKey: ['tmdbLocalMedia'] });
       queryClient.invalidateQueries({ queryKey: ['watchlist'] });
     },
   });
@@ -83,7 +83,7 @@ export default function TmdbWatchActions({ item, details, type }) {
   const markWatched = useMutation({
     mutationFn: () => upsertHistory({ completed: true, percent: 100 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['media'] });
+      queryClient.invalidateQueries({ queryKey: ['tmdbLocalMedia'] });
       queryClient.invalidateQueries({ queryKey: ['watchHistory'] });
     },
   });
@@ -91,7 +91,7 @@ export default function TmdbWatchActions({ item, details, type }) {
   const saveProgress = useMutation({
     mutationFn: () => upsertHistory({ completed: false, percent: progressPercent[0] }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['media'] });
+      queryClient.invalidateQueries({ queryKey: ['tmdbLocalMedia'] });
       queryClient.invalidateQueries({ queryKey: ['watchHistory'] });
       setShowProgress(false);
     },

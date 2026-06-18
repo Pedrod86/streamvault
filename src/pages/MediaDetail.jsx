@@ -14,7 +14,6 @@ import ShakaPlayer from '@/components/media/ShakaPlayer';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
-import { fetchEmbyFullLibrary } from '../lib/embyApi';
 import PlayerPicker, { PLAYERS } from '../components/media/PlayerPicker';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
 
@@ -94,17 +93,21 @@ export default function MediaDetail() {
   const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
   const xtreamServer = servers.find(s => s.server_type === 'xtream' && s.is_active !== false);
 
-  const { data: embyLibrary = [] } = useQuery({
-    queryKey: ['embyLiveLibrary', embyServer?.id],
-    enabled: !!embyServer && (!!media || isEmbyDirect),
-    staleTime: 5 * 60 * 1000,
-    queryFn: () => fetchEmbyFullLibrary(embyServer),
-  });
+  const getEmbyIdFromMedia = (item) => {
+    if (!item) return null;
+    const tagId = (item.tags || []).find(t => t?.startsWith('emby:') && t !== 'emby')?.replace('emby:', '');
+    const urlId = (item.video_url || '').match(/\/Videos\/([^/]+)\//)?.[1];
+    return item.emby_id || tagId || urlId || null;
+  };
 
-  // Match current media item to an Emby library item by title or direct ID
+  // Build a lightweight Emby item from the saved media record instead of loading the full server library.
   const embyItem = embyDirectId
-    ? (embyLibrary.find(e => e.id === embyDirectId) || (embyLibrary.length === 0 ? { id: embyDirectId, title: 'Loading…', type: 'Movie' } : null))
-    : media ? embyLibrary.find(e => e.title.toLowerCase().trim() === media.title.toLowerCase().trim()) : null;
+    ? { id: embyDirectId, title: 'Emby Item', type: 'Movie' }
+    : media && getEmbyIdFromMedia(media) ? {
+        id: getEmbyIdFromMedia(media),
+        title: media.title,
+        type: media.media_type === 'tv_show' ? 'Series' : 'Movie',
+      } : null;
 
   // Try to find a matching VOD in IPTV by title
   const { data: iptvVod = null } = useQuery({
