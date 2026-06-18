@@ -29,13 +29,17 @@ const IS_TOUCH = typeof window !== 'undefined' && (('ontouchstart' in window) ||
 
 // If a direct Emby stream can't be decoded by the browser (e.g. MKV), build the
 // HLS transcode URL so the single player can fall back without any caller changes.
+// Emby requires the real MediaSourceId (mediasource_<itemId>) plus a DeviceId and
+// PlaySessionId — without them the master.m3u8 request returns HTTP 400.
 function toEmbyHlsTranscode(directUrl) {
   const m = directUrl.match(/^(.*)\/Videos\/([^/]+)\/stream/);
   if (!m) return null;
   const [, base, id] = m;
   const token = directUrl.match(/[?&]api_key=([^&]+)/)?.[1] || '';
-  return `${base}/Videos/${id}/master.m3u8?api_key=${token}&MediaSourceId=${id}` +
-    `&VideoCodec=h264&AudioCodec=aac,mp3&EnableAdaptiveBitrateStreaming=true`;
+  return `${base}/Videos/${id}/master.m3u8?api_key=${token}` +
+    `&MediaSourceId=mediasource_${id}&DeviceId=streamvault-web&PlaySessionId=${Date.now()}` +
+    `&VideoCodec=h264&AudioCodec=aac,mp3&TranscodingContainer=ts&TranscodingProtocol=hls` +
+    `&EnableAdaptiveBitrateStreaming=true`;
 }
 
 function Btn({ children, onClick, title: tip }) {
