@@ -91,9 +91,6 @@ export default function MediaDetail() {
 
   const getEmbyIdFromMedia = (item) => {
     if (!item) return null;
-    // Only treat as an Emby item if this record actually came from Emby
-    const isEmbyRecord = (item.tags || []).includes('emby');
-    if (!isEmbyRecord) return null;
     const tagId = (item.tags || []).find(t => t?.startsWith('emby:') && t !== 'emby')?.replace('emby:', '');
     const urlId = (item.video_url || '').match(/\/Videos\/([^/]+)\//)?.[1];
     return item.emby_id || tagId || urlId || null;
