@@ -999,9 +999,6 @@ export default function Settings() {
       {/* ── Quick Sync ── */}
       <QuickSyncSection />
 
-      {/* ── Category Sync ── */}
-      <CategorySyncSection />
-
       {/* ── TVDB Bulk Enrich ── */}
       <TvdbEnrichSection />
 
