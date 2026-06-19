@@ -256,6 +256,8 @@ function QuickSyncSection() {
           if (pageCreated === 0) break;
           if (!hasMore) break;
           startIndex += items.length;
+          // Small pause between pages to avoid hitting the database rate limit
+          await new Promise(r => setTimeout(r, 400));
         }
       }
 

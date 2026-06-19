@@ -3,6 +3,21 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 const BATCH = 50;
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+// Retry a DB operation with exponential backoff when the platform returns 429 (rate limit)
+async function withRetry(fn, label = 'op') {
+  let delay = 600;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const is429 = e?.status === 429 || /rate limit/i.test(e?.message || '');
+      if (!is429 || attempt === 4) throw e;
+      await sleep(delay);
+      delay *= 2;
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   const startedAt = new Date().toISOString();
   const t0 = Date.now();
@@ -27,23 +42,16 @@ Deno.serve(async (req) => {
     const existingEmbyIds = new Set();
     const existingTitleType = new Set();
 
-    // Fetch existing emby-tagged media — limit to 1000 to stay fast
-    // Most libraries are well under 1000 items per sync page
-    const existingPage = await base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 1000).catch(() => []);
+    // Fetch existing emby-tagged media (single capped page) to dedup against.
+    // Kept to one read per call to avoid hammering the DB rate limit during a full sync.
+    const existingPage = await withRetry(
+      () => base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 1000),
+      'read-existing'
+    ).catch(() => []);
     for (const m of existingPage) {
       const embyTag = Array.isArray(m.tags) ? m.tags.find(t => typeof t === 'string' && t.startsWith('emby:')) : null;
       if (embyTag) existingEmbyIds.add(embyTag.replace('emby:', ''));
       existingTitleType.add(`${(m.title || '').toLowerCase().trim()}|${m.media_type}`);
-    }
-
-    // If library is larger than 1000, do a second page
-    if (existingPage.length >= 1000) {
-      const page2 = await base44.entities.Media.filter({ tags: 'emby' }, '-created_date', 2000).catch(() => []);
-      for (const m of page2.slice(1000)) {
-        const embyTag = Array.isArray(m.tags) ? m.tags.find(t => typeof t === 'string' && t.startsWith('emby:')) : null;
-        if (embyTag) existingEmbyIds.add(embyTag.replace('emby:', ''));
-        existingTitleType.add(`${(m.title || '').toLowerCase().trim()}|${m.media_type}`);
-      }
     }
 
     // Filter to only genuinely new items
@@ -61,9 +69,9 @@ Deno.serve(async (req) => {
     // Bulk create in small batches with pacing
     let createdCount = 0;
     for (let i = 0; i < newItems.length; i += BATCH) {
-      await base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH));
+      await withRetry(() => base44.entities.Media.bulkCreate(newItems.slice(i, i + BATCH)), 'bulk-create');
       createdCount += Math.min(BATCH, newItems.length - i);
-      if (i + BATCH < newItems.length) await sleep(300);
+      if (i + BATCH < newItems.length) await sleep(500);
     }
 
     const duration = Math.round((Date.now() - t0) / 1000);
