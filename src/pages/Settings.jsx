@@ -11,16 +11,7 @@ import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import VideoAudioSection from '@/components/settings/VideoAudioSection';
-
-// Predefined colour themes (primary HSL, accent HSL)
-const THEMES = [
-  { label: '⚡ Cyberpunk',      primary: '300 100% 55%', accent: '57 100% 50%',  preview: ['#cc00ff', '#ffee00'], cyberpunk: true },
-  { label: '🔥 Neon Inferno',   primary: '0 100% 60%',   accent: '30 100% 55%',  preview: ['#ff1a1a', '#ff8800'] },
-  { label: '🌊 Neon Ocean',     primary: '195 100% 50%', accent: '240 100% 65%', preview: ['#00d4ff', '#4040ff'] },
-  { label: '☢️ Neon Toxic',     primary: '120 100% 50%', accent: '75 100% 50%',  preview: ['#00ff00', '#aaff00'] },
-  { label: '🌸 Neon Sakura',    primary: '320 100% 65%', accent: '280 100% 65%', preview: ['#ff40b0', '#c040ff'] },
-  { label: '🌅 Neon Sunrise',   primary: '45 100% 55%',  accent: '15 100% 58%',  preview: ['#ffcc00', '#ff5500'] },
-];
+import { THEMES, applyTheme } from '@/lib/themes';
 
 const INTERVALS = [
   { label: 'Disabled', value: 0 },
@@ -31,55 +22,6 @@ const INTERVALS = [
   { label: 'Every 6 hours', value: 360 },
   { label: 'Every 24 hours', value: 1440 },
 ];
-
-function applyTheme(primary, accent, cyberpunk = false) {
-  const root = document.documentElement;
-  root.style.setProperty('--primary', primary);
-  root.style.setProperty('--ring', primary);
-  root.style.setProperty('--chart-1', primary);
-  root.style.setProperty('--accent', accent);
-  root.style.setProperty('--chart-2', accent);
-
-  if (cyberpunk) {
-    root.classList.add('theme-cyberpunk');
-    root.style.setProperty('--background', '270 100% 3%');
-    root.style.setProperty('--foreground', '57 100% 55%');
-    root.style.setProperty('--card', '270 80% 6%');
-    root.style.setProperty('--card-foreground', '57 100% 55%');
-    root.style.setProperty('--popover', '270 80% 6%');
-    root.style.setProperty('--popover-foreground', '57 100% 55%');
-    root.style.setProperty('--secondary', '270 60% 10%');
-    root.style.setProperty('--secondary-foreground', '57 100% 65%');
-    root.style.setProperty('--muted', '270 60% 10%');
-    root.style.setProperty('--muted-foreground', '270 30% 55%');
-    root.style.setProperty('--border', '300 80% 30%');
-    root.style.setProperty('--input', '270 60% 10%');
-    root.style.setProperty('--sidebar-background', '270 80% 6%');
-    root.style.setProperty('--sidebar-foreground', '57 100% 55%');
-    root.style.setProperty('--sidebar-primary', primary);
-    root.style.setProperty('--sidebar-border', '300 80% 30%');
-    root.style.setProperty('--primary-foreground', '270 100% 5%');
-  } else {
-    root.classList.remove('theme-cyberpunk');
-    root.style.setProperty('--background', '222 47% 6%');
-    root.style.setProperty('--foreground', '210 40% 96%');
-    root.style.setProperty('--card', '222 41% 9%');
-    root.style.setProperty('--card-foreground', '210 40% 96%');
-    root.style.setProperty('--popover', '222 41% 9%');
-    root.style.setProperty('--popover-foreground', '210 40% 96%');
-    root.style.setProperty('--secondary', '222 30% 14%');
-    root.style.setProperty('--secondary-foreground', '210 40% 96%');
-    root.style.setProperty('--muted', '222 30% 14%');
-    root.style.setProperty('--muted-foreground', '215 20% 55%');
-    root.style.setProperty('--border', '222 30% 18%');
-    root.style.setProperty('--input', '222 30% 18%');
-    root.style.setProperty('--sidebar-background', '222 41% 9%');
-    root.style.setProperty('--sidebar-foreground', '210 40% 96%');
-    root.style.setProperty('--sidebar-primary', primary);
-    root.style.setProperty('--sidebar-border', '222 30% 18%');
-    root.style.setProperty('--primary-foreground', '210 40% 98%');
-  }
-}
 
 function TvdbEnrichSection() {
   const queryClient = useQueryClient();
@@ -785,7 +727,7 @@ export default function Settings() {
     if (themeIdx >= 0) {
       setSelectedTheme(themeIdx);
       const t = THEMES[themeIdx];
-      applyTheme(t.primary, t.accent, !!t.cyberpunk);
+      applyTheme(t.primary, t.accent, !!t.cyberpunk, t.bg);
     }
     setSyncInterval(String(settings.sync_interval_minutes ?? 0));
   }, [settings]);
@@ -793,7 +735,7 @@ export default function Settings() {
   // Apply theme on selection change
   useEffect(() => {
     const t = THEMES[selectedTheme];
-    applyTheme(t.primary, t.accent, !!t.cyberpunk);
+    applyTheme(t.primary, t.accent, !!t.cyberpunk, t.bg);
   }, [selectedTheme]);
 
   const saveSettings = async (patch, onDone) => {

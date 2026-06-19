@@ -13,6 +13,7 @@ import StreamVaultLogo from '@/components/StreamVaultLogo';
 import { useTvDevice } from '@/hooks/useTvDevice';
 import { runScan } from '@/lib/embyScanState';
 import OfflineBanner from './OfflineBanner';
+import { applySavedTheme } from '@/lib/themes';
 
 const ROOT_TABS = new Set(['/', '/emby', '/watchlist', '/search', '/settings', '/discover', '/iptv', '/audiobooks']);
 
@@ -33,15 +34,7 @@ export default function AppLayout() {
   useEffect(() => {
     const s = settingsList[0];
     if (!s) return;
-    if (s.accent_color) {
-      document.documentElement.style.setProperty('--primary', s.accent_color);
-      document.documentElement.style.setProperty('--ring', s.accent_color);
-      document.documentElement.style.setProperty('--chart-1', s.accent_color);
-    }
-    if (s.secondary_color) {
-      document.documentElement.style.setProperty('--accent', s.secondary_color);
-      document.documentElement.style.setProperty('--chart-2', s.secondary_color);
-    }
+    applySavedTheme(s);
   }, [settingsList]);
 
   // App is always dark — ensure the class is set
