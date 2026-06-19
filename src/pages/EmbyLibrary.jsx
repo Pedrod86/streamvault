@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Database, Search, Play, Star, X, RefreshCw, Loader2, Clapperboard, MonitorPlay, Trophy } from 'lucide-react';
+import { Database, Search, Play, Star, X, RefreshCw, Loader2, Clapperboard, MonitorPlay, Trophy, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -164,6 +164,8 @@ export default function EmbyLibrary() {
     { id: 'TV Shows', label: 'TV Shows' },
     { id: '4K Movies', label: '4K Movies', icon: Clapperboard },
     { id: '4K TV', label: '4K TV', icon: MonitorPlay },
+    { id: 'Recent Movies', label: 'Recent Movies', icon: Sparkles },
+    { id: 'Recent TV', label: 'Recent TV', icon: Sparkles },
     { id: 'Sports', label: 'Sports', icon: Trophy },
   ];
 
@@ -174,6 +176,17 @@ export default function EmbyLibrary() {
     if (activeFilter === '4K Movies') items = items.filter(i => i.media_type === 'movie' && IS_4K(i));
     if (activeFilter === '4K TV') items = items.filter(i => i.media_type === 'tv_show' && IS_4K(i));
     if (activeFilter === 'Sports') items = items.filter(i => IS_SPORTS(i));
+    if (activeFilter === 'Recent Movies' || activeFilter === 'Recent TV') {
+      const wantType = activeFilter === 'Recent Movies' ? 'movie' : 'tv_show';
+      items = items
+        .filter(i => i.media_type === wantType)
+        .sort((a, b) => {
+          const da = new Date(a.dateAdded || a.DateCreated || a.created_date || 0).getTime();
+          const db = new Date(b.dateAdded || b.DateCreated || b.created_date || 0).getTime();
+          return db - da;
+        })
+        .slice(0, 40);
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(i => i.title.toLowerCase().includes(q));
@@ -193,6 +206,12 @@ export default function EmbyLibrary() {
     }
     if (activeFilter === 'Sports') {
       return [{ title: 'Sports Replays', items: filtered }];
+    }
+    if (activeFilter === 'Recent Movies') {
+      return [{ title: 'Recently Added Movies', items: filtered }];
+    }
+    if (activeFilter === 'Recent TV') {
+      return [{ title: 'Recently Added TV', items: filtered }];
     }
 
     const movies = filtered.filter(i => i.media_type === 'movie' && !IS_4K(i));
