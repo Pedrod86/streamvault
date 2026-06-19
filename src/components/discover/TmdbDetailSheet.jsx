@@ -4,6 +4,7 @@ import { tmdb, fanart } from '@/lib/metadataService';
 import { X, Star, Clock, Calendar, ExternalLink, Loader2, Tv2, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TmdbWatchActions from './TmdbWatchActions';
+import TmdbHeroTrailer from './TmdbHeroTrailer';
 
 function CastAvatar({ member }) {
   return (
@@ -53,11 +54,9 @@ export default function TmdbDetailSheet({ item, onClose }) {
         onClick={e => e.stopPropagation()}
       >
         {/* Hero backdrop */}
-        <div className="relative h-48 sm:h-64 bg-secondary shrink-0">
-          {backdrop && (
-            <img src={backdrop} alt="" className="w-full h-full object-cover" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+        <div className="relative h-48 sm:h-64 bg-secondary shrink-0 overflow-hidden">
+          <TmdbHeroTrailer trailers={details?.trailers} backdrop={backdrop} />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent pointer-events-none" />
           <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
             <X className="w-4 h-4" />
           </button>
