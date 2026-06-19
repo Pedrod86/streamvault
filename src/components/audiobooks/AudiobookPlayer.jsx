@@ -339,10 +339,14 @@ export default function AudiobookPlayer({ book, onClose }) {
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={() => setPlaying(false)}
-        onError={(e) => {
+        onError={() => {
           setPlaying(false);
           setLoadingAudio(false);
-          setAudioError('Could not load audio — check your Emby server is reachable. Tap play to retry.');
+          const code = audioRef.current?.error?.code;
+          const msg = code === 4
+            ? 'This audio format is not supported by your browser.'
+            : 'Could not load audio — check your Emby server is reachable.';
+          setAudioError(msg + ' Tap play to retry.');
         }}
         preload="metadata"
       />

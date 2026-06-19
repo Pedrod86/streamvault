@@ -94,7 +94,8 @@ Deno.serve(async (req) => {
       const posterUrl = hasPrimary
         ? `${base}/Items/${item.Id}/Images/Primary?api_key=${token}&maxHeight=400`
         : null;
-      const streamUrl = `${base}/Audio/${item.Id}/universal?api_key=${token}&audioCodec=mp3&maxAudioBitDepth=16&audioBitRate=192000&TranscodingContainer=mp3&TranscodingProtocol=http`;
+      // Direct static stream — far more reliable than the transcoding `universal` endpoint
+      const streamUrl = `${base}/Audio/${item.Id}/stream?api_key=${token}&Static=true`;
       const durationSeconds = item.RunTimeTicks ? Math.floor(item.RunTimeTicks / 10_000_000) : 0;
 
       return {
