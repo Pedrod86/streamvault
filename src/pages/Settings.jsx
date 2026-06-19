@@ -933,7 +933,12 @@ export default function Settings() {
         <p className="text-xs text-muted-foreground -mt-2">Automatically sync all media servers in the background.</p>
 
         <div>
-          <Label className="text-sm text-foreground">Sync every</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm text-foreground">Sync every</Label>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              {INTERVALS.find(i => i.value === parseInt(syncInterval))?.label || `${syncInterval} min`}
+            </span>
+          </div>
           <Select value={syncInterval} onValueChange={setSyncInterval}>
             <SelectTrigger className="mt-1 bg-secondary border-border h-11">
               <SelectValue />

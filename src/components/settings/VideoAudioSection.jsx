@@ -54,7 +54,10 @@ export default function VideoAudioSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Skip interval */}
         <div>
-          <Label className="text-sm text-foreground">Skip interval</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm text-foreground">Skip interval</Label>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{prefs.skipSeconds}s</span>
+          </div>
           <Select value={prefs.skipSeconds} onValueChange={v => set('skipSeconds', v)}>
             <SelectTrigger className="mt-1 bg-secondary border-border h-10">
               <SelectValue />
@@ -69,7 +72,10 @@ export default function VideoAudioSection() {
 
         {/* Default volume */}
         <div>
-          <Label className="text-sm text-foreground">Default volume</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm text-foreground">Default volume</Label>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{Math.round(parseFloat(prefs.defaultVolume) * 100)}%</span>
+          </div>
           <Select value={prefs.defaultVolume} onValueChange={v => set('defaultVolume', v)}>
             <SelectTrigger className="mt-1 bg-secondary border-border h-10">
               <SelectValue />
@@ -84,7 +90,10 @@ export default function VideoAudioSection() {
 
         {/* Autoplay */}
         <div>
-          <Label className="text-sm text-foreground">Autoplay</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm text-foreground">Autoplay</Label>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{prefs.autoplay === 'true' ? 'On' : 'Off'}</span>
+          </div>
           <Select value={prefs.autoplay} onValueChange={v => set('autoplay', v)}>
             <SelectTrigger className="mt-1 bg-secondary border-border h-10">
               <SelectValue />
@@ -98,7 +107,10 @@ export default function VideoAudioSection() {
 
         {/* Fit mode */}
         <div>
-          <Label className="text-sm text-foreground">Video fit</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm text-foreground">Video fit</Label>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{prefs.fitMode}</span>
+          </div>
           <Select value={prefs.fitMode} onValueChange={v => set('fitMode', v)}>
             <SelectTrigger className="mt-1 bg-secondary border-border h-10">
               <SelectValue />
