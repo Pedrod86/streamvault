@@ -100,6 +100,25 @@ Deno.serve(async (req) => {
     const rawItems = json?.Items || [];
     const total = json?.TotalRecordCount || 0;
 
+    // For Series, the series object has no resolution (it lives on episodes).
+    // Query each series' episodes for a 4K video stream and build a 4K lookup.
+    const series4k = new Set();
+    const seriesItems = rawItems.filter(it => it.Type === 'Series');
+    await Promise.all(seriesItems.map(async (s) => {
+      try {
+        const epUrl =
+          `${base}/Users/${userId}/Items?ParentId=${s.Id}&Recursive=true` +
+          `&IncludeItemTypes=Episode&Fields=MediaStreams,Height,Width&Limit=400&api_key=${token}`;
+        const epJson = await doFetch(epUrl);
+        const eps = epJson?.Items || [];
+        const has4k = eps.some(ep => {
+          const vs = (ep.MediaStreams || []).find(st => st.Type === 'Video');
+          return (ep.Height || 0) >= 2160 || (vs?.Height || 0) >= 2160 || (vs?.Width || 0) >= 3840;
+        });
+        if (has4k) series4k.add(s.Id);
+      } catch (_) { /* skip series we can't read */ }
+    }));
+
     const items = rawItems.map(item => {
       // Detect 4K: check Height field, MediaStreams, Emby Tags, or title keywords
       const height = item.Height || 0;
@@ -110,7 +129,8 @@ Deno.serve(async (req) => {
       const is4k = maxHeight >= 2160 ||
         /\b(4K|UHD|2160p)\b/i.test(item.Name || '') ||
         (item.MediaStreams || []).some(s => s.Type === 'Video' && (s.Width >= 3840 || s.Height >= 2160)) ||
-        embyTags.some(t => /4k|uhd|2160p/.test(t));
+        embyTags.some(t => /4k|uhd|2160p/.test(t)) ||
+        series4k.has(item.Id); // series flagged 4K via its episodes
 
       return {
         id: item.Id,
