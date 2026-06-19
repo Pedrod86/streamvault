@@ -72,7 +72,11 @@ export default function EmbyLibraryViews() {
 
   const handlePlay = (item) => {
     if (!item?.id) return;
-    navigate(`/media/${item.id}`);
+    const params = new URLSearchParams();
+    if (item.type) params.set('type', item.type);
+    if (item.title) params.set('title', item.title);
+    if (item.posterUrl) params.set('poster', item.posterUrl);
+    navigate(`/media/emby:${item.id}?${params.toString()}`);
   };
 
   if (isLoading) {

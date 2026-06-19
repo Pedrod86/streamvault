@@ -97,9 +97,13 @@ export default function MediaDetail() {
     return item.emby_id || tagId || urlId || null;
   };
 
+  const directType = urlParams.get('type') || 'Movie';
+  const directTitle = urlParams.get('title') || 'Emby Item';
+  const directPoster = urlParams.get('poster') || null;
+
   // Build a lightweight Emby item from the saved media record instead of loading the full server library.
   const embyItem = embyDirectId
-    ? { id: embyDirectId, title: 'Emby Item', type: 'Movie' }
+    ? { id: embyDirectId, title: directTitle, type: directType, posterUrl: directPoster }
     : media && getEmbyIdFromMedia(media) ? {
         id: getEmbyIdFromMedia(media),
         title: media.title,
