@@ -23,12 +23,21 @@ export default function WatchHistory() {
 
   const { data: history = [], isLoading: histLoading } = useQuery({
     queryKey: ['watchHistory'],
-    queryFn: () => base44.entities.WatchHistory.list('-last_watched', 200),
+    queryFn: () => base44.entities.WatchHistory.list('-last_watched', 500),
   });
 
+  // Fetch only the media records referenced by the history entries (handles
+  // large libraries where a bulk list would miss older items)
   const { data: allMedia = [], isLoading: mediaLoading } = useQuery({
-    queryKey: ['media'],
-    queryFn: () => base44.entities.Media.list('-created_date', 500),
+    queryKey: ['watchHistoryMedia', history.map(h => h.media_id).sort().join(',')],
+    enabled: history.length > 0,
+    queryFn: async () => {
+      const ids = [...new Set(history.map(h => h.media_id).filter(Boolean))];
+      const results = await Promise.all(
+        ids.map(id => base44.entities.Media.filter({ id }).then(r => r[0]).catch(() => null))
+      );
+      return results.filter(Boolean);
+    },
   });
 
   const deleteEntry = useMutation({
