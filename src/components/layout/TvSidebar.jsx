@@ -37,7 +37,10 @@ export default function TvSidebar() {
       <div className="flex items-center gap-3 px-5 py-5 shrink-0">
         <img src={LOGO_URL} alt="StreamVault" className="w-9 h-9 rounded-xl object-cover shrink-0" />
         {expanded && (
-          <span className="font-heading font-bold text-base bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent whitespace-nowrap overflow-hidden">
+          <span
+            className="font-heading font-extrabold text-base bg-gradient-to-r from-[#ff00e5] via-[#00f0ff] to-[#a64dff] bg-clip-text text-transparent whitespace-nowrap overflow-hidden tracking-wide"
+            style={{ filter: 'drop-shadow(0 0 4px rgba(0,240,255,0.8)) drop-shadow(0 0 10px rgba(255,0,229,0.6))' }}
+          >
             StreamVault
           </span>
         )}
