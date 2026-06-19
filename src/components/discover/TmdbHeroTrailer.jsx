@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Play } from 'lucide-react';
 
 // Extracts the 11-char YouTube ID from a trailer URL
 function youtubeId(url = '') {
@@ -8,43 +8,38 @@ function youtubeId(url = '') {
 }
 
 export default function TmdbHeroTrailer({ trailers, backdrop }) {
-  const [muted, setMuted] = useState(true);
-  const [show, setShow] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   const id = (trailers || []).map(t => youtubeId(t.url)).find(Boolean);
 
-  // Small delay so the backdrop image shows first, then trailer fades in
-  useEffect(() => {
-    setShow(false);
-    setFailed(false);
-    if (!id) return;
-    const timer = setTimeout(() => setShow(true), 600);
-    return () => clearTimeout(timer);
-  }, [id]);
-
-  const playing = id && show && !failed;
+  // Reset when navigating between titles
+  useEffect(() => { setPlaying(false); }, [id]);
 
   return (
     <>
       {backdrop && (
         <img src={backdrop} alt="" className="w-full h-full object-cover" />
       )}
-      {playing && (
+
+      {playing && id && (
         <iframe
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${id}`}
+          className="absolute inset-0 w-full h-full"
+          src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
           title="Trailer"
-          allow="autoplay; encrypted-media"
-          onError={() => setFailed(true)}
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
         />
       )}
-      {playing && (
+
+      {/* Play button overlay — user taps to start the trailer (avoids autoplay errors) */}
+      {!playing && id && (
         <button
-          onClick={() => setMuted(m => !m)}
-          className="absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
+          onClick={() => setPlaying(true)}
+          className="absolute inset-0 z-10 flex items-center justify-center group"
         >
-          {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          <span className="w-14 h-14 rounded-full bg-black/50 group-hover:bg-primary/80 flex items-center justify-center transition-colors backdrop-blur-sm">
+            <Play className="w-6 h-6 text-white fill-white ml-1" />
+          </span>
         </button>
       )}
     </>
