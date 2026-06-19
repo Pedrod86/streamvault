@@ -1,5 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Retry a platform/DB call with backoff when rate-limited (429)
+async function withRetry(fn) {
+  let delay = 600;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const is429 = e?.status === 429 || /rate limit/i.test(e?.message || '');
+      if (!is429 || attempt === 4) throw e;
+      await sleep(delay);
+      delay *= 2;
+    }
+  }
+}
+
 // Module-level server cache — avoids hitting DB on every request
 let _serverCache = null;
 let _serverCacheAt = 0;
@@ -8,7 +25,7 @@ const SERVER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 async function getEmbyServer(base44) {
   const now = Date.now();
   if (_serverCache && (now - _serverCacheAt) < SERVER_CACHE_TTL) return _serverCache;
-  const servers = await base44.entities.MediaServer.list();
+  const servers = await withRetry(() => base44.entities.MediaServer.list());
   const server = servers.find(s => s.server_type === 'emby' && s.is_active !== false) || null;
   _serverCache = server;
   _serverCacheAt = now;
@@ -56,7 +73,7 @@ async function resolveUserId(base, token) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const user = await withRetry(() => base44.auth.me());
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
