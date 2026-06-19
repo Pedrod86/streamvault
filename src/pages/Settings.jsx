@@ -714,6 +714,7 @@ export default function Settings() {
 
   // Server sync states
   const [serverStatuses, setServerStatuses] = useState({});
+  const [serverStats, setServerStats] = useState({});
 
   const { data: servers = [] } = useQuery({
     queryKey: ['mediaServers'],
@@ -770,6 +771,8 @@ export default function Settings() {
 
   const runSync = async (server) => {
     setServerStatuses(s => ({ ...s, [server.id]: 'syncing' }));
+    setServerStats(s => ({ ...s, [server.id]: { fetched: 0, created: 0, updated: 0 } }));
+    let totalFetched = 0, totalCreated = 0, totalUpdated = 0;
     try {
       if (server.server_type === 'emby') {
         let startIndex = 0;
@@ -779,6 +782,7 @@ export default function Settings() {
           if (res.data?.error) throw new Error(res.data.error);
           const { items, hasMore } = res.data;
           if (!items?.length) break;
+          totalFetched += items.length;
           const dbItems = items.map(item => {
             const tags = ['emby', `emby:${item.id}`];
             if (item.is4k) tags.push('4k');
@@ -797,7 +801,10 @@ export default function Settings() {
               tags,
             };
           });
-          await base44.functions.invoke('embySync', { server, items: dbItems });
+          const sr = await base44.functions.invoke('embySync', { server, items: dbItems });
+          totalCreated += sr.data?.created || 0;
+          totalUpdated += sr.data?.updated || 0;
+          setServerStats(s => ({ ...s, [server.id]: { fetched: totalFetched, created: totalCreated, updated: totalUpdated } }));
           if (!hasMore) break;
           startIndex += items.length;
         }
@@ -805,12 +812,16 @@ export default function Settings() {
         // Other server types (Plex, Jellyfin, Xtream) use the client-side fetch
         const items = await fetchServerLibrary(server);
         if (items.length > 0) {
-          await base44.functions.invoke('embySync', { server, items });
+          totalFetched += items.length;
+          const sr = await base44.functions.invoke('embySync', { server, items });
+          totalCreated += sr.data?.created || 0;
+          totalUpdated += sr.data?.updated || 0;
+          setServerStats(s => ({ ...s, [server.id]: { fetched: totalFetched, created: totalCreated, updated: totalUpdated } }));
         }
       }
       queryClient.invalidateQueries({ queryKey: ['media'] });
       setServerStatuses(s => ({ ...s, [server.id]: 'done' }));
-      setTimeout(() => setServerStatuses(s => ({ ...s, [server.id]: 'idle' })), 3000);
+      setTimeout(() => setServerStatuses(s => ({ ...s, [server.id]: 'idle' })), 6000);
     } catch (e) {
       setServerStatuses(s => ({ ...s, [server.id]: 'error' }));
       setTimeout(() => setServerStatuses(s => ({ ...s, [server.id]: 'idle' })), 4000);
@@ -922,12 +933,19 @@ export default function Settings() {
           <div className="space-y-3">
             {mediaServers.map(server => {
               const st = serverStatuses[server.id] || 'idle';
+              const stat = serverStats[server.id];
               const typeLabels = { plex: 'Plex', emby: 'Emby', jellyfin: 'Jellyfin' };
               return (
                 <div key={server.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-secondary">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{server.server_name || typeLabels[server.server_type] || server.server_type}</p>
-                    <p className="text-xs text-muted-foreground truncate">{server.server_url || 'No URL'}</p>
+                    {(st === 'syncing' || st === 'done') && stat ? (
+                      <p className="text-xs text-primary truncate">
+                        {stat.fetched.toLocaleString()} scanned · <span className="text-green-400 font-semibold">{stat.created.toLocaleString()} added</span> · {stat.updated.toLocaleString()} updated
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground truncate">{server.server_url || 'No URL'}</p>
+                    )}
                   </div>
                   <div className="shrink-0">
                     {st === 'done' && (
