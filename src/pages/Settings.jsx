@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Zap, LayoutGrid, History, Film, Baby, Sparkles, Clapperboard, MonitorPlay, Download, ArrowUpCircle, PackageCheck, Info, Mail } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Trash2, ShieldAlert, Tv2, Radio, Plug, FlaskConical, Zap, LayoutGrid, History, Film, Baby, Sparkles, Clapperboard, MonitorPlay, Download, ArrowUpCircle, PackageCheck, Info, Mail, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
@@ -1030,6 +1030,29 @@ export default function Settings() {
             </div>
           </Link>
         </div>
+      </motion.section>
+
+      {/* ── Donate ── */}
+      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.145 }} className="space-y-4 p-5 rounded-xl bg-card border border-pink-500/30">
+        <div className="flex items-center gap-2 mb-1">
+          <Heart className="w-4 h-4 text-pink-400" />
+          <h2 className="font-heading font-semibold text-foreground">Donate</h2>
+        </div>
+        <p className="text-sm text-muted-foreground -mt-1 leading-relaxed">
+          StreamVault is a passion project built as a hobby in my spare time — it's completely free to use.
+          If you're enjoying the app and would like to support its development, donations are always warmly welcomed.
+          Every little bit helps cover costs and lets the app keep growing with new features. Thank you so much for your support! 💜
+        </p>
+        <a
+          href="https://www.paypal.com/paypalme/pedjones590"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full h-11 rounded-xl font-semibold bg-pink-500 hover:bg-pink-600 text-white transition-colors"
+        >
+          <Heart className="w-4 h-4" />
+          Donate via PayPal
+        </a>
+        <p className="text-[11px] text-muted-foreground text-center">PayPal: pedjones590@gmail.com</p>
       </motion.section>
 
       {/* ── Account Management ── */}
