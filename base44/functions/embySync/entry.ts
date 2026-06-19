@@ -104,7 +104,12 @@ Deno.serve(async (req) => {
       }).catch(() => {});
     }
 
-    return Response.json({ success: true, fetched: items.length, created: createdCount, updated: 0 });
+    // How many items in this page were already in the DB — lets the caller stop
+    // early once it reaches a page of entirely-known content.
+    const alreadyExisting = items.length - newItems.length;
+    const allExisting = newItems.length === 0 && items.length > 0;
+
+    return Response.json({ success: true, fetched: items.length, created: createdCount, updated: 0, alreadyExisting, allExisting });
 
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

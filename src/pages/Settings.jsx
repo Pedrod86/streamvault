@@ -777,8 +777,16 @@ export default function Settings() {
       if (server.server_type === 'emby') {
         let startIndex = 0;
         const PAGE = 500;
+        // Your library rarely changes, so we scan newest-first (DateCreated desc)
+        // and stop as soon as we hit 2 consecutive pages of already-synced items.
+        let knownPagesInARow = 0;
+        const STOP_AFTER_KNOWN_PAGES = 2;
         while (true) {
-          const res = await base44.functions.invoke('embyLibrary', { startIndex, pageSize: PAGE });
+          const res = await base44.functions.invoke('embyLibrary', {
+            startIndex,
+            pageSize: PAGE,
+            sortBy: 'DateCreated,Descending',
+          });
           if (res.data?.error) throw new Error(res.data.error);
           const { items, hasMore } = res.data;
           if (!items?.length) break;
@@ -805,6 +813,16 @@ export default function Settings() {
           totalCreated += sr.data?.created || 0;
           totalUpdated += sr.data?.updated || 0;
           setServerStats(s => ({ ...s, [server.id]: { fetched: totalFetched, created: totalCreated, updated: totalUpdated } }));
+
+          // Early stop: newest items come first, so once we reach already-synced
+          // pages we've caught up — no need to crawl the whole 59k library.
+          if (sr.data?.allExisting) {
+            knownPagesInARow++;
+            if (knownPagesInARow >= STOP_AFTER_KNOWN_PAGES) break;
+          } else {
+            knownPagesInARow = 0;
+          }
+
           if (!hasMore) break;
           startIndex += items.length;
         }
