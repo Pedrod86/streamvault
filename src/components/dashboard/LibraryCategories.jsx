@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Loader2, Clapperboard, MonitorPlay } from 'lucide-react';
+import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Loader2, Clapperboard, MonitorPlay, Trophy } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { scanState, runScan } from '@/lib/embyScanState';
@@ -19,6 +19,10 @@ const IS_KIDS = (m) =>
 const IS_ANIME = (m) =>
   m.tags?.some(t => /^anime$/.test(t)) ||
   m.genre?.some(g => /^anime$/i.test(g));
+
+const IS_SPORTS = (m) =>
+  m.tags?.some(t => /^sports?$/i.test(t)) ||
+  (m.genre || m.genres)?.some(g => /^sports?$/i.test(g));
 
 function formatWatchTime(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
@@ -51,6 +55,7 @@ export default function LibraryCategories({ allMedia = [] }) {
   const emby4kShows = embyScan.library.filter(i => i.type === 'Series' && IS_4K(i)).length;
   const embyKids = embyScan.library.filter(i => IS_KIDS(i)).length;
   const embyAnime = embyScan.library.filter(i => IS_ANIME(i)).length;
+  const embySports = embyScan.library.filter(i => IS_SPORTS(i)).length;
   const embyLoading = embyScan.loading && embyScan.library.length === 0;
   const embySyncing = embyScan.loading;
 
@@ -116,6 +121,17 @@ export default function LibraryCategories({ allMedia = [] }) {
       border: 'border-rose-400/20',
       href: '/shows',
       value: embyLoading ? '…' : embyAnime.toLocaleString(),
+      syncing: embySyncing,
+    },
+    {
+      key: 'sports',
+      label: 'Sports Replays',
+      icon: Trophy,
+      color: 'text-green-400',
+      bg: 'bg-green-400/10',
+      border: 'border-green-400/20',
+      href: '/emby?filter=Sports',
+      value: embyLoading ? '…' : embySports.toLocaleString(),
       syncing: embySyncing,
     },
     {

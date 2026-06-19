@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Database, Search, Play, Star, X, RefreshCw, Loader2, Clapperboard, MonitorPlay } from 'lucide-react';
+import { Database, Search, Play, Star, X, RefreshCw, Loader2, Clapperboard, MonitorPlay, Trophy } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,12 @@ const IS_4K = (item) =>
     item.is4k === true ||
     item.tags?.some(t => /^4k$/i.test(t) || /4k|2160p|uhd/i.test(t)) ||
     !!(item.title?.match(/\b(4K|UHD|2160p)\b/i))
+  );
+
+const IS_SPORTS = (item) =>
+  !!item && (
+    item.tags?.some(t => /^sports?$/i.test(t)) ||
+    (item.genre || item.genres)?.some(g => /^sports?$/i.test(g))
   );
 
 // Normalise items from either scan state or DB so filtering always works
@@ -88,7 +94,9 @@ export default function EmbyLibrary() {
   const [playingItem, setPlayingItem] = useState(null);
   const [browsingItem, setBrowsingItem] = useState(null);
 
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, setActiveFilter] = useState(
+    () => new URLSearchParams(window.location.search).get('filter') || 'All'
+  );
   const [scanProgress, setScanProgress] = useState({ loading: scanState.loading, done: scanState.done, total: scanState.total, count: scanState.library.length });
 
   // Build a title→embyId lookup from the in-memory scan state
@@ -156,6 +164,7 @@ export default function EmbyLibrary() {
     { id: 'TV Shows', label: 'TV Shows' },
     { id: '4K Movies', label: '4K Movies', icon: Clapperboard },
     { id: '4K TV', label: '4K TV', icon: MonitorPlay },
+    { id: 'Sports', label: 'Sports', icon: Trophy },
   ];
 
   const filtered = useMemo(() => {
@@ -164,6 +173,7 @@ export default function EmbyLibrary() {
     if (activeFilter === 'TV Shows') items = items.filter(i => i.media_type === 'tv_show' && !IS_4K(i));
     if (activeFilter === '4K Movies') items = items.filter(i => i.media_type === 'movie' && IS_4K(i));
     if (activeFilter === '4K TV') items = items.filter(i => i.media_type === 'tv_show' && IS_4K(i));
+    if (activeFilter === 'Sports') items = items.filter(i => IS_SPORTS(i));
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(i => i.title.toLowerCase().includes(q));
@@ -180,6 +190,9 @@ export default function EmbyLibrary() {
     }
     if (activeFilter === '4K TV') {
       return [{ title: '4K TV Shows', items: filtered }];
+    }
+    if (activeFilter === 'Sports') {
+      return [{ title: 'Sports Replays', items: filtered }];
     }
 
     const movies = filtered.filter(i => i.media_type === 'movie' && !IS_4K(i));
