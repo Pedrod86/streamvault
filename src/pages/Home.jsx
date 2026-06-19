@@ -7,6 +7,7 @@ import PullToRefresh from '../components/layout/PullToRefresh';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
 import EmbyLibraryViews from '../components/media/EmbyLibraryViews';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
+import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const TABS = [
@@ -102,6 +103,7 @@ export default function Home() {
         {activeTab === 'All' && (
           <>
             <EmbyContinueWatching />
+            <EmbyRecentlyAdded />
             <EmbyLibraryViews />
           </>
         )}
