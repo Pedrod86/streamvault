@@ -170,7 +170,7 @@ export default function Home() {
                   return continueWatching.length > 0 ? (
                     <MediaRow key={section.id} title="Continue Watching" items={continueWatching.map(c => c.media)} watchHistory={watchHistory} showProgress={true} />
                   ) : null;
-                case 'local_recent':  return <MediaRow key={section.id} title="Recently Added" items={recentlyAdded} watchHistory={watchHistory} showProgress={true} />;
+                case 'local_recent':  return null; // handled by EmbyHomeRows (Recently Added Movies / TV Shows)
                 case 'anime':         return animeItems.length > 0 ? <MediaRow key={section.id} title="Anime" items={animeItems} watchHistory={watchHistory} /> : null;
                 case 'kids':          return kidsItems.length > 0 ? <MediaRow key={section.id} title="Kids" items={kidsItems} watchHistory={watchHistory} /> : null;
                 case 'genres':        return null; // handled inside EmbyMediaRows to avoid duplicates
