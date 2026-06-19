@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { scanState, runScan } from '@/lib/embyScanState';
 import { loadCounts, saveCounts } from '@/lib/embyCountsCache';
+import QuickSyncButton from '@/components/dashboard/QuickSyncButton';
 
 const IS_4K = (m) =>
   !!m && (
@@ -189,6 +190,8 @@ export default function LibraryCategories({ allMedia = [] }) {
         <h2 className="font-heading font-semibold text-sm text-muted-foreground uppercase tracking-wider">
           Library
         </h2>
+        <div className="flex items-center gap-2 ml-auto">
+        <QuickSyncButton />
         {embySyncing && (
           <span className="flex items-center gap-1 text-[10px] text-accent">
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -198,6 +201,7 @@ export default function LibraryCategories({ allMedia = [] }) {
         {embyScan.done && embyTotal > 0 && (
           <span className="text-[10px] text-green-400">✓ {embyTotal.toLocaleString()} items</span>
         )}
+        </div>
       </div>
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
         {categories.map(({ key, label, icon: Icon, color, bg, border, href, value, syncing, live }) => (
