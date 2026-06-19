@@ -463,17 +463,18 @@ function CheckForUpdatesSection() {
   const [latestVersion, setLatestVersion] = useState(null);
   const [releaseUrl, setReleaseUrl] = useState(null);
   const [releaseNotes, setReleaseNotes] = useState(null);
+  const [apk, setApk] = useState(null);
 
   const check = async () => {
     setStatus('checking');
     setLatestVersion(null);
     setReleaseUrl(null);
     setReleaseNotes(null);
+    setApk(null);
     try {
       const res = await base44.functions.invoke('githubLatestRelease', {});
       const data = res.data;
-      if (data?.error) throw new Error(data.error);
-      if (data.error) {
+      if (data?.error && !data.tag) {
         setStatus('no-releases');
         return;
       }
@@ -481,6 +482,7 @@ function CheckForUpdatesSection() {
       setLatestVersion(tag);
       setReleaseUrl(data.html_url || null);
       setReleaseNotes(data.body ? data.body.slice(0, 300) : null);
+      setApk(data.apk || null);
       setStatus(tag && tag !== CURRENT_VERSION ? 'update-available' : 'uptodate');
     } catch (e) {
       setStatus('error');
@@ -512,11 +514,27 @@ function CheckForUpdatesSection() {
           {releaseNotes && (
             <p className="text-xs text-muted-foreground bg-secondary rounded-lg px-3 py-2 line-clamp-3">{releaseNotes}</p>
           )}
-          {releaseUrl && (
-            <a href={releaseUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-primary underline underline-offset-2">
-              <ArrowUpCircle className="w-3 h-3" /> View release on GitHub
+          {apk?.download_url ? (
+            <a
+              href={apk.download_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full h-11 rounded-xl font-semibold bg-yellow-500 hover:bg-yellow-600 text-black transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download Update{apk.size_mb ? ` (${apk.size_mb} MB)` : ''}
             </a>
+          ) : (
+            releaseUrl && (
+              <a
+                href={releaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full h-11 rounded-xl font-semibold bg-yellow-500 hover:bg-yellow-600 text-black transition-colors"
+              >
+                <ArrowUpCircle className="w-4 h-4" /> Get Update on GitHub
+              </a>
+            )
           )}
         </div>
       )}
