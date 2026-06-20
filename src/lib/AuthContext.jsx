@@ -26,7 +26,22 @@ export const AuthProvider = ({ children }) => {
       try {
         const headers = { 'X-App-Id': appParams.appId, 'Content-Type': 'application/json' };
         if (appParams.token) headers['Authorization'] = `Bearer ${appParams.token}`;
-        const resp = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { headers });
+
+        // Resolve against the absolute app base URL — a relative `/api/...` URL
+        // doesn't resolve correctly inside an Android TV / APK WebView, where it
+        // would otherwise hang forever and trap the app on the logo splash.
+        const base = (appParams.appBaseUrl || '').replace(/\/$/, '');
+        const settingsUrl = `${base}/api/apps/public/prod/public-settings/by-id/${appParams.appId}`;
+
+        // Hard timeout so a stalled request can never block boot past the splash.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 12000);
+        let resp;
+        try {
+          resp = await fetch(settingsUrl, { headers, signal: controller.signal });
+        } finally {
+          clearTimeout(timer);
+        }
         if (!resp.ok) {
           const errData = await resp.json().catch(() => ({}));
           const err = new Error(errData?.message || 'Failed to load app');
