@@ -33,7 +33,10 @@ export function restoreQueryCache(queryClient) {
     }
     cache.forEach(({ queryKey, state }) => {
       if (state?.data !== undefined) {
-        queryClient.setQueryData(queryKey, state.data);
+        // Restore for instant display, but mark as stale (updatedAt: 0) so
+        // React Query refetches fresh data in the background on launch.
+        // This keeps offline/instant loads while ensuring media stays current.
+        queryClient.setQueryData(queryKey, state.data, { updatedAt: 0 });
       }
     });
   } catch (e) {
