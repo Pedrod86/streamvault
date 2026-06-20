@@ -27,6 +27,24 @@ export default function TmdbWatchActions({ item, details, type }) {
     m.title?.toLowerCase().trim() === title?.toLowerCase().trim()
   );
 
+  // Search the Emby server directly for this title so any available item can be played,
+  // even if it isn't saved as a local Media record.
+  const { data: embyMatch, isLoading: embyLoading } = useQuery({
+    queryKey: ['embyDiscoverMatch', title, mediaType],
+    enabled: !!title && !canPlayLocal,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const res = await base44.functions.invoke('embyLibrary', {
+        search: title,
+        itemType: mediaType === 'tv_show' ? 'Series' : 'Movie',
+        pageSize: 10,
+      });
+      const items = res.data?.items || [];
+      const norm = (s) => s?.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      return items.find(it => norm(it.title) === norm(title)) || null;
+    },
+  });
+
   const { data: watchlist = [] } = useQuery({
     queryKey: ['watchlist'],
     queryFn: () => base44.entities.Watchlist.list('-created_date', 500),
@@ -35,8 +53,8 @@ export default function TmdbWatchActions({ item, details, type }) {
 
   const isInWatchlist = localItem && watchlist.some(w => w.media_id === localItem.id);
 
-  // You own this title and it has something playable (local file, Emby, or stream)
-  const canPlay = !!localItem && !!(
+  // You own this title locally and it has something playable (local file, Emby, or stream)
+  const canPlayLocal = !!localItem && !!(
     localItem.video_url ||
     localItem.emby_id ||
     localItem.tags?.some(t => /^emby/.test(t))
@@ -108,14 +126,25 @@ export default function TmdbWatchActions({ item, details, type }) {
 
   return (
     <div className="space-y-3">
-      {canPlay && (
+      {canPlayLocal ? (
         <Button
           className="w-full gap-2 bg-primary hover:bg-primary/90 font-semibold"
           onClick={() => navigate(`/media/${localItem.id}`)}
         >
           <Play className="w-4 h-4 fill-current" /> Play Now
         </Button>
-      )}
+      ) : embyLoading ? (
+        <Button disabled className="w-full gap-2 font-semibold">
+          <Loader2 className="w-4 h-4 animate-spin" /> Checking Emby…
+        </Button>
+      ) : embyMatch ? (
+        <Button
+          className="w-full gap-2 bg-primary hover:bg-primary/90 font-semibold"
+          onClick={() => navigate(`/media/emby:${embyMatch.id}?type=${embyMatch.type}&title=${encodeURIComponent(embyMatch.title)}${embyMatch.posterUrl ? `&poster=${encodeURIComponent(embyMatch.posterUrl)}` : ''}`)}
+        >
+          <Play className="w-4 h-4 fill-current" /> Play on Emby
+        </Button>
+      ) : null}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Button
           variant="outline"
