@@ -12,6 +12,7 @@ import { useReconnectRefetch } from '@/hooks/useReconnectRefetch';
 import BootScreen from '@/components/BootScreen';
 
 import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
 import Movies from './pages/Movies';
 import Shows from './pages/Shows';
 import MediaDetail from './pages/MediaDetail';
@@ -82,6 +83,7 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/movies" element={<Movies />} />
           <Route path="/shows" element={<Shows />} />
           <Route path="/media/:id" element={<MediaDetail />} />

@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Database, BookOpen, Radio, Settings, LogIn, Compass } from 'lucide-react';
+import { Home, Database, BookOpen, Settings, LogIn, Compass, LayoutDashboard } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const TABS = [
   { to: '/', label: 'Home', icon: Home },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/emby', label: 'Library', icon: Database },
   { to: '/browse', label: 'Browse', icon: Compass },
-  { to: '/audiobooks', label: 'Books', icon: BookOpen },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 

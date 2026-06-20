@@ -1,0 +1,67 @@
+{
+  "name": "WeeklyPlan",
+  "type": "object",
+  "properties": {
+    "day": {
+      "type": "string",
+      "enum": [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday"
+      ],
+      "description": "Day of the week this plan is scheduled for"
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the movie or show to watch"
+    },
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "movie",
+        "tv_show"
+      ],
+      "description": "Type of media"
+    },
+    "poster_url": {
+      "type": "string",
+      "description": "Optional poster image URL"
+    },
+    "emby_id": {
+      "type": "string",
+      "description": "Optional Emby item id for direct navigation"
+    },
+    "watched": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the planned item has been watched"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional note",
+      "maxLength": 300
+    }
+  },
+  "required": [
+    "day",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Home, Film, Tv, BookmarkPlus, Database, Search,
   History, Compass, LayoutGrid, Zap, Server, Settings,
-  ChevronRight, LogOut, Radio
+  ChevronRight, LogOut, Radio, LayoutDashboard
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
@@ -11,6 +11,7 @@ const LOGO_URL = 'https://www.dropbox.com/scl/fi/ub9cr2djh0cb7x57m25c7/streamvau
 
 const LINKS = [
   { to: '/',          label: 'Home',       icon: Home },
+  { to: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard },
   { to: '/search',    label: 'Search',     icon: Search },
   { to: '/emby',      label: 'Library',    icon: Database },
   { to: '/iptv',      label: 'IPTV',       icon: Radio },
