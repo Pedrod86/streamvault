@@ -1,32 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import MediaGrid from '../components/media/MediaGrid';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDebounce } from '../hooks/useDebounce';
+import EmbyBrowseGrid from '../components/media/EmbyBrowseGrid';
+
+const PAGE_SIZE = 48;
 
 export default function SearchPage() {
   const urlParams = new URLSearchParams(window.location.search);
   const initialQuery = urlParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
+  const [page, setPage] = useState(0);
+  const debouncedQuery = useDebounce(query, 400);
+  const isFirstRun = React.useRef(true);
 
-  const { data: allMedia = [] } = useQuery({
-    queryKey: ['media'],
-    queryFn: () => base44.entities.Media.list('-created_date', 500),
+  // Reset to the first page whenever the search term changes.
+  useEffect(() => {
+    if (isFirstRun.current) { isFirstRun.current = false; return; }
+    setPage(0);
+  }, [debouncedQuery]);
+
+  const trimmed = debouncedQuery.trim();
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['embySearch', trimmed, page],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('embyLibrary', {
+        startIndex: page * PAGE_SIZE,
+        pageSize: PAGE_SIZE,
+        search: trimmed,
+        sortBy: 'SortName',
+      });
+      if (res.data?.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    enabled: !!trimmed,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: false,
+    keepPreviousData: true,
   });
 
-  const filtered = query.trim()
-    ? allMedia.filter(m => {
-        const q = query.toLowerCase();
-        return (
-          m.title?.toLowerCase().includes(q) ||
-          m.description?.toLowerCase().includes(q) ||
-          m.genre?.some(g => g.toLowerCase().includes(q)) ||
-          m.cast?.some(c => c.toLowerCase().includes(q)) ||
-          m.director?.toLowerCase().includes(q)
-        );
-      })
-    : [];
+  const items = data?.items || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const server = data?.server;
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8">
@@ -43,12 +64,26 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {query.trim() ? (
+      {trimmed ? (
         <>
           <p className="text-muted-foreground text-sm mb-4">
-            {filtered.length} result{filtered.length !== 1 ? 's' : ''} for "{query}"
+            {total.toLocaleString()} result{total !== 1 ? 's' : ''} for "{trimmed}"
           </p>
-          <MediaGrid items={filtered} />
+          <EmbyBrowseGrid items={items} server={server} isLoading={isLoading || isFetching} />
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page + 1} of {totalPages.toLocaleString()}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center py-20">
