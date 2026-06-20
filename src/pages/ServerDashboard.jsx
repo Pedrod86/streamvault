@@ -10,6 +10,7 @@ import {
 import { motion } from 'framer-motion';
 import SyncServerButton from '@/components/server/SyncServerButton';
 import EditServerDialog from '@/components/server/EditServerDialog';
+import ConnectionRouteBadge from '@/components/server/ConnectionRouteBadge';
 
 const SERVER_META = {
   plex:     { name: 'Plex',     color: 'from-yellow-500 to-orange-500', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10', text: 'text-yellow-400' },
@@ -142,6 +143,12 @@ function ServerCard({ server, onDelete, deleting }) {
           <p className="text-muted-foreground mb-0.5">Status</p>
           <StatusBadge status={status} latency={null} />
         </div>
+        {server.local_url && ['emby', 'jellyfin', 'plex'].includes(server.server_type) && (
+          <div className="rounded-lg bg-black/20 px-3 py-2">
+            <p className="text-muted-foreground mb-0.5">Route</p>
+            <ConnectionRouteBadge server={server} />
+          </div>
+        )}
       </div>
 
       {/* Actions */}
