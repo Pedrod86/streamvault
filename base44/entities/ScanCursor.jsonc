@@ -1,0 +1,45 @@
+{
+  "name": "ScanCursor",
+  "type": "object",
+  "properties": {
+    "start_index": {
+      "type": "number",
+      "default": 0,
+      "description": "Next page offset to fetch from Emby"
+    },
+    "total": {
+      "type": "number",
+      "default": 0,
+      "description": "Total items reported by Emby"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "running",
+        "complete"
+      ],
+      "default": "idle",
+      "description": "Current scan status"
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
