@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { CalendarDays, Plus, Check, Trash2, Play } from 'lucide-react';
+import { toast } from 'sonner';
+import { CalendarDays, Plus, Check, Trash2, Play, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -21,6 +22,34 @@ export default function WeeklyPlanner({ pendingItem, onConsumePending }) {
   const navigate = useNavigate();
   const [addingDay, setAddingDay] = useState(null);
   const [titleInput, setTitleInput] = useState('');
+  const [loadingPlayId, setLoadingPlayId] = useState(null);
+
+  // Play a planned item — for shows, resolve & play the latest episode; otherwise open the title.
+  const handlePlay = async (plan) => {
+    if (!plan.emby_id) {
+      navigate(`/search?q=${encodeURIComponent(plan.title)}`);
+      return;
+    }
+    if (plan.media_type === 'tv_show') {
+      setLoadingPlayId(plan.id);
+      try {
+        const res = await base44.functions.invoke('embyEpisodes', { seriesId: plan.emby_id, latest: true });
+        const ep = res.data?.episode;
+        if (ep?.id) {
+          navigate(`/media/emby:${ep.id}?type=Episode&title=${encodeURIComponent(plan.title + ' · ' + (ep.name || ''))}`);
+        } else {
+          navigate(`/media/emby:${plan.emby_id}`);
+        }
+      } catch {
+        toast.error('Could not load the latest episode');
+        navigate(`/media/emby:${plan.emby_id}`);
+      } finally {
+        setLoadingPlayId(null);
+      }
+    } else {
+      navigate(`/media/emby:${plan.emby_id}`);
+    }
+  };
 
   const { data: plans = [] } = useQuery({
     queryKey: ['weeklyPlan'],
@@ -137,15 +166,21 @@ export default function WeeklyPlanner({ pendingItem, onConsumePending }) {
                     </button>
                     <span
                       className={`flex-1 text-xs truncate cursor-pointer ${p.watched ? 'line-through text-muted-foreground' : 'text-foreground'}`}
-                      onClick={() => p.emby_id ? navigate(`/media/emby:${p.emby_id}`) : null}
+                      onClick={() => handlePlay(p)}
                     >
                       {p.title}
                     </span>
-                    {p.emby_id && (
-                      <button onClick={() => navigate(`/media/emby:${p.emby_id}`)} className="opacity-0 group-hover:opacity-100 text-primary">
+                    <button
+                      onClick={() => handlePlay(p)}
+                      title={p.media_type === 'tv_show' ? 'Play latest episode' : 'Play'}
+                      className="w-6 h-6 rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center text-primary-foreground shrink-0"
+                    >
+                      {loadingPlayId === p.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
                         <Play className="w-3 h-3 fill-current" />
-                      </button>
-                    )}
+                      )}
+                    </button>
                     <button onClick={() => deletePlan.mutate(p.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive">
                       <Trash2 className="w-3 h-3" />
                     </button>

@@ -62,6 +62,26 @@ Deno.serve(async (req) => {
     const token = server.api_token;
     const userId = await resolveUserId(base, token);
 
+    // Latest-episode mode — returns the most recently added episode for direct play
+    if (body.latest) {
+      const latestData = await doFetch(
+        `${base}/Shows/${seriesId}/Episodes?UserId=${userId}&api_key=${token}` +
+        `&Fields=DateCreated,RunTimeTicks&SortBy=DateCreated&SortOrder=Descending&Limit=1`
+      );
+      const ep = (latestData?.Items || [])[0];
+      if (!ep) return Response.json({ error: 'No episodes found' }, { status: 404 });
+      return Response.json({
+        episode: {
+          id: ep.Id,
+          name: ep.Name,
+          seasonIndex: ep.ParentIndexNumber || 0,
+          episodeIndex: ep.IndexNumber || 0,
+          streamUrl: `${base}/Videos/${ep.Id}/stream?api_key=${token}&Static=true`,
+        },
+        server: { server_url: base, api_token: token },
+      });
+    }
+
     // Fetch all seasons
     const seasonsData = await doFetch(
       `${base}/Shows/${seriesId}/Seasons?UserId=${userId}&api_key=${token}&Fields=Overview,ImageTags`
