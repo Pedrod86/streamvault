@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useReconnectRefetch } from '@/hooks/useReconnectRefetch';
+import BootScreen from '@/components/BootScreen';
 
 import Home from './pages/Home';
 import Movies from './pages/Movies';
@@ -58,11 +59,7 @@ const AuthenticatedApp = () => {
   const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password'].includes(window.location.pathname);
 
   if (!isAuthRoute && (isLoadingPublicSettings || isLoadingAuth)) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
+    return <BootScreen />;
   }
 
   if (!isAuthRoute && authError) {

@@ -15,6 +15,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAppState();
+
+    // Hard failsafe: no matter what happens in checkAppState (a stalled fetch,
+    // a WebView that never resolves, an unhandled edge case), force the loading
+    // state off after 8s so the app can never stay frozen on the logo splash.
+    const failsafe = setTimeout(() => {
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+    }, 8000);
+
+    return () => clearTimeout(failsafe);
   }, []);
 
   const checkAppState = async () => {
