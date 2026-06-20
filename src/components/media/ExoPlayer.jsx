@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Hls from 'hls.js';
+import { usePlaybackWatchdog } from '@/hooks/usePlaybackWatchdog';
 import {
   X, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Settings, PictureInPicture2,
@@ -54,27 +55,38 @@ function Btn({ children, onClick, title: tip }) {
   );
 }
 
-// ── HLS config matching Media3 default buffer settings ────────────────────────
+// ── HLS config tuned for reliable relay / mobile playback ─────────────────────
 const HLS_CONFIG = {
-  // Media3 default: 50s max buffer, 10s min before playback starts
-  maxBufferLength: 50,
-  maxMaxBufferLength: 120,
-  maxBufferSize: 60 * 1000 * 1000, // 60 MB
+  // Larger forward buffer so brief network dips during relay don't cause stalls
+  maxBufferLength: 60,
+  maxMaxBufferLength: 180,
+  maxBufferSize: 80 * 1000 * 1000, // 80 MB
   maxBufferHole: 0.5,
-  // Start level: auto (ABR)
+  // Jump small gaps automatically instead of stalling
+  nudgeOffset: 0.2,
+  nudgeMaxRetry: 8,
+  highBufferWatchdogPeriod: 2,
+  // Start conservatively (auto ABR picks up quickly) so playback begins fast
   startLevel: -1,
-  // Low latency ABR — matches Media3 AdaptiveTrackSelection
+  // Conservative ABR — react to weak mobile networks, recover quality gradually.
+  // Lower up-factor avoids over-shooting bitrate on flaky connections.
   abrEwmaDefaultEstimate: 500000,
-  abrBandWidthFactor: 0.95,
-  abrBandWidthUpFactor: 0.7,
-  // Stall recovery — Media3 retries on error
-  manifestLoadingMaxRetry: 6,
+  abrEwmaFastLive: 3,
+  abrEwmaSlowLive: 9,
+  abrBandWidthFactor: 0.9,
+  abrBandWidthUpFactor: 0.6,
+  abrMaxWithRealBitrate: true,
+  // Aggressive retry counts/timeouts for unreliable relay connections
+  manifestLoadingMaxRetry: 8,
   manifestLoadingRetryDelay: 1000,
-  levelLoadingMaxRetry: 6,
-  fragLoadingMaxRetry: 6,
+  manifestLoadingMaxRetryTimeout: 64000,
+  levelLoadingMaxRetry: 8,
+  levelLoadingRetryDelay: 1000,
+  fragLoadingMaxRetry: 10,
   fragLoadingRetryDelay: 1000,
+  fragLoadingMaxRetryTimeout: 64000,
   // Faster switching
-  appendErrorMaxRetry: 3,
+  appendErrorMaxRetry: 5,
   enableWorker: true,
   lowLatencyMode: false,
 };
@@ -133,6 +145,9 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
   // Codec / HDR info
   const [codecInfo, setCodecInfo] = useState(null); // { video, audio, hdr, container, resolution }
   const [isHdr, setIsHdr] = useState(false);
+
+  // ── playback reliability: frozen-buffer watchdog + network reconnect ────────
+  usePlaybackWatchdog({ videoRef, hlsRef, playing, onBuffering: setIsBuffering });
 
   // ── controls visibility ────────────────────────────────────────────────────
 
@@ -242,16 +257,33 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
         else setCurrentQuality(data.level);
       });
 
-      // Stall recovery — Media3 equivalent of LoadControl
+      // Stall / network recovery with escalating backoff. Relay connections drop
+      // often, so we keep retrying rather than failing the playback outright.
+      let recoverCount = 0;
       hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls.startLoad();
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
-          }
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // Back off a touch before resuming the load — avoids hammering a dropped relay
+          const delay = Math.min(1000 * Math.pow(2, recoverCount), 8000);
+          recoverCount = Math.min(recoverCount + 1, 4);
+          setIsBuffering(true);
+          setTimeout(() => { try { hls.startLoad(); } catch (_) {} }, delay);
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          try { hls.recoverMediaError(); } catch (_) {}
+        } else {
+          // Unrecoverable type — full teardown + reload as a last resort
+          try {
+            hls.destroy();
+            const fresh = new Hls(HLS_CONFIG);
+            hlsRef.current = fresh;
+            fresh.loadSource(src);
+            fresh.attachMedia(v);
+          } catch (_) {}
         }
       });
+
+      // Reset the recovery counter once we're playing smoothly again
+      hls.on(Hls.Events.FRAG_BUFFERED, () => { recoverCount = 0; });
 
       return () => {
         hls.destroy();
