@@ -13,18 +13,24 @@ const IS_4K = (m) =>
     !!(m.title?.match(/\b(4K|UHD|2160p)\b/i))
   );
 
+// Scan items use `genres` + `contentRating`; DB items use `genre` + `content_rating`.
+// Normalise both so the counters work on either shape.
+const genresOf = (m) => m.genres || m.genre || [];
+const tagsOf = (m) => m.tags || [];
+const ratingOf = (m) => m.contentRating || m.content_rating || '';
+
 const IS_KIDS = (m) =>
-  m.tags?.some(t => /^kids?$/.test(t)) ||
-  m.genre?.some(g => /kids?|children|family/i.test(g)) ||
-  ['TV-Y', 'TV-G', 'G', 'TV-Y7'].includes(m.content_rating);
+  tagsOf(m).some(t => /^kids?$/i.test(t)) ||
+  genresOf(m).some(g => /kids?|children|family/i.test(g)) ||
+  ['TV-Y', 'TV-G', 'G', 'TV-Y7'].includes(ratingOf(m));
 
 const IS_ANIME = (m) =>
-  m.tags?.some(t => /^anime$/.test(t)) ||
-  m.genre?.some(g => /^anime$/i.test(g));
+  tagsOf(m).some(t => /^anime$/i.test(t)) ||
+  genresOf(m).some(g => /anime|animation/i.test(g));
 
 const IS_SPORTS = (m) =>
-  m.tags?.some(t => /^sports?$/i.test(t)) ||
-  (m.genre || m.genres)?.some(g => /^sports?$/i.test(g));
+  tagsOf(m).some(t => /^sports?$/i.test(t)) ||
+  genresOf(m).some(g => /^sports?$/i.test(g));
 
 function formatWatchTime(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
