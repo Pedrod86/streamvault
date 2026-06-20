@@ -42,13 +42,18 @@ export default function MediaRow({ title, items, watchHistory, showProgress }) {
       </div>
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide px-4 sm:px-6 pb-2"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="flex gap-4 overflow-x-auto scrollbar-hide px-4 sm:px-6 pt-2 pb-4 snap-x snap-mandatory scroll-px-4 sm:scroll-px-6"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          maskImage: 'linear-gradient(to right, transparent 0, black 1.5rem, black calc(100% - 1.5rem), transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 1.5rem, black calc(100% - 1.5rem), transparent 100%)',
+        }}
       >
         {items.map((media) => {
           const progress = watchHistory?.find(h => h.media_id === media.id);
           return (
-            <div key={media.id} className="shrink-0 w-[140px] sm:w-[160px] lg:w-[180px]">
+            <div key={media.id} className="shrink-0 w-[140px] sm:w-[160px] lg:w-[180px] snap-start">
               <MediaCard media={media} showProgress={showProgress} progress={progress} />
             </div>
           );
