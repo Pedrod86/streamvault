@@ -1,26 +1,11 @@
 /**
- * Emby API helpers — all requests go through the mediaProxy backend
- * to avoid CORS issues when the server is on a remote/CDN URL.
+ * Emby API helpers — LAN-first with relay fallback.
+ *
+ * Requests try the local network URL directly from the client first (fast, no
+ * proxy), and fall back to the remote relay URL through the mediaProxy backend
+ * when the LAN isn't reachable. See lib/embyConnection.js for the strategy.
  */
-import { base44 } from '@/api/base44Client';
-
-export async function embyProxyFetch(url, headers = {}) {
-  const res = await base44.functions.invoke('mediaProxy', { url, headers });
-  if (res.data?.error) throw new Error(`Proxy error: ${res.data.error}`);
-  if (!res.data?.ok) {
-    const status = res.data?.status;
-    const body = typeof res.data?.data === 'string' ? res.data.data.slice(0, 200) : JSON.stringify(res.data?.data);
-    if (status === 502 || status === 503 || status === 504 || status === 0) {
-      throw new Error(
-        `Cannot reach your Emby server (HTTP ${status || 'timeout'}). ` +
-        `Make sure the server URL is publicly accessible — local IPs (192.168.x.x, localhost) ` +
-        `cannot be reached by the proxy.`
-      );
-    }
-    throw new Error(`Emby returned HTTP ${status}: ${body}`);
-  }
-  return res.data.data;
-}
+import { resolveEmbyConnection } from '@/lib/embyConnection';
 
 export function buildImageUrl(base, itemId, token, type = 'Primary') {
   return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&MaxWidth=400`;
@@ -31,21 +16,19 @@ export function buildStreamUrl(base, itemId, token) {
 }
 
 /**
- * Resolve the Emby user ID. Tries header auth first, then api_key query param.
- * Returns the user ID string.
+ * Resolve the Emby user ID using the active connection (LAN or relay).
  */
-export async function resolveEmbyUserId(base, token) {
-  // Try /Users with api_key query param — works on most Emby servers
+export async function resolveEmbyUserId(conn) {
+  const { token } = conn;
   try {
-    const users = await embyProxyFetch(`${base}/Users?api_key=${token}`, {});
+    const users = await conn.fetchJson(`/Users?api_key=${token}`);
     const list = Array.isArray(users) ? users : (users?.Items || []);
     const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
     if (admin?.Id) return admin.Id;
   } catch (_) {}
 
-  // Fallback: /Users/Me with header auth
   try {
-    const me = await embyProxyFetch(`${base}/Users/Me`, { 'X-Emby-Token': token });
+    const me = await conn.fetchJson('/Users/Me', { 'X-Emby-Token': token });
     if (me?.Id) return me.Id;
   } catch (_) {}
 
@@ -53,15 +36,13 @@ export async function resolveEmbyUserId(base, token) {
 }
 
 export async function fetchEmbyRecentlyAdded(server) {
-  const base = server.server_url.replace(/\/$/, '');
-  const token = server.api_token;
+  const conn = await resolveEmbyConnection(server);
+  const { base, token } = conn;
+  const userId = await resolveEmbyUserId(conn);
 
-  const userId = await resolveEmbyUserId(base, token);
-
-  const items = await embyProxyFetch(
-    `${base}/Users/${userId}/Items/Latest?IncludeItemTypes=Movie,Episode` +
-    `&Fields=Overview,Genres,CommunityRating,ProductionYear,RunTimeTicks,ImageTags,BackdropImageTags,SeriesName,ParentId&Limit=20&api_key=${token}`,
-    {}
+  const items = await conn.fetchJson(
+    `/Users/${userId}/Items/Latest?IncludeItemTypes=Movie,Episode` +
+    `&Fields=Overview,Genres,CommunityRating,ProductionYear,RunTimeTicks,ImageTags,BackdropImageTags,SeriesName,ParentId&Limit=20&api_key=${token}`
   );
 
   return (Array.isArray(items) ? items : []).map(item => ({
@@ -82,21 +63,19 @@ export async function fetchEmbyRecentlyAdded(server) {
 }
 
 export async function fetchEmbyFullLibrary(server) {
-  const base = server.server_url.replace(/\/$/, '');
-  const token = server.api_token;
-
-  const userId = await resolveEmbyUserId(base, token);
+  const conn = await resolveEmbyConnection(server);
+  const { base, token } = conn;
+  const userId = await resolveEmbyUserId(conn);
 
   const PAGE = 500;
   let startIndex = 0;
   const all = [];
 
   while (true) {
-    const json = await embyProxyFetch(
-      `${base}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true` +
+    const json = await conn.fetchJson(
+      `/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true` +
       `&Fields=Overview,Genres,OfficialRating,CommunityRating,ProductionYear,RunTimeTicks,ChildCount,ImageTags,BackdropImageTags` +
-      `&SortBy=SortName&SortOrder=Ascending&Limit=${PAGE}&StartIndex=${startIndex}&api_key=${token}`,
-      {}
+      `&SortBy=SortName&SortOrder=Ascending&Limit=${PAGE}&StartIndex=${startIndex}&api_key=${token}`
     );
     const items = json?.Items || [];
     for (const item of items) {

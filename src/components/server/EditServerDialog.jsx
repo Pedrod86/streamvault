@@ -30,7 +30,8 @@ const FIELDS_BY_TYPE = {
   ],
   _default: [
     { key: 'server_name', label: 'Display Name', placeholder: 'My Server' },
-    { key: 'server_url', label: 'Server URL', placeholder: 'http://192.168.1.10:8096' },
+    { key: 'server_url', label: 'Remote / Relay URL', placeholder: 'https://my-server.example.com' },
+    { key: 'local_url', label: 'Local Network URL (optional)', placeholder: 'http://192.168.1.10:8096' },
     { key: 'username', label: 'Username' },
     { key: 'password', label: 'Password', secret: true },
     { key: 'api_token', label: 'API Token', secret: true },

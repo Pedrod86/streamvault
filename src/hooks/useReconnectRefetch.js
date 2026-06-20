@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearConnectionRoutes } from '@/lib/embyConnection';
 
 // Belt-and-braces auto-refetch on reconnect. React Query's refetchOnReconnect
 // relies on its own onlineManager; in an Android WebView the browser 'online'
@@ -11,6 +12,8 @@ export function useReconnectRefetch() {
   useEffect(() => {
     const refetchStale = () => {
       if (!navigator.onLine) return;
+      // Re-probe LAN-first vs relay since the network may have changed
+      clearConnectionRoutes();
       // Only refetch queries that are actually being observed on screen
       queryClient.refetchQueries({ type: 'active', stale: true });
     };
