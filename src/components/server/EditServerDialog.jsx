@@ -19,7 +19,8 @@ const FIELDS_BY_TYPE = {
   ],
   plex: [
     { key: 'server_name', label: 'Display Name', placeholder: 'My Plex' },
-    { key: 'server_url', label: 'Server URL', placeholder: 'http://192.168.1.10:32400' },
+    { key: 'server_url', label: 'Remote / Relay URL', placeholder: 'https://my-plex.example.com' },
+    { key: 'local_url', label: 'Local Network URL (optional)', placeholder: 'http://192.168.1.10:32400' },
     { key: 'plex_token', label: 'Plex Token', secret: true },
   ],
   xtream: [
