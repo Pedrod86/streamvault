@@ -1,0 +1,39 @@
+{
+  "name": "NotifiedEpisode",
+  "type": "object",
+  "properties": {
+    "emby_item_id": {
+      "type": "string",
+      "description": "Emby item id of the episode that was announced"
+    },
+    "series_name": {
+      "type": "string",
+      "description": "Name of the series"
+    },
+    "episode_label": {
+      "type": "string",
+      "description": "Season/episode label e.g. S01E03"
+    }
+  },
+  "required": [
+    "emby_item_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
