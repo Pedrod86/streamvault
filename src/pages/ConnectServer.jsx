@@ -13,6 +13,7 @@ import SyncServerButton from '@/components/server/SyncServerButton';
 import ServerHealthBadge from '@/components/server/ServerHealthBadge';
 import XtreamForm, { XTREAM } from '@/components/server/XtreamForm';
 import IptvConnectionTester from '@/components/server/IptvConnectionTester';
+import LocalUrlField from '@/components/server/LocalUrlField';
 
 const SERVERS = [
   {
@@ -478,10 +479,12 @@ function TraktForm({ onBack, onSave, isSaving }) {
 
 function ServerForm({ server, onBack, onSave, isSaving }) {
   const [url, setUrl] = useState('');
+  const [localUrl, setLocalUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [serverName, setServerName] = useState('');
+  const supportsLocal = server.id === 'emby' || server.id === 'jellyfin' || server.id === 'plex';
 
   const [authError, setAuthError] = useState('');
 
@@ -506,6 +509,7 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
       }
       onSave({
         server_url: url,
+        local_url: localUrl || undefined,
         username: res.data.username || username,
         plex_token: res.data.plexToken,
         server_name: serverName || 'My Plex Server',
@@ -542,6 +546,7 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
       const authData = res.data.data;
       onSave({
         server_url: url,
+        local_url: localUrl || undefined,
         username,
         api_token: authData.AccessToken,
         server_name: serverName || `${server.name} Server`,
@@ -563,6 +568,7 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
     e.preventDefault();
     onSave({
       server_url: url,
+      local_url: localUrl || undefined,
       api_token: server.id === 'plex' ? undefined : token,
       plex_token: server.id === 'plex' ? token : undefined,
       server_name: serverName || `${server.name} Server`,
@@ -619,9 +625,10 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
                   required
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {server.id === 'plex' ? 'Your local IP or remote access URL — must include port 32400' : 'Include port number if not on standard ports'}
+                  {server.id === 'plex' ? 'Your remote access URL — used when away from home' : 'Your remote access URL — used when away from home'}
                 </p>
               </div>
+              {supportsLocal && <LocalUrlField value={localUrl} onChange={setLocalUrl} />}
               <div>
                 <Label className="text-foreground text-sm">Server Name (optional)</Label>
                 <Input
@@ -672,11 +679,13 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
                 <Input
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder={server.id === 'plex' ? 'http://localhost:32400' : 'http://192.168.1.10:8096'}
+                  placeholder={server.id === 'plex' ? 'https://my-plex.example.com' : 'https://my-server.example.com'}
                   className="mt-1 bg-secondary border-border h-11 font-mono text-sm"
                   required
                 />
+                <p className="text-xs text-muted-foreground mt-1">Your remote access URL — used when away from home</p>
               </div>
+              {supportsLocal && <LocalUrlField value={localUrl} onChange={setLocalUrl} />}
               <div>
                 <Label className="text-foreground text-sm">Server Name (optional)</Label>
                 <Input
