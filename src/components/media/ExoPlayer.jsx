@@ -566,7 +566,6 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none"
       onMouseMove={resetHideTimer}
-      onClick={() => { if (!showControls) resetHideTimer(); }}
     >
       <video
         ref={videoRef}
@@ -583,8 +582,20 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
         onCanPlay={() => setIsBuffering(false)}
         onPlaying={() => setIsBuffering(false)}
         onError={handleVideoError}
-        onClick={handleVideoTap}
       />
+
+      {/* Tap-catch layer — always reliably toggles/reveals controls on touch.
+          Sits above the video; the controls overlay (higher in DOM) sits above this. */}
+      <div className="absolute inset-0" onClick={handleVideoTap} />
+
+      {/* Always-visible quick pause button (top-left) so users can pause even if
+          the controls overlay is mid-fade. */}
+      <button
+        onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+        className={`absolute top-5 left-5 z-30 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white transition-opacity ${showControls ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      >
+        {playing ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white ml-0.5" />}
+      </button>
 
       {/* Buffering spinner */}
       {isBuffering && !fatalError && (
@@ -640,7 +651,6 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
       {/* Controls overlay */}
       <div
         className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={(e) => { if (e.target === e.currentTarget) handleVideoTap(e); }}
       >
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-5 pb-10 bg-gradient-to-b from-black/80 to-transparent">
