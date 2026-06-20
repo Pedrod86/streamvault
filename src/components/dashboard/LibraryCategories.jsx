@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Loader2, Clapperboard, MonitorPlay, Trophy } from 'lucide-react';
+import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Loader2, Clapperboard, MonitorPlay, Trophy, BookOpen } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { scanState, runScan } from '@/lib/embyScanState';
@@ -45,6 +45,16 @@ export default function LibraryCategories({ allMedia = [] }) {
     queryKey: ['watchHistory'],
     queryFn: () => base44.entities.WatchHistory.list('-last_watched', 500),
     staleTime: 5 * 60 * 1000,
+  });
+
+  // Audiobooks/Books live in a separate Emby item type, so count them on their own.
+  const { data: booksCount = null } = useQuery({
+    queryKey: ['embyBooksCount'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('embyAudiobooks', { startIndex: 0, pageSize: 1 });
+      return res.data?.totalCount ?? 0;
+    },
+    staleTime: 10 * 60 * 1000,
   });
 
   // Subscribe to the shared Emby scan state (no extra API calls)
@@ -125,13 +135,24 @@ export default function LibraryCategories({ allMedia = [] }) {
     },
     {
       key: 'emby-4k',
-      label: '4K Library',
+      label: '4K Movies',
       icon: Clapperboard,
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
       border: 'border-yellow-400/20',
       href: '/4k',
-      value: embyLoading ? '…' : (emby4kMovies + emby4kShows).toLocaleString(),
+      value: embyLoading ? '…' : emby4kMovies.toLocaleString(),
+      syncing: embySyncing,
+    },
+    {
+      key: 'emby-4k-tv',
+      label: '4K TV Shows',
+      icon: MonitorPlay,
+      color: 'text-amber-400',
+      bg: 'bg-amber-400/10',
+      border: 'border-amber-400/20',
+      href: '/4k',
+      value: embyLoading ? '…' : emby4kShows.toLocaleString(),
       syncing: embySyncing,
     },
     {
@@ -166,6 +187,16 @@ export default function LibraryCategories({ allMedia = [] }) {
       href: '/emby?filter=Sports',
       value: embyLoading ? '…' : embySports.toLocaleString(),
       syncing: embySyncing,
+    },
+    {
+      key: 'books',
+      label: 'Audiobooks',
+      icon: BookOpen,
+      color: 'text-orange-400',
+      bg: 'bg-orange-400/10',
+      border: 'border-orange-400/20',
+      href: '/audiobooks',
+      value: booksCount === null ? '…' : booksCount.toLocaleString(),
     },
     {
       key: 'watchtime',
