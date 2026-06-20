@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { CalendarDays, Plus, Check, Trash2, Play, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import WatchedDayList from './WatchedDayList';
 
 const DAYS = [
   { id: 'monday', label: 'Mon' },
@@ -16,6 +17,9 @@ const DAYS = [
   { id: 'saturday', label: 'Sat' },
   { id: 'sunday', label: 'Sun' },
 ];
+
+// JS getDay(): 0=Sun..6=Sat → our day ids
+const DAY_BY_INDEX = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export default function WeeklyPlanner({ pendingItem, onConsumePending }) {
   const queryClient = useQueryClient();
@@ -55,6 +59,41 @@ export default function WeeklyPlanner({ pendingItem, onConsumePending }) {
     queryKey: ['weeklyPlan'],
     queryFn: () => base44.entities.WeeklyPlan.list('-created_date', 200),
   });
+
+  // This week's watch history, resolved to titles and bucketed by weekday
+  const { data: history = [] } = useQuery({
+    queryKey: ['watchHistory'],
+    queryFn: () => base44.entities.WatchHistory.list('-last_watched', 500),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: allMedia = [] } = useQuery({
+    queryKey: ['media'],
+    queryFn: () => base44.entities.Media.list('-created_date', 500),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const watchedByDay = React.useMemo(() => {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const mediaById = new Map(allMedia.map(m => [m.id, m]));
+    const buckets = {};
+    history.forEach(h => {
+      if (!h.last_watched) return;
+      const ts = new Date(h.last_watched).getTime();
+      if (ts < weekAgo) return;
+      const dayId = DAY_BY_INDEX[new Date(h.last_watched).getDay()];
+      const media = mediaById.get(h.media_id);
+      const title = media?.title
+        || (h.media_id?.startsWith('emby:') ? 'Emby title' : h.media_id);
+      (buckets[dayId] ||= []).push({
+        id: h.id,
+        media_id: h.media_id,
+        title,
+        last_watched: h.last_watched,
+      });
+    });
+    return buckets;
+  }, [history, allMedia]);
 
   const createPlan = useMutation({
     mutationFn: (data) => base44.entities.WeeklyPlan.create(data),
@@ -126,6 +165,7 @@ export default function WeeklyPlanner({ pendingItem, onConsumePending }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {DAYS.map(day => {
           const dayPlans = plans.filter(p => p.day === day.id);
+          const dayWatched = watchedByDay[day.id] || [];
           return (
             <div key={day.id} className="rounded-xl bg-card border border-border p-3 min-h-[120px]">
               <div className="flex items-center justify-between mb-2">
@@ -153,7 +193,7 @@ export default function WeeklyPlanner({ pendingItem, onConsumePending }) {
               )}
 
               <div className="space-y-1.5">
-                {dayPlans.length === 0 && addingDay !== day.id && (
+                {dayPlans.length === 0 && dayWatched.length === 0 && addingDay !== day.id && (
                   <p className="text-[11px] text-muted-foreground">Nothing planned</p>
                 )}
                 {dayPlans.map(p => (
@@ -187,6 +227,8 @@ export default function WeeklyPlanner({ pendingItem, onConsumePending }) {
                   </div>
                 ))}
               </div>
+
+              <WatchedDayList entries={dayWatched} />
             </div>
           );
         })}
