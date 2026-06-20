@@ -27,6 +27,13 @@ export default function TmdbWatchActions({ item, details, type }) {
     m.title?.toLowerCase().trim() === title?.toLowerCase().trim()
   );
 
+  // You own this title locally and it has something playable (local file, Emby, or stream)
+  const canPlayLocal = !!localItem && !!(
+    localItem.video_url ||
+    localItem.emby_id ||
+    localItem.tags?.some(t => /^emby/.test(t))
+  );
+
   // Search the Emby server directly for this title so any available item can be played,
   // even if it isn't saved as a local Media record.
   const { data: embyMatch, isLoading: embyLoading } = useQuery({
@@ -52,13 +59,6 @@ export default function TmdbWatchActions({ item, details, type }) {
   });
 
   const isInWatchlist = localItem && watchlist.some(w => w.media_id === localItem.id);
-
-  // You own this title locally and it has something playable (local file, Emby, or stream)
-  const canPlayLocal = !!localItem && !!(
-    localItem.video_url ||
-    localItem.emby_id ||
-    localItem.tags?.some(t => /^emby/.test(t))
-  );
 
   const ensureMedia = async () => {
     if (localItem) return localItem;
