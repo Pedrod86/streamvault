@@ -80,23 +80,24 @@ export default function Login() {
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
           overflowY: 'auto',
+          padding: '24px 16px',
           zIndex: 9999,
         }}
       >
-        <div style={{ width: '100%', maxWidth: 520, padding: '40px', margin: '0 auto' }}
+        <div style={{ width: '100%', maxWidth: 460, padding: '28px', margin: '0 auto' }}
           className="bg-card rounded-2xl border border-border shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-3">
-              <StreamVaultLogo size="lg" />
+          <div className="text-center mb-5">
+            <div className="flex justify-center mb-2">
+              <StreamVaultLogo size="md" />
             </div>
-            <h1 className="font-heading font-bold text-3xl text-foreground mt-2">Sign In</h1>
-            <p className="text-muted-foreground text-base mt-1">Use your remote to navigate</p>
+            <h1 className="font-heading font-bold text-2xl text-foreground mt-1">Sign In</h1>
+            <p className="text-muted-foreground text-sm mt-1">Use your remote to navigate</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm text-destructive text-center">
                 {error}
@@ -104,13 +105,13 @@ export default function Login() {
             )}
 
             <div>
-              <Label className="text-foreground text-base mb-2 block">Email</Label>
+              <Label className="text-foreground text-sm mb-1.5 block">Email</Label>
               <Input
                 ref={emailRef}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-secondary border-border h-14 text-lg px-4 focus:ring-2 focus:ring-primary tv-focusable"
+                className="bg-secondary border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
                 tabIndex={1}
                 autoComplete="email"
                 autoFocus
@@ -119,13 +120,13 @@ export default function Login() {
             </div>
 
             <div>
-              <Label className="text-foreground text-base mb-2 block">Password</Label>
+              <Label className="text-foreground text-sm mb-1.5 block">Password</Label>
               <Input
                 ref={passwordRef}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-secondary border-border h-14 text-lg px-4 focus:ring-2 focus:ring-primary tv-focusable"
+                className="bg-secondary border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
                 tabIndex={2}
                 autoComplete="current-password"
                 required
@@ -134,7 +135,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full h-14 bg-primary hover:bg-primary/90 rounded-xl font-bold text-lg tv-focusable mt-2"
+              className="w-full h-12 bg-primary hover:bg-primary/90 rounded-xl font-bold text-base tv-focusable mt-2"
               tabIndex={3}
               disabled={loading}
             >
