@@ -39,17 +39,20 @@ export default function Home() {
     retry: false,
   });
 
-  const featured = (recent?.items || []).slice(0, 5).map(i => ({
-    id: `emby:${i.id}`,
-    title: i.title,
-    media_type: i.type === 'Series' ? 'tv_show' : 'movie',
-    backdrop_url: i.backdropUrl || i.posterUrl,
-    poster_url: i.posterUrl,
-    description: i.overview,
-    year: i.year,
-    rating: i.rating,
-    genre: i.genres || [],
-  }));
+  const featured = (recent?.items || [])
+    .filter(i => i.type === 'Movie')
+    .slice(0, 5)
+    .map(i => ({
+      id: `emby:${i.id}`,
+      title: i.title,
+      media_type: 'movie',
+      backdrop_url: i.backdropUrl || i.posterUrl,
+      poster_url: i.posterUrl,
+      description: i.overview,
+      year: i.year,
+      rating: i.rating,
+      genre: i.genres || [],
+    }));
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
