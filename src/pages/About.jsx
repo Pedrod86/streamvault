@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Tv, Library, Radio, Zap, Users, ShieldCheck, Download, Smartphone, RefreshCw, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { downloadApk } from '@/lib/appVersion';
 
 function ApkDownloadSection() {
   const [status, setStatus] = useState('idle'); // idle | loading | done | error
@@ -65,15 +66,13 @@ function ApkDownloadSection() {
           )}
 
           {release.apk ? (
-            <a
-              href={release.apk.download_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => downloadApk(release.apk.download_url, release.apk.name)}
               className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-xl px-5 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity"
             >
               <Download className="w-4 h-4" />
               Download APK ({release.apk.size_mb} MB)
-            </a>
+            </button>
           ) : (
             <p className="text-sm text-muted-foreground">No APK found in the latest release.</p>
           )}

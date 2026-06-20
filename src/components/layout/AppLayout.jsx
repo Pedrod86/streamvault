@@ -13,6 +13,7 @@ import StreamVaultLogo from '@/components/StreamVaultLogo';
 import { useTvDevice } from '@/hooks/useTvDevice';
 import { runScan } from '@/lib/embyScanState';
 import OfflineBanner from './OfflineBanner';
+import UpdateBanner from './UpdateBanner';
 import { applySavedTheme } from '@/lib/themes';
 
 const ROOT_TABS = new Set(['/', '/emby', '/watchlist', '/search', '/settings', '/discover', '/iptv', '/audiobooks']);
@@ -47,6 +48,7 @@ export default function AppLayout() {
   if (isTV) {
     return (
       <div className="min-h-screen bg-background font-body flex">
+        <UpdateBanner />
         <OfflineBanner />
         <TvSidebar />
         <main className="flex-1 min-w-0" style={{ marginLeft: '80px' }}>
@@ -62,6 +64,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background font-body">
+      <UpdateBanner />
       <OfflineBanner />
       {/* Top navbar — desktop only */}
       <div className="hidden md:block">
