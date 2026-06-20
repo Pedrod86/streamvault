@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Loader2, Clapperboard, MonitorPlay, Trophy, BookOpen } from 'lucide-react';
+import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Loader2, Clapperboard, MonitorPlay, Trophy, BookOpen, Library } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { scanState, runScan } from '@/lib/embyScanState';
@@ -125,10 +125,10 @@ export default function LibraryCategories({ allMedia = [] }) {
   const embyTotal = embyScan.library.length;
   const hasEmby = embyTotal > 0 || embySyncing;
 
-  // Emby brand green for every box
-  const embyColor = 'text-[#52b54b]';
-  const embyBg = 'bg-[#52b54b]/10';
-  const embyBorder = 'border-[#52b54b]/25';
+  // Plex brand amber/gold for every box
+  const embyColor = 'text-[#e5a00d]';
+  const embyBg = 'bg-[#e5a00d]/10';
+  const embyBorder = 'border-[#e5a00d]/25';
 
   const categories = [
     {
@@ -244,7 +244,8 @@ export default function LibraryCategories({ allMedia = [] }) {
   return (
     <div className="px-4 sm:px-6 mt-6">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-heading font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+        <h2 className="flex items-center gap-1.5 font-heading font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+          <Library className="w-4 h-4 text-[#e5a00d]" />
           Library
         </h2>
         <div className="flex items-center gap-2 ml-auto">
