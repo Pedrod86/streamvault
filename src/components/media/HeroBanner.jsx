@@ -59,9 +59,10 @@ export default function HeroBanner({ featured }) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Gradients */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
+      {/* Gradients — deeper Plex-style bottom fade for legibility */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/30 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10 lg:p-16 max-w-[1400px] mx-auto">
@@ -84,7 +85,7 @@ export default function HeroBanner({ featured }) {
               )}
             </div>
 
-            <h1 className="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl text-foreground mb-3 max-w-2xl leading-tight">
+            <h1 className="font-heading font-extrabold text-4xl sm:text-5xl lg:text-7xl text-foreground mb-3 max-w-3xl leading-[0.95] tracking-tight drop-shadow-lg">
               {media.title}
             </h1>
 
@@ -113,14 +114,14 @@ export default function HeroBanner({ featured }) {
 
             <div className="flex items-center gap-3">
               <Link to={detailUrl}>
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-11 px-6 rounded-xl font-semibold">
-                  <Play className="w-4 h-4 fill-current" />
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/30">
+                  <Play className="w-5 h-5 fill-current" />
                   Play Now
                 </Button>
               </Link>
               <Link to={detailUrl}>
-                <Button variant="outline" className="border-foreground/20 text-foreground hover:bg-foreground/10 gap-2 h-11 px-6 rounded-xl font-semibold">
-                  <Info className="w-4 h-4" />
+                <Button variant="outline" className="border-foreground/20 bg-foreground/5 backdrop-blur-md text-foreground hover:bg-foreground/15 gap-2 h-12 px-8 rounded-xl font-bold">
+                  <Info className="w-5 h-5" />
                   Details
                 </Button>
               </Link>
