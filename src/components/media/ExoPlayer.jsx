@@ -566,10 +566,11 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none"
       onMouseMove={resetHideTimer}
+      onClick={() => { if (!showControls) resetHideTimer(); }}
     >
       <video
         ref={videoRef}
-        className={`w-full h-full object-${fitMode}`}
+        className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`}
         playsInline
         webkit-playsinline="true"
         x5-playsinline="true"
@@ -637,7 +638,10 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
       )}
 
       {/* Controls overlay */}
-      <div className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div
+        className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={(e) => { if (e.target === e.currentTarget) handleVideoTap(e); }}
+      >
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-5 pb-10 bg-gradient-to-b from-black/80 to-transparent">
           <h3 className="text-white font-semibold text-sm truncate max-w-[60%] drop-shadow">{title}</h3>
