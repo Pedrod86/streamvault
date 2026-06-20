@@ -11,7 +11,6 @@ import MediaRow from '../components/media/MediaRow';
 import ExoPlayer from '@/components/media/ExoPlayer';
 import EmbySeriesBrowser from '@/components/media/EmbySeriesBrowser';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
-import ImdbPanel from '../components/media/ImdbPanel';
 import TvdbPanel from '../components/media/TvdbPanel';
 import TmdbCastInfo from '../components/media/TmdbCastInfo';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
@@ -519,9 +518,6 @@ export default function MediaDetail() {
               </Button>
             </div>
             <AddToCollectionDialog mediaId={historyKey} open={showCollections} onOpenChange={setShowCollections} />
-
-            {/* IMDb Panel */}
-            <ImdbPanel media={activeMedia} />
 
             {/* TVDB Panel */}
             <TvdbPanel media={activeMedia} onEnriched={() => queryClient.invalidateQueries({ queryKey: ['media', mediaId] })} />
