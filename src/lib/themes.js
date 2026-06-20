@@ -15,6 +15,7 @@ export const THEMES = [
   { label: '🩸 Crimson Dark',   primary: '0 84% 60%',    accent: '350 80% 55%',  preview: ['#ef4444', '#e6315e'], bg: { h: 350, s: 40 } },
   { label: '🪨 Slate Mono',     primary: '210 20% 75%',  accent: '210 16% 60%',  preview: ['#b0bac5', '#8a96a3'], bg: { h: 215, s: 16 } },
   { label: '⬛ OLED Black',     primary: '210 40% 96%',  accent: '199 89% 55%',  preview: ['#f0f4f8', '#22b8e6'], bg: { h: 0, s: 0, oled: true } },
+  { label: '🎬 Plex',          primary: '41 89% 48%',   accent: '38 95% 60%',   preview: ['#e5a00d', '#f5b942'], bg: { h: 0, s: 0 } },
 ];
 
 export function applyTheme(primary, accent, cyberpunk = false, bg = null) {
