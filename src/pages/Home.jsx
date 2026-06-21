@@ -8,6 +8,7 @@ import EmbyLibraryViews from '../components/media/EmbyLibraryViews';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import EmbyWatchlistRow from '../components/media/EmbyWatchlistRow';
+import KidsTvRow from '../components/media/KidsTvRow';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const TABS = [
@@ -84,6 +85,7 @@ export default function Home() {
           <>
             <EmbyContinueWatching />
             <EmbyRecentlyAdded />
+            <KidsTvRow />
             <EmbyLibraryViews />
           </>
         )}
