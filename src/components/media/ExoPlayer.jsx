@@ -642,11 +642,11 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
           Rewind · Play/Pause · Fast-forward, big and impossible to miss on mobile. */}
       {!isBuffering && !fatalError && (
         <div
-          className={`absolute inset-0 flex items-center justify-center gap-8 transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className={`absolute inset-0 z-40 flex items-center justify-center gap-8 pointer-events-none transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0'}`}
         >
           <button
-            onClick={(e) => { e.stopPropagation(); skip(-skipSecs); flash('left'); }}
-            className="relative w-14 h-14 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all"
+            onPointerUp={(e) => { e.stopPropagation(); e.preventDefault(); skip(-skipSecs); flash('left'); }}
+            className={`relative w-14 h-14 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all ${showControls || !playing ? 'pointer-events-auto' : 'pointer-events-none'}`}
             title={`-${skipSecs}s`}
           >
             <SkipBack className="w-7 h-7 fill-white" />
@@ -654,8 +654,8 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
           </button>
 
           <button
-            onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-            className="w-20 h-20 rounded-full bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
+            onPointerUp={(e) => { e.stopPropagation(); e.preventDefault(); togglePlay(); }}
+            className={`w-20 h-20 rounded-full bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all ${showControls || !playing ? 'pointer-events-auto' : 'pointer-events-none'}`}
             title={playing ? 'Pause' : 'Play'}
           >
             {playing
@@ -664,8 +664,8 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
           </button>
 
           <button
-            onClick={(e) => { e.stopPropagation(); skip(skipSecs); flash('right'); }}
-            className="relative w-14 h-14 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all"
+            onPointerUp={(e) => { e.stopPropagation(); e.preventDefault(); skip(skipSecs); flash('right'); }}
+            className={`relative w-14 h-14 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all ${showControls || !playing ? 'pointer-events-auto' : 'pointer-events-none'}`}
             title={`+${skipSecs}s`}
           >
             <SkipForward className="w-7 h-7 fill-white" />
