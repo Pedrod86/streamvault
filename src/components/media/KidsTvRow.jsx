@@ -26,5 +26,5 @@ export default function KidsTvRow() {
 
   if (!items.length) return null;
 
-  return <MediaRow title="Kids TV" items={items} />;
+  return <MediaRow title="Kids Movies" items={items} />;
 }
