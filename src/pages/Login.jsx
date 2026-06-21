@@ -110,6 +110,7 @@ export default function Login() {
                 spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onInput={(e) => setEmail(e.target.value)}
                 className="bg-secondary border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
                 tabIndex={1}
                 autoComplete="email"
@@ -125,6 +126,7 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onInput={(e) => setPassword(e.target.value)}
                 className="bg-secondary border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
                 tabIndex={2}
                 autoComplete="current-password"
