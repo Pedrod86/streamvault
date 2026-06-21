@@ -40,6 +40,8 @@ import Audiobooks from './pages/Audiobooks';
 import MetadataBrowser from './pages/MetadataBrowser';
 import ServerDashboard from './pages/ServerDashboard';
 import CategoryView from './pages/CategoryView';
+import Folders from './pages/Folders';
+import FolderDetail from './pages/FolderDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -107,6 +109,8 @@ const AuthenticatedApp = () => {
           <Route path="/audiobooks" element={<Audiobooks />} />
           <Route path="/browse" element={<MetadataBrowser />} />
           <Route path="/category" element={<CategoryView />} />
+          <Route path="/folders" element={<Folders />} />
+          <Route path="/folder/:id" element={<FolderDetail />} />
           <Route path="/server-dashboard" element={<ServerDashboard />} />
           <Route path="/ServerDashboard" element={<ServerDashboard />} />
         </Route>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus, Trash2, Settings, History, Compass, LayoutGrid, Zap, Database, RefreshCw, Radio, Mail, BookOpen } from 'lucide-react';
+import { Search, Home, Film, Tv, BookmarkPlus, Menu, X, LogOut, User, Server, Plus, Trash2, Settings, History, Compass, LayoutGrid, Zap, Database, RefreshCw, Radio, Mail, BookOpen, Folder } from 'lucide-react';
 
 const LOGO_URL = 'https://media.base44.com/images/public/69fe35055df988e0955e5c11/50f25d6c4_generated_image.png';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ export default function Navbar() {
     { to: '/emby', label: 'Library', icon: Database },
     { to: '/iptv', label: 'IPTV', icon: Radio },
     { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
+    { to: '/folders', label: 'Folders', icon: Folder },
     { to: '/audiobooks', label: 'Audiobooks', icon: BookOpen },
     { to: '/discover', label: 'Discover', icon: Compass },
     { to: '/settings', label: 'Settings', icon: Settings },
