@@ -110,9 +110,9 @@ export default function LibraryCategories({ allMedia = [] }) {
   const embyKids = liveTotals?.kids ?? counts.kids;
   const embyAnime = liveTotals?.anime ?? counts.anime;
   const embySports = liveTotals?.sports ?? counts.sports;
-  // 4K isn't tagged on the server, so detect it by resolution during the scan.
-  const emby4kMovies = counts.fourkMovies;
-  const emby4kShows = counts.fourkShows;
+  // Prefer the real Emby 4K totals (Is4K filter); fall back to scanned counts.
+  const emby4kMovies = liveTotals?.fourkMovies ?? counts.fourkMovies;
+  const emby4kShows = liveTotals?.fourkShows ?? counts.fourkShows;
   // Only show "…" if we have no live totals AND no scanned/cached count.
   const embyLoading = !liveTotals && embyScan.loading && !hasLive && !cachedCounts;
   const embySyncing = embyScan.loading;

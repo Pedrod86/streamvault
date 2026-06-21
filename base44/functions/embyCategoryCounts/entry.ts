@@ -57,10 +57,10 @@ Deno.serve(async (req) => {
       countOf(base, userId, token, 'IncludeItemTypes=Movie,Series&Genres=Sport'),
     ]);
 
-    // 4K — count items tagged/marked 4K. Emby exposes this via the "4K" tag.
+    // 4K — count items by actual resolution via Emby's Is4K filter (tags are unreliable).
     const [fourkMovies, fourkShows] = await Promise.all([
-      countOf(base, userId, token, 'IncludeItemTypes=Movie&Tags=4K'),
-      countOf(base, userId, token, 'IncludeItemTypes=Series&Tags=4K'),
+      countOf(base, userId, token, 'IncludeItemTypes=Movie&Is4K=true'),
+      countOf(base, userId, token, 'IncludeItemTypes=Series&Is4K=true'),
     ]);
 
     return Response.json({
