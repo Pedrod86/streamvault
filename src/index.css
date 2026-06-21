@@ -169,6 +169,16 @@ button:focus-visible,
   box-shadow: 0 0 6px hsl(300 100% 55%);
 }
 
+/* Login logo flash-once then settle */
+@keyframes logo-flash {
+  0%   { opacity: 0; transform: scale(1.4); filter: brightness(2.5); }
+  40%  { opacity: 1; transform: scale(1.1); filter: brightness(1.6); }
+  100% { opacity: 1; transform: scale(1);   filter: brightness(1); }
+}
+.animate-logo-flash {
+  animation: logo-flash 0.9s ease-out both;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
