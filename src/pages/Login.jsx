@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import StreamVaultLogo from '@/components/StreamVaultLogo';
 import { useTvDevice } from '@/hooks/useTvDevice';
 
@@ -13,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const isTV = useTvDevice();
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
@@ -121,17 +122,31 @@ export default function Login() {
 
             <div>
               <Label className="text-foreground text-sm mb-1.5 block">Password</Label>
-              <Input
-                ref={passwordRef}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onInput={(e) => setPassword(e.target.value)}
-                className="bg-secondary border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
-                tabIndex={2}
-                autoComplete="current-password"
-                required
-              />
+              <div className="relative">
+                <Input
+                  ref={passwordRef}
+                  type={showPassword ? 'text' : 'password'}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onInput={(e) => setPassword(e.target.value)}
+                  className="bg-secondary border-border h-12 text-base px-4 pr-12 focus:ring-2 focus:ring-primary tv-focusable"
+                  tabIndex={2}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={5}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground tv-focusable rounded p-1"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <Button
