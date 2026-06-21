@@ -638,14 +638,40 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
         </div>
       )}
 
-      {/* Big centre play when paused */}
-      {!playing && !tapFlash && !isBuffering && (
-        <button
-          className="absolute w-20 h-20 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
-          onClick={togglePlay}
+      {/* Center control cluster — always visible with the controls overlay.
+          Rewind · Play/Pause · Fast-forward, big and impossible to miss on mobile. */}
+      {!isBuffering && !fatalError && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center gap-8 transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
-          <Play className="w-9 h-9 fill-white text-white ml-1" />
-        </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); skip(-skipSecs); flash('left'); }}
+            className="relative w-14 h-14 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all"
+            title={`-${skipSecs}s`}
+          >
+            <SkipBack className="w-7 h-7 fill-white" />
+            <span className="absolute text-[9px] font-bold">{skipSecs}</span>
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+            className="w-20 h-20 rounded-full bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
+            title={playing ? 'Pause' : 'Play'}
+          >
+            {playing
+              ? <Pause className="w-9 h-9 fill-white text-white" />
+              : <Play className="w-9 h-9 fill-white text-white ml-1" />}
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); skip(skipSecs); flash('right'); }}
+            className="relative w-14 h-14 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition-all"
+            title={`+${skipSecs}s`}
+          >
+            <SkipForward className="w-7 h-7 fill-white" />
+            <span className="absolute text-[9px] font-bold">{skipSecs}</span>
+          </button>
+        </div>
       )}
 
       {/* Controls overlay */}
