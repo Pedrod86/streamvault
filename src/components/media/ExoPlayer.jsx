@@ -739,8 +739,22 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
               <Btn onClick={togglePlay} title={playing ? 'Pause' : 'Play'}>
                 {playing ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white" />}
               </Btn>
-              <Btn onClick={() => { skip(-skipSecs); flash('left'); }} title={`-${skipSecs}s`}><SkipBack className="w-4 h-4" /></Btn>
-              <Btn onClick={() => { skip(skipSecs); flash('right'); }} title={`+${skipSecs}s`}><SkipForward className="w-4 h-4" /></Btn>
+              <button
+                onClick={() => { skip(-skipSecs); flash('left'); }}
+                title={`-${skipSecs}s`}
+                className="relative w-9 h-9 flex items-center justify-center rounded-full text-white hover:bg-white/15 active:bg-white/25 transition-colors"
+              >
+                <SkipBack className="w-5 h-5" />
+                <span className="absolute text-[8px] font-bold">{skipSecs}</span>
+              </button>
+              <button
+                onClick={() => { skip(skipSecs); flash('right'); }}
+                title={`+${skipSecs}s`}
+                className="relative w-9 h-9 flex items-center justify-center rounded-full text-white hover:bg-white/15 active:bg-white/25 transition-colors"
+              >
+                <SkipForward className="w-5 h-5" />
+                <span className="absolute text-[8px] font-bold">{skipSecs}</span>
+              </button>
               <div className="flex items-center gap-1 group/vol">
                 <Btn onClick={toggleMute} title="Mute">
                   {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -854,11 +868,9 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
                 <Info className={`w-4 h-4 ${settingsTab === 'info' ? 'text-primary' : ''}`} />
               </Btn>
 
-              {typeof document !== 'undefined' && document.pictureInPictureEnabled && (
-                <Btn onClick={togglePip} title="Picture in Picture">
-                  <PictureInPicture2 className={`w-4 h-4 ${pip ? 'text-primary' : ''}`} />
-                </Btn>
-              )}
+              <Btn onClick={togglePip} title="Picture in Picture">
+                <PictureInPicture2 className={`w-4 h-4 ${pip ? 'text-primary' : ''}`} />
+              </Btn>
 
               <Btn onClick={toggleFullscreen} title="Fullscreen">
                 {fullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
