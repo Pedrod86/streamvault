@@ -35,6 +35,24 @@ async function countOf(base, userId, token, params) {
   return json?.TotalRecordCount || 0;
 }
 
+// Counts distinct 4K series by deduplicating the parent series of every 4K episode.
+async function count4kSeries(base, userId, token) {
+  const distinct = new Set();
+  let start = 0;
+  const page = 1000;
+  let total = Infinity;
+  while (start < total && start < 50000) {
+    const url =
+      `${base}/Users/${userId}/Items?Recursive=true&Limit=${page}&StartIndex=${start}` +
+      `&api_key=${token}&IncludeItemTypes=Episode&Is4K=true&Fields=SeriesId`;
+    const j = await doFetch(url);
+    total = j?.TotalRecordCount || 0;
+    (j?.Items || []).forEach(i => { if (i.SeriesId) distinct.add(i.SeriesId); });
+    start += page;
+  }
+  return distinct.size;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -57,11 +75,12 @@ Deno.serve(async (req) => {
       countOf(base, userId, token, 'IncludeItemTypes=Movie,Series&Genres=Sport'),
     ]);
 
-    // 4K — count items by actual resolution via Emby's Is4K filter (tags are unreliable).
-    const [fourkMovies, fourkShows] = await Promise.all([
-      countOf(base, userId, token, 'IncludeItemTypes=Movie&Is4K=true'),
-      countOf(base, userId, token, 'IncludeItemTypes=Series&Is4K=true'),
-    ]);
+    // 4K movies — count by actual resolution via Emby's Is4K filter.
+    const fourkMovies = await countOf(base, userId, token, 'IncludeItemTypes=Movie&Is4K=true');
+
+    // 4K series — the series container never carries Is4K, only episodes do.
+    // Count distinct parent series across all 4K episodes.
+    const fourkShows = await count4kSeries(base, userId, token);
 
     return Response.json({
       movies, shows, kids, anime, sports,
