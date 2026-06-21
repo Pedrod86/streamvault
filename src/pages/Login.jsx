@@ -23,7 +23,7 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await base44.auth.loginViaEmailPassword(email, password);
+      await base44.auth.loginViaEmailPassword(email.trim().toLowerCase(), password);
       // Use navigate for TV WebView compatibility — avoids full page reload issues
       if (isTV) {
         navigate('/', { replace: true });
@@ -104,6 +104,10 @@ export default function Login() {
               <Input
                 ref={emailRef}
                 type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-secondary border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
@@ -180,6 +184,10 @@ export default function Login() {
             <Label className="text-foreground text-sm">Email</Label>
             <Input
               type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 bg-secondary border-border h-11"
