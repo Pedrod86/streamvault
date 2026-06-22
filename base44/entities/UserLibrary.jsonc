@@ -1,0 +1,39 @@
+{
+  "name": "UserLibrary",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "User-chosen name of the library"
+    },
+    "media_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of media IDs (or emby:<id> keys) in this library"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of this library",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
