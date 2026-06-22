@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FolderPlus, Check, Plus, Loader2 } from 'lucide-react';
+import AddToLibrarySection from './AddToLibrarySection';
 
 export default function AddToCollectionDialog({ mediaId, open, onOpenChange }) {
   const queryClient = useQueryClient();
@@ -108,6 +109,8 @@ export default function AddToCollectionDialog({ mediaId, open, onOpenChange }) {
             <Plus className="w-4 h-4" /> New Collection
           </Button>
         )}
+
+        <AddToLibrarySection mediaId={mediaId} />
       </DialogContent>
     </Dialog>
   );

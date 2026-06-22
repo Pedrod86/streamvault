@@ -42,6 +42,8 @@ import ServerDashboard from './pages/ServerDashboard';
 import CategoryView from './pages/CategoryView';
 import Folders from './pages/Folders';
 import FolderDetail from './pages/FolderDetail';
+import Libraries from './pages/Libraries';
+import LibraryDetail from './pages/LibraryDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -111,6 +113,8 @@ const AuthenticatedApp = () => {
           <Route path="/category" element={<CategoryView />} />
           <Route path="/folders" element={<Folders />} />
           <Route path="/folder/:id" element={<FolderDetail />} />
+          <Route path="/libraries" element={<Libraries />} />
+          <Route path="/library/:id" element={<LibraryDetail />} />
           <Route path="/server-dashboard" element={<ServerDashboard />} />
           <Route path="/ServerDashboard" element={<ServerDashboard />} />
         </Route>
