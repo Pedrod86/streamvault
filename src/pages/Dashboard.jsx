@@ -5,6 +5,7 @@ import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import WatchSuggestions from '../components/dashboard/WatchSuggestions';
 import WeeklyPlanner from '../components/dashboard/WeeklyPlanner';
+import HoursWatchedSummary from '../components/dashboard/HoursWatchedSummary';
 import { LayoutDashboard } from 'lucide-react';
 
 export default function Dashboard() {
@@ -35,6 +36,7 @@ export default function Dashboard() {
           <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground">My Dashboard</h1>
         </div>
 
+        <HoursWatchedSummary />
         <EmbyContinueWatching />
         <EmbyRecentlyAdded />
         <WatchSuggestions onAddToPlan={handleAddToPlan} />
