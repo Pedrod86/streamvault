@@ -305,72 +305,6 @@ function CategorySyncSection() {
   );
 }
 
-function DeduplicateSection() {
-  const queryClient = useQueryClient();
-  const [status, setStatus] = useState('idle');
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-
-  const run = async () => {
-    setStatus('running');
-    setResult(null);
-    setError(null);
-    try {
-      const res = await base44.functions.invoke('embyDeduplicate', {});
-      if (res.data?.error) throw new Error(res.data.error);
-      setResult(res.data);
-      setStatus('done');
-      queryClient.invalidateQueries({ queryKey: ['media'] });
-    } catch (e) {
-      setError(e.message);
-      setStatus('error');
-    }
-  };
-
-  return (
-    <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.125 }} className="space-y-4 p-5 rounded-xl bg-card border border-border">
-      <div className="flex items-center gap-2 mb-1">
-        <Trash2 className="w-4 h-4 text-orange-400" />
-        <h2 className="font-heading font-semibold text-foreground">Remove Duplicates</h2>
-      </div>
-      <p className="text-xs text-muted-foreground -mt-2">
-        Scans your library and removes duplicate entries — keeps one copy per Emby item ID, or per title+type as a fallback.
-      </p>
-
-      {status === 'running' && (
-        <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-          <div className="h-full bg-orange-500 rounded-full animate-pulse w-full" />
-        </div>
-      )}
-      {status === 'done' && result && (
-        <div className="flex items-center gap-2 text-sm text-green-400 bg-green-500/10 rounded-lg px-3 py-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>Removed {result.duplicates_deleted} duplicates from {result.total_scanned} items.</span>
-        </div>
-      )}
-      {status === 'error' && (
-        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <Button
-        variant="outline"
-        className="w-full h-11 border-orange-500/40 text-orange-400 hover:bg-orange-500/10 hover:border-orange-500 gap-2"
-        onClick={run}
-        disabled={status === 'running'}
-      >
-        {status === 'running' ? (
-          <><RefreshCw className="w-4 h-4 animate-spin" />Scanning for duplicates…</>
-        ) : (
-          <><Trash2 className="w-4 h-4" />Remove Duplicates</>
-        )}
-      </Button>
-    </motion.section>
-  );
-}
-
 const CURRENT_VERSION = '1.0.0';
 
 function CheckForUpdatesSection() {
@@ -781,9 +715,6 @@ export default function Settings() {
 
       {/* ── TVDB Bulk Enrich ── */}
       <TvdbEnrichSection />
-
-      {/* ── Deduplicate Library ── */}
-      <DeduplicateSection />
 
       {/* ── API Keys ── */}
       <ApiKeysSection />
