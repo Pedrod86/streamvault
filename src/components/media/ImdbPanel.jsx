@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Star, Award, ExternalLink, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Star, Award, ExternalLink, ChevronDown, ChevronUp, Loader2, Clock, Clapperboard, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function ImdbPanel({ media }) {
@@ -83,6 +83,49 @@ export default function ImdbPanel({ media }) {
               </div>
             )}
           </div>
+
+          {/* Quick facts */}
+          {(data.runtime || data.rated || data.year) && (
+            <div className="flex flex-wrap gap-2">
+              {data.year && <span className="text-xs bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">{data.year}</span>}
+              {data.rated && <span className="text-xs bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">{data.rated}</span>}
+              {data.runtime && (
+                <span className="flex items-center gap-1 text-xs bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">
+                  <Clock className="w-3 h-3" /> {data.runtime}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Genres */}
+          {data.genre?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {data.genre.map(g => (
+                <span key={g} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{g}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Plot */}
+          {data.plot && (
+            <p className="text-xs text-muted-foreground leading-relaxed">{data.plot}</p>
+          )}
+
+          {/* Director */}
+          {data.director && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clapperboard className="w-3.5 h-3.5 shrink-0" />
+              <span><span className="text-foreground font-medium">Director:</span> {data.director}</span>
+            </div>
+          )}
+
+          {/* Cast */}
+          {data.cast?.length > 0 && (
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <Users className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span><span className="text-foreground font-medium">Cast:</span> {data.cast.join(', ')}</span>
+            </div>
+          )}
 
           {/* Awards */}
           {data.awards && (

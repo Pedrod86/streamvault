@@ -13,6 +13,7 @@ import EmbySeriesBrowser from '@/components/media/EmbySeriesBrowser';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import WatchProgressControls from '@/components/media/WatchProgressControls';
 import TvdbPanel from '../components/media/TvdbPanel';
+import ImdbPanel from '../components/media/ImdbPanel';
 import TmdbCastInfo from '../components/media/TmdbCastInfo';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
 
@@ -526,6 +527,9 @@ export default function MediaDetail() {
               durationMinutes={activeMedia.duration_minutes}
               historyEntry={watchHistory.find(h => h.media_id === historyKey)}
             />
+
+            {/* IMDb Panel — ratings, Rotten Tomatoes, Metascore, plot, cast & awards */}
+            <ImdbPanel media={activeMedia} />
 
             {/* TVDB Panel */}
             <TvdbPanel media={activeMedia} onEnriched={() => queryClient.invalidateQueries({ queryKey: ['media', mediaId] })} />

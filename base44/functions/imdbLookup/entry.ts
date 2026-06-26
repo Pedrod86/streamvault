@@ -9,7 +9,9 @@ Deno.serve(async (req) => {
     const { title, year, type } = await req.json();
     if (!title) return Response.json({ error: 'title is required' }, { status: 400 });
 
-    const apiKey = Deno.env.get('OMDB_API_KEY');
+    // Accept either a bare key or a full OMDb URL that was pasted by mistake.
+    const rawKey = Deno.env.get('OMDB_API_KEY') || '';
+    const apiKey = rawKey.match(/apikey=([^&\s]+)/i)?.[1] || rawKey.trim();
     const params = new URLSearchParams({ apikey: apiKey, t: title, plot: 'full' });
     if (year) params.set('y', String(year));
     if (type) params.set('type', type === 'tv_show' ? 'series' : 'movie');
