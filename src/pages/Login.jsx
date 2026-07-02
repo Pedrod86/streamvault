@@ -80,14 +80,14 @@ export default function Login() {
   if (tvLayout) {
     return (
       <div
-        className="bg-background flex items-center justify-center w-full overflow-y-auto relative"
-        style={{ minHeight: '100vh', minHeight: '100dvh', padding: '24px 16px' }}
+        className="bg-background flex flex-col items-center justify-start w-full overflow-y-auto relative"
+        style={{ minHeight: '100vh', minHeight: '100dvh', height: '100dvh', padding: '20px 16px 48px' }}
       >
-        <div className="absolute top-6 left-6 animate-logo-flash">
+        <div className="animate-logo-flash mb-4 shrink-0">
           <StreamVaultLogo size="md" />
         </div>
         <div style={{ width: '100%', maxWidth: 460, padding: '28px' }}
-          className="bg-card rounded-2xl border border-border shadow-2xl mx-auto">
+          className="bg-card rounded-2xl border border-border shadow-2xl mx-auto shrink-0">
           <div className="text-center mb-5">
             <h1 className="font-heading font-bold text-2xl text-foreground">Sign In</h1>
             <p className="text-muted-foreground text-sm mt-1">Use your remote to navigate</p>
