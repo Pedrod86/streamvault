@@ -83,8 +83,13 @@ export default function Login() {
         className="bg-background w-full relative"
         style={{ minHeight: '100vh', minHeight: '100dvh', overflowY: 'auto', padding: '16px 16px 64px' }}
       >
-        <div className="animate-logo-flash mb-3 flex justify-center shrink-0">
-          <StreamVaultLogo size="sm" />
+        <div className="flex items-center justify-center gap-2 mb-4 shrink-0">
+          <img
+            src="https://media.base44.com/images/public/69fe35055df988e0955e5c11/6a6f0ca7a_generated_image.png"
+            alt="StreamVault"
+            className="w-8 h-8 rounded-lg object-cover ring-1 ring-primary/20"
+          />
+          <span className="font-heading font-bold text-lg text-foreground">StreamVault</span>
         </div>
         <div style={{ width: '100%', maxWidth: 460, padding: '24px' }}
           className="bg-card rounded-2xl border border-border shadow-2xl mx-auto shrink-0">
