@@ -13,6 +13,11 @@
     "episode_label": {
       "type": "string",
       "description": "Season/episode label e.g. S01E03"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this notified episode",
+      "maxLength": 1000
     }
   },
   "required": [

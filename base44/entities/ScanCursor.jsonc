@@ -21,6 +21,11 @@
       ],
       "default": "idle",
       "description": "Current scan status"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this scan cursor",
+      "maxLength": 1000
     }
   },
   "required": [],

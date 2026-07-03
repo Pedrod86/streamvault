@@ -44,6 +44,11 @@
       "type": "string",
       "description": "Optional note",
       "maxLength": 300
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this weekly plan",
+      "maxLength": 1000
     }
   },
   "required": [
