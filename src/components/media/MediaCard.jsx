@@ -1,9 +1,36 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
+import MediaContextMenu from './MediaContextMenu';
 
 export default function MediaCard({ media, showProgress, progress, disableNavigation }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const longPressTimer = useRef(null);
+  const longPressFired = useRef(false);
+
+  const startLongPress = () => {
+    longPressFired.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      setMenuOpen(true);
+    }, 550);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  };
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setMenuOpen(true);
+  };
+  // Swallow the click that follows a long-press so navigation doesn't fire
+  const handleClickCapture = (e) => {
+    if (longPressFired.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressFired.current = false;
+    }
+  };
   const progressPercent =
     progress && progress.total_seconds > 0
       ? Math.min(100, Math.round((progress.progress_seconds / progress.total_seconds) * 100))
@@ -23,10 +50,17 @@ export default function MediaCard({ media, showProgress, progress, disableNaviga
     : ({ children, className }) => <Link to={`/media/${media.id}`} className={className}>{children}</Link>;
 
   return (
+    <>
     <Wrapper className="block group">
       <motion.div
         whileHover={{ scale: 1.06, y: -6 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
+        onContextMenu={handleContextMenu}
+        onClickCapture={handleClickCapture}
+        onPointerDown={startLongPress}
+        onPointerUp={cancelLongPress}
+        onPointerLeave={cancelLongPress}
+        onPointerCancel={cancelLongPress}
         className="relative rounded-xl overflow-hidden bg-card border border-border/50 shadow-lg shadow-black/20 transition-shadow duration-200 group-hover:shadow-2xl group-hover:shadow-primary/25 group-hover:border-primary/40"
       >
         {/* Poster */}
@@ -105,5 +139,7 @@ export default function MediaCard({ media, showProgress, progress, disableNaviga
         </div>
       </motion.div>
     </Wrapper>
+    <MediaContextMenu open={menuOpen} onOpenChange={setMenuOpen} media={media} />
+    </>
   );
 }
