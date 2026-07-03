@@ -80,13 +80,13 @@ export default function Login() {
   if (tvLayout) {
     return (
       <div
-        className="bg-background flex flex-col items-center justify-start w-full overflow-y-auto relative"
-        style={{ minHeight: '100vh', minHeight: '100dvh', height: '100dvh', padding: '20px 16px 48px' }}
+        className="bg-background w-full relative"
+        style={{ minHeight: '100vh', minHeight: '100dvh', overflowY: 'auto', padding: '16px 16px 64px' }}
       >
-        <div className="animate-logo-flash mb-4 shrink-0">
-          <StreamVaultLogo size="md" />
+        <div className="animate-logo-flash mb-3 flex justify-center shrink-0">
+          <StreamVaultLogo size="sm" />
         </div>
-        <div style={{ width: '100%', maxWidth: 460, padding: '28px' }}
+        <div style={{ width: '100%', maxWidth: 460, padding: '24px' }}
           className="bg-card rounded-2xl border border-border shadow-2xl mx-auto shrink-0">
           <div className="text-center mb-5">
             <h1 className="font-heading font-bold text-2xl text-foreground">Sign In</h1>
