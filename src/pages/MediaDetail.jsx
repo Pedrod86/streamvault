@@ -13,7 +13,6 @@ import EmbySeriesBrowser from '@/components/media/EmbySeriesBrowser';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import WatchProgressControls from '@/components/media/WatchProgressControls';
 import TvdbPanel from '../components/media/TvdbPanel';
-import ImdbPanel from '../components/media/ImdbPanel';
 import TmdbCastInfo from '../components/media/TmdbCastInfo';
 import PlaySourcePicker from '../components/media/PlaySourcePicker';
 import PlexSeriesBrowser from '@/components/media/PlexSeriesBrowser';
@@ -158,6 +157,38 @@ export default function MediaDetail() {
     },
   });
 
+  // Fetch the item's own overview + metadata from the Emby/Jellyfin server
+  // (mirrors how Plex surfaces its overview) so the detail page shows it directly.
+  const detailServer = isEmbyDirect ? embyServer : (isJellyfinDirect ? jellyfinServer : null);
+  const detailItemId = isEmbyDirect ? embyDirectId : (isJellyfinDirect ? jellyfinDirectId : null);
+  const { data: serverItemDetail = null } = useQuery({
+    queryKey: ['serverItemDetail', detailServer?.id, detailItemId],
+    enabled: !!detailServer && !!detailItemId,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const base = detailServer.server_url?.replace(/\/$/, '');
+      const token = detailServer.api_token;
+      // Resolve a user id (Emby/Jellyfin need it for item detail with Overview)
+      let userId = null;
+      try {
+        const me = await fetch(`${base}/Users/Me?api_key=${token}`, { headers: { 'X-Emby-Token': token } }).then(r => r.json());
+        userId = me?.Id || null;
+      } catch (_) {}
+      const url = userId
+        ? `${base}/Users/${userId}/Items/${detailItemId}?api_key=${token}`
+        : `${base}/Items/${detailItemId}?api_key=${token}`;
+      const item = await fetch(url, { headers: { 'X-Emby-Token': token } }).then(r => r.json());
+      return {
+        overview: item?.Overview || '',
+        year: item?.ProductionYear || null,
+        rating: item?.CommunityRating ? parseFloat(Number(item.CommunityRating).toFixed(1)) : null,
+        genres: item?.Genres || [],
+        duration: item?.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null,
+        contentRating: item?.OfficialRating || null,
+      };
+    },
+  });
+
   // Fetch subtitle tracks from Emby when item is known
   useEffect(() => {
     if (!embyItem || !embyServer) return;
@@ -255,11 +286,12 @@ export default function MediaDetail() {
         media_type: embyItem.type === 'Series' ? 'tv_show' : 'movie',
         poster_url: embyItem.posterUrl,
         backdrop_url: embyItem.backdropUrl,
-        year: embyItem.year,
-        rating: embyItem.rating,
-        duration_minutes: embyItem.duration,
-        genre: embyItem.genres || [],
-        description: embyItem.overview || '',
+        year: embyItem.year || serverItemDetail?.year,
+        rating: embyItem.rating || serverItemDetail?.rating,
+        duration_minutes: embyItem.duration || serverItemDetail?.duration,
+        content_rating: serverItemDetail?.contentRating || undefined,
+        genre: embyItem.genres?.length ? embyItem.genres : (serverItemDetail?.genres || []),
+        description: embyItem.overview || serverItemDetail?.overview || '',
         video_url: embyItem.streamUrl,
       } : null)
     : isJellyfinDirect
@@ -268,8 +300,12 @@ export default function MediaDetail() {
         title: directTitle,
         media_type: directType === 'Series' ? 'tv_show' : 'movie',
         poster_url: directPoster,
-        genre: [],
-        description: '',
+        year: serverItemDetail?.year,
+        rating: serverItemDetail?.rating,
+        duration_minutes: serverItemDetail?.duration,
+        content_rating: serverItemDetail?.contentRating || undefined,
+        genre: serverItemDetail?.genres || [],
+        description: serverItemDetail?.overview || '',
       }
     : isPlexDirect
     ? {
@@ -623,9 +659,6 @@ export default function MediaDetail() {
               durationMinutes={activeMedia.duration_minutes}
               historyEntry={watchHistory.find(h => h.media_id === historyKey)}
             />
-
-            {/* IMDb Panel — ratings, Rotten Tomatoes, Metascore, plot, cast & awards */}
-            <ImdbPanel media={activeMedia} />
 
             {/* TVDB Panel */}
             <TvdbPanel media={activeMedia} onEnriched={() => queryClient.invalidateQueries({ queryKey: ['media', mediaId] })} />
