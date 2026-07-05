@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
 import PullToRefresh from '../components/layout/PullToRefresh';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
+import ServerSection from '../components/media/ServerSection';
 import EmbyLibraryViews from '../components/media/EmbyLibraryViews';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
@@ -45,6 +46,16 @@ export default function Home() {
     refetchOnWindowFocus: false,
     retry: false,
   });
+
+  // Which servers are connected — used to show a section per server.
+  const { data: servers = [] } = useQuery({
+    queryKey: ['mediaServers'],
+    queryFn: () => base44.entities.MediaServer.list(),
+    staleTime: 60 * 1000,
+  });
+  const hasEmby = servers.some(s => s.server_type === 'emby' && s.is_active !== false);
+  const hasJellyfin = servers.some(s => s.server_type === 'jellyfin' && s.is_active !== false);
+  const hasPlex = servers.some(s => s.server_type === 'plex' && s.is_active !== false);
 
   const featured = (recent?.items || [])
     .filter(i => i.type === 'Movie')
@@ -89,13 +100,30 @@ export default function Home() {
 
         {activeTab === 'All' && (
           <>
-            <EmbyContinueWatching />
-            <JellyfinContinueWatching />
-            <EmbyRecentlyAdded />
-            <JellyfinRecentlyAdded />
-            <KidsTvRow />
-            <EmbyLibraryViews />
-            <JellyfinLibraryViews />
+            {hasEmby && (
+              <ServerSection name="Emby" accentClass="text-green-500">
+                <EmbyContinueWatching />
+                <EmbyRecentlyAdded />
+                <KidsTvRow />
+                <EmbyLibraryViews />
+              </ServerSection>
+            )}
+
+            {hasJellyfin && (
+              <ServerSection name="Jellyfin" accentClass="text-purple-500">
+                <JellyfinContinueWatching />
+                <JellyfinRecentlyAdded />
+                <JellyfinLibraryViews />
+              </ServerSection>
+            )}
+
+            {hasPlex && (
+              <ServerSection name="Plex" accentClass="text-yellow-500">
+                <p className="px-4 sm:px-6 text-sm text-muted-foreground">
+                  Plex browsing is coming soon.
+                </p>
+              </ServerSection>
+            )}
           </>
         )}
 
