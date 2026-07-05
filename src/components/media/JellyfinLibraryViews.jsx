@@ -68,7 +68,7 @@ export default function JellyfinLibraryViews() {
     queryFn: () => base44.functions.invoke('jellyfinViews', {}).then(r => r.data),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    retry: false,
+    refetchOnMount: 'always',
   });
 
   const handlePlay = (item) => {

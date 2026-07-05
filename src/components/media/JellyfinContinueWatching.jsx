@@ -70,7 +70,7 @@ export default function JellyfinContinueWatching() {
     },
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: false,
+    refetchOnMount: 'always',
   });
 
   const items = data?.items || [];
