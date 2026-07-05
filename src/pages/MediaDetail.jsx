@@ -24,9 +24,10 @@ export default function MediaDetail() {
   const rawId = window.location.pathname.split('/media/')[1];
   const isEmbyDirect = rawId?.startsWith('emby:');
   const isJellyfinDirect = rawId?.startsWith('jellyfin:');
+  const isPlexDirect = rawId?.startsWith('plex:');
   const embyDirectId = isEmbyDirect ? rawId.slice(5) : null;
   const jellyfinDirectId = isJellyfinDirect ? rawId.slice(9) : null;
-  const mediaId = (isEmbyDirect || isJellyfinDirect) ? null : rawId;
+  const mediaId = (isEmbyDirect || isJellyfinDirect || isPlexDirect) ? null : rawId;
   const queryClient = useQueryClient();
   const [showPlayer, setShowPlayer] = useState(false);
   const [playerSource, setPlayerSource] = useState('emby'); // 'emby' | 'iptv'
@@ -68,7 +69,7 @@ export default function MediaDetail() {
       const items = await base44.entities.Media.filter({ id: mediaId });
       return items[0];
     },
-    enabled: !!mediaId && !isEmbyDirect && !isJellyfinDirect,
+    enabled: !!mediaId && !isEmbyDirect && !isJellyfinDirect && !isPlexDirect,
   });
 
   const { data: watchHistory = [] } = useQuery({
@@ -117,7 +118,7 @@ export default function MediaDetail() {
   };
 
   const directType = urlParams.get('type') || 'Movie';
-  const directTitle = urlParams.get('title') || 'Emby Item';
+  const directTitle = urlParams.get('title') || 'Untitled';
   const directPoster = urlParams.get('poster') || null;
 
   // Build a lightweight Emby item from the saved media record instead of loading the full server library.
@@ -254,6 +255,16 @@ export default function MediaDetail() {
         poster_url: directPoster,
         genre: [],
         description: '',
+      }
+    : isPlexDirect
+    ? {
+        id: null,
+        title: directTitle,
+        media_type: directType === 'Series' ? 'tv_show' : 'movie',
+        poster_url: directPoster,
+        year: urlParams.get('year') ? Number(urlParams.get('year')) : undefined,
+        genre: [],
+        description: urlParams.get('overview') || '',
       }
     : media;
 
@@ -543,12 +554,14 @@ export default function MediaDetail() {
                   Resume {formatTime(historyEntry.progress_seconds)}
                 </Button>
               )}
-              <PlaySourcePicker
-                hasEmby={!!embyItem}
-                hasJellyfin={hasJellyfin && (activeMedia.media_type !== 'tv_show' || isJellyfinDirect)}
-                label={historyEntry?.progress_seconds > 30 ? 'Start Over' : (embyItem || hasJellyfin ? 'Play' : iptvVod ? 'Play with IPTV' : 'Play')}
-                onPlay={(chosen) => { setPlayerSource(resolveSource(chosen)); setStartAt(0); setShowPlayer(true); }}
-              />
+              {!isPlexDirect && (
+                <PlaySourcePicker
+                  hasEmby={!!embyItem}
+                  hasJellyfin={hasJellyfin && (activeMedia.media_type !== 'tv_show' || isJellyfinDirect)}
+                  label={historyEntry?.progress_seconds > 30 ? 'Start Over' : (embyItem || hasJellyfin ? 'Play' : iptvVod ? 'Play with IPTV' : 'Play')}
+                  onPlay={(chosen) => { setPlayerSource(resolveSource(chosen)); setStartAt(0); setShowPlayer(true); }}
+                />
+              )}
               <Button
                 variant="outline"
                 className="border-border text-foreground hover:bg-secondary gap-2 h-11 px-5 rounded-xl select-none"

@@ -78,6 +78,8 @@ export default function PlexLibraryViews() {
     if (item.type) params.set('type', item.type);
     if (item.title) params.set('title', item.title);
     if (item.posterUrl) params.set('poster', item.posterUrl);
+    if (item.year) params.set('year', String(item.year));
+    if (item.overview) params.set('overview', item.overview);
     navigate(`/media/plex:${item.id}?${params.toString()}`);
   };
 
