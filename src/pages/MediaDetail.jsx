@@ -16,6 +16,7 @@ import TvdbPanel from '../components/media/TvdbPanel';
 import ImdbPanel from '../components/media/ImdbPanel';
 import TmdbCastInfo from '../components/media/TmdbCastInfo';
 import PlaySourcePicker from '../components/media/PlaySourcePicker';
+import PlexSeriesBrowser from '@/components/media/PlexSeriesBrowser';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
 
 export default function MediaDetail() {
@@ -27,6 +28,7 @@ export default function MediaDetail() {
   const isPlexDirect = rawId?.startsWith('plex:');
   const embyDirectId = isEmbyDirect ? rawId.slice(5) : null;
   const jellyfinDirectId = isJellyfinDirect ? rawId.slice(9) : null;
+  const plexDirectId = isPlexDirect ? rawId.slice(5) : null;
   const mediaId = (isEmbyDirect || isJellyfinDirect || isPlexDirect) ? null : rawId;
   const queryClient = useQueryClient();
   const [showPlayer, setShowPlayer] = useState(false);
@@ -140,6 +142,19 @@ export default function MediaDetail() {
       if (!Array.isArray(streams) || !media?.title) return null;
       const q = media.title.toLowerCase().trim();
       return streams.find(s => s?.name?.toLowerCase?.().trim() === q) || null;
+    },
+  });
+
+  // Resolve the direct-play stream URL for a Plex movie (shows use the browser).
+  const isPlexShow = isPlexDirect && directType === 'Series';
+  const { data: plexStreamUrl = null } = useQuery({
+    queryKey: ['plexPlayback', plexDirectId],
+    enabled: isPlexDirect && !isPlexShow,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const res = await base44.functions.invoke('plexPlayback', { ratingKey: plexDirectId });
+      if (res.data?.error) throw new Error(res.data.error);
+      return res.data.streamUrl;
     },
   });
 
@@ -265,6 +280,7 @@ export default function MediaDetail() {
         year: urlParams.get('year') ? Number(urlParams.get('year')) : undefined,
         genre: [],
         description: urlParams.get('overview') || '',
+        video_url: plexStreamUrl || undefined,
       }
     : media;
 
@@ -313,6 +329,15 @@ export default function MediaDetail() {
         {(() => {
           if (!showPlayer) return null;
           const PlayerComponent = ExoPlayer;
+          // Plex series — browse seasons/episodes
+          if (isPlexShow) {
+            return (
+              <PlexSeriesBrowser
+                item={{ id: plexDirectId, title: activeMedia.title, poster_url: activeMedia.poster_url, year: activeMedia.year }}
+                onClose={() => setShowPlayer(false)}
+              />
+            );
+          }
           // TV series have no playable stream on the series id — browse episodes instead
           if (playerSource === 'emby' && embyItem && embyServer && activeMedia.media_type === 'tv_show') {
             return (
@@ -554,7 +579,16 @@ export default function MediaDetail() {
                   Resume {formatTime(historyEntry.progress_seconds)}
                 </Button>
               )}
-              {!isPlexDirect && (
+              {isPlexDirect ? (
+                <Button
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-11 px-6 rounded-xl font-semibold select-none"
+                  disabled={!isPlexShow && !plexStreamUrl}
+                  onClick={() => { setStartAt(0); setShowPlayer(true); }}
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  {isPlexShow ? 'Play' : (plexStreamUrl ? 'Play' : 'Loading…')}
+                </Button>
+              ) : (
                 <PlaySourcePicker
                   hasEmby={!!embyItem}
                   hasJellyfin={hasJellyfin && (activeMedia.media_type !== 'tv_show' || isJellyfinDirect)}
