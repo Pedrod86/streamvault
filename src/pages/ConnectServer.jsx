@@ -517,11 +517,11 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
         return;
       }
       onSave({
-        server_url: url,
+        server_url: res.data.serverUrl || url,
         local_url: localUrl || undefined,
         username: res.data.username || username,
         plex_token: res.data.plexToken,
-        server_name: serverName || 'My Plex Server',
+        server_name: serverName || res.data.serverName || 'My Plex Server',
         auth_method: 'credentials',
       });
       return;
@@ -618,23 +618,22 @@ function ServerForm({ server, onBack, onSave, isSaving }) {
             <form onSubmit={handleCredentials} className="space-y-4">
               {server.id === 'plex' && (
                 <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-300 leading-relaxed space-y-1">
-                  <p>Sign in with your <strong>plex.tv</strong> account credentials. A token will be fetched automatically.</p>
-                  <p className="text-yellow-300/70">⚠️ Server URL must be your <strong>local or remote server address</strong>, e.g. <code className="bg-black/20 px-1 rounded">http://192.168.1.100:32400</code> — not app.plex.tv.</p>
+                  <p>Just sign in with your <strong>plex.tv</strong> account. Your server and token are found automatically — no URL needed.</p>
                 </div>
               )}
               <div>
                 <Label className="text-foreground text-sm flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Server URL
+                  <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Server URL {server.id === 'plex' && <span className="text-muted-foreground font-normal">(optional)</span>}
                 </Label>
                 <Input
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder={server.id === 'plex' ? 'http://192.168.1.100:32400' : 'http://192.168.1.10:8096'}
+                  placeholder={server.id === 'plex' ? 'Leave blank to auto-discover' : 'http://192.168.1.10:8096'}
                   className="mt-1 bg-secondary border-border h-11 font-mono text-sm"
-                  required
+                  required={server.id !== 'plex'}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {server.id === 'plex' ? 'Your remote access URL — used when away from home' : 'Your remote access URL — used when away from home'}
+                  {server.id === 'plex' ? 'Leave blank and we\'ll detect your server. Only fill this in to force a specific address.' : 'Your remote access URL — used when away from home'}
                 </p>
               </div>
               {supportsLocal && <LocalUrlField value={localUrl} onChange={setLocalUrl} />}
