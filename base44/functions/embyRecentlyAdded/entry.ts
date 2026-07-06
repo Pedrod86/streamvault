@@ -7,12 +7,15 @@ async function getEmbyServer(base44, serverId) {
   return embyServers[0] || null;
 }
 
-async function doFetch(url) {
+async function doFetch(url, token) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
+    const headers = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' };
+    // Emby accepts the token via header too — required for credentials/AccessToken auth.
+    if (token) headers['X-Emby-Token'] = token;
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+      headers,
       signal: controller.signal,
       redirect: 'follow',
     });
@@ -29,11 +32,11 @@ function buildImageUrl(base, itemId, token, type = 'Primary') {
 
 async function resolveUserId(base, token) {
   try {
-    const me = await doFetch(`${base}/Users/Me?api_key=${token}`);
+    const me = await doFetch(`${base}/Users/Me?api_key=${token}`, token);
     if (me?.Id) return me.Id;
   } catch (_) {}
   try {
-    const users = await doFetch(`${base}/Users?api_key=${token}`);
+    const users = await doFetch(`${base}/Users?api_key=${token}`, token);
     const list = Array.isArray(users) ? users : (users?.Items || []);
     const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
     if (admin?.Id) return admin.Id;
@@ -60,7 +63,8 @@ Deno.serve(async (req) => {
       `${base}/Users/${userId}/Items/Latest` +
       `?IncludeItemTypes=Movie,Series` +
       `&Fields=Overview,Genres,CommunityRating,ProductionYear,RunTimeTicks,ImageTags,BackdropImageTags,SeriesName,ParentIndexNumber,IndexNumber` +
-      `&Limit=20&api_key=${token}`
+      `&Limit=20&api_key=${token}`,
+      token
     );
 
     const rawItems = Array.isArray(json) ? json : (json?.Items || []);

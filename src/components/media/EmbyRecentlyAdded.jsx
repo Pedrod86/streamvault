@@ -77,7 +77,17 @@ export default function EmbyRecentlyAdded({ serverId } = {}) {
 
   const items = data?.items || [];
 
-  if (error || (!isLoading && items.length === 0)) return null;
+  if (error) {
+    return (
+      <div className="mb-2 px-4 sm:px-6">
+        <p className="text-xs text-muted-foreground">
+          Couldn't connect to this Emby server. Check the connection in Settings.
+        </p>
+      </div>
+    );
+  }
+
+  if (!isLoading && items.length === 0) return null;
 
   return (
     <div className="mb-2">
