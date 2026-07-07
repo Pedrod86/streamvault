@@ -30,6 +30,33 @@ function buildImageUrl(base, itemId, token, type = 'Primary') {
   return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&MaxWidth=400`;
 }
 
+// The auth header Emby requires for AuthenticateByName.
+const EMBY_AUTH_HEADER =
+  'MediaBrowser Client="StreamVault", Device="Server", DeviceId="streamvault-backend", Version="1.0.0"';
+
+// Log in with username + password to obtain a fresh AccessToken + userId.
+async function authenticateByName(base, username, password) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${base}/Users/AuthenticateByName`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Emby-Authorization': EMBY_AUTH_HEADER,
+      },
+      body: JSON.stringify({ Username: username, Pw: password }),
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+    if (!res.ok) throw new Error(`Auth HTTP ${res.status}`);
+    const data = await res.json();
+    return { token: data?.AccessToken || null, userId: data?.User?.Id || null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function resolveUserId(base, token) {
   try {
     const me = await doFetch(`${base}/Users/Me?api_key=${token}`, token);
@@ -41,6 +68,26 @@ async function resolveUserId(base, token) {
     const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
     if (admin?.Id) return admin.Id;
   } catch (_) {}
+  throw new Error('Could not authenticate with Emby.');
+}
+
+// Return a working { token, userId } for the server.
+// Tries the stored token first; if that fails and username/password exist,
+// performs a fresh AuthenticateByName login.
+async function resolveAuth(base, server) {
+  const storedToken = server.api_token;
+  if (storedToken) {
+    try {
+      const userId = await resolveUserId(base, storedToken);
+      return { token: storedToken, userId };
+    } catch (_) { /* fall through to username/password */ }
+  }
+  if (server.username && server.password) {
+    const { token, userId } = await authenticateByName(base, server.username, server.password);
+    if (token) {
+      return { token, userId: userId || (await resolveUserId(base, token)) };
+    }
+  }
   throw new Error('Could not authenticate with Emby.');
 }
 
@@ -56,8 +103,7 @@ Deno.serve(async (req) => {
     if (!server) return Response.json({ items: [] });
 
     const base = server.server_url.replace(/\/$/, '');
-    const token = server.api_token;
-    const userId = await resolveUserId(base, token);
+    const { token, userId } = await resolveAuth(base, server);
 
     const json = await doFetch(
       `${base}/Users/${userId}/Items/Latest` +

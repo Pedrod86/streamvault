@@ -7,12 +7,14 @@ async function getEmbyServer(base44, serverId) {
   return embyServers[0] || null;
 }
 
-async function doFetch(url) {
+async function doFetch(url, token) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20000);
   try {
+    const headers = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' };
+    if (token) headers['X-Emby-Token'] = token;
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+      headers,
       signal: controller.signal,
       redirect: 'follow',
     });
@@ -27,15 +29,57 @@ function buildImageUrl(base, itemId, token, type = 'Primary') {
   return `${base}/Items/${itemId}/Images/${type}?api_key=${token}&MaxWidth=400`;
 }
 
+const EMBY_AUTH_HEADER =
+  'MediaBrowser Client="StreamVault", Device="Server", DeviceId="streamvault-backend", Version="1.0.0"';
+
+async function authenticateByName(base, username, password) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${base}/Users/AuthenticateByName`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Emby-Authorization': EMBY_AUTH_HEADER,
+      },
+      body: JSON.stringify({ Username: username, Pw: password }),
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+    if (!res.ok) throw new Error(`Auth HTTP ${res.status}`);
+    const data = await res.json();
+    return { token: data?.AccessToken || null, userId: data?.User?.Id || null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function resolveUserId(base, token) {
   try {
-    const me = await doFetch(`${base}/Users/Me?api_key=${token}`);
+    const me = await doFetch(`${base}/Users/Me?api_key=${token}`, token);
     if (me?.Id) return me.Id;
   } catch (_) {}
-  const users = await doFetch(`${base}/Users?api_key=${token}`);
+  const users = await doFetch(`${base}/Users?api_key=${token}`, token);
   const list = Array.isArray(users) ? users : (users?.Items || []);
   const admin = list.find(u => u.Policy?.IsAdministrator) || list[0];
   if (admin?.Id) return admin.Id;
+  throw new Error('Could not authenticate with Emby.');
+}
+
+async function resolveAuth(base, server) {
+  const storedToken = server.api_token;
+  if (storedToken) {
+    try {
+      const userId = await resolveUserId(base, storedToken);
+      return { token: storedToken, userId };
+    } catch (_) { /* fall through to username/password */ }
+  }
+  if (server.username && server.password) {
+    const { token, userId } = await authenticateByName(base, server.username, server.password);
+    if (token) {
+      return { token, userId: userId || (await resolveUserId(base, token)) };
+    }
+  }
   throw new Error('Could not authenticate with Emby.');
 }
 
@@ -75,11 +119,10 @@ Deno.serve(async (req) => {
     if (!server) return Response.json({ views: [] });
 
     const base = server.server_url.replace(/\/$/, '');
-    const token = server.api_token;
-    const userId = await resolveUserId(base, token);
+    const { token, userId } = await resolveAuth(base, server);
 
     // Fetch the user's actual Emby library views (the "folders" shown in Emby)
-    const viewsRaw = await doFetch(`${base}/Users/${userId}/Views?api_key=${token}`);
+    const viewsRaw = await doFetch(`${base}/Users/${userId}/Views?api_key=${token}`, token);
     const views = (viewsRaw?.Items || []).filter(
       v => ['movies', 'tvshows', 'mixed', 'homevideos'].includes((v.CollectionType || '').toLowerCase()) || !v.CollectionType
     );
@@ -91,7 +134,7 @@ Deno.serve(async (req) => {
       const url = `${base}/Users/${userId}/Items?ParentId=${view.Id}&Recursive=true&IncludeItemTypes=Movie,Series&Fields=${FIELDS}&SortBy=DateCreated&SortOrder=Descending&Limit=${LIMIT}&api_key=${token}`;
       let items = [];
       try {
-        const raw = await doFetch(url);
+        const raw = await doFetch(url, token);
         items = (raw?.Items || []).map(i => mapItem(base, token, i));
       } catch (_) {}
       return { id: view.Id, name: view.Name, items };
