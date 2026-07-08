@@ -5,8 +5,12 @@ import {
   X, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Settings, PictureInPicture2,
   ChevronLeft, ChevronRight, Wifi, Layers, AudioLines,
-  Subtitles, Info, Gauge
+  Subtitles, Info, Gauge, Lock, Unlock, Ratio
 } from 'lucide-react';
+
+// Cycle of video fit modes for the aspect/zoom toggle.
+const FIT_MODES = ['contain', 'cover', 'fill'];
+const FIT_LABELS = { contain: 'Fit', cover: 'Zoom', fill: 'Stretch' };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -93,11 +97,15 @@ const HLS_CONFIG = {
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0 }) {
+export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0, introEnd = 0 }) {
   const prefs = loadPrefs();
   const skipSecs = parseInt(prefs.skipSeconds || '10', 10);
-  const fitMode = prefs.fitMode || 'contain';
   const initVol = parseFloat(prefs.defaultVolume || '1');
+
+  // Video fit mode — starts from the saved preference, toggleable in-player.
+  const [fitMode, setFitMode] = useState(prefs.fitMode || 'contain');
+  // Locked state hides controls and ignores taps (child-safe / accidental-touch guard).
+  const [locked, setLocked] = useState(false);
 
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -443,6 +451,28 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
     }
   };
 
+  const cycleFitMode = () => {
+    setFitMode(prev => {
+      const next = FIT_MODES[(FIT_MODES.indexOf(prev) + 1) % FIT_MODES.length];
+      try {
+        const p = loadPrefs();
+        localStorage.setItem('sv_player_prefs', JSON.stringify({ ...p, fitMode: next }));
+      } catch (_) {}
+      return next;
+    });
+    resetHideTimer();
+  };
+
+  const skipIntro = () => {
+    const v = videoRef.current;
+    if (!v || !introEnd) return;
+    v.currentTime = introEnd;
+    resetHideTimer();
+  };
+
+  // Show the Skip Intro button while playhead is within the intro window.
+  const showSkipIntro = introEnd > 0 && currentTime < introEnd && currentTime >= 0;
+
   const setPlaybackSpeed = (s) => {
     if (!videoRef.current) return;
     videoRef.current.playbackRate = s;
@@ -551,6 +581,11 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
   };
 
   const handleVideoTap = (e) => {
+    if (locked) {
+      // While locked, a tap only briefly reveals the unlock button.
+      resetHideTimer();
+      return;
+    }
     const now = Date.now();
     if (now - lastTap.current < 300) {
       const x = e.clientX;
@@ -586,7 +621,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
     >
       <video
         ref={videoRef}
-        className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`}
+        className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : fitMode === 'fill' ? 'object-fill' : 'object-contain'}`}
         playsInline
         webkit-playsinline="true"
         x5-playsinline="true"
@@ -628,6 +663,29 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
         </div>
       )}
 
+      {/* Skip Intro button — shows during the intro window */}
+      {showSkipIntro && !locked && (
+        <button
+          onClick={(e) => { e.stopPropagation(); skipIntro(); }}
+          className="absolute bottom-24 left-6 z-40 px-5 py-2.5 rounded-lg bg-white/90 text-black text-sm font-semibold shadow-xl hover:bg-white active:scale-95 transition-all"
+        >
+          Skip Intro
+        </button>
+      )}
+
+      {/* Locked overlay — hides all controls; single unlock button */}
+      {locked && (
+        <div className="absolute inset-0 z-50" onClick={resetHideTimer}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setLocked(false); resetHideTimer(); }}
+            className={`absolute top-1/2 left-6 -translate-y-1/2 w-14 h-14 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white transition-opacity ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            title="Unlock"
+          >
+            <Lock className="w-6 h-6" />
+          </button>
+        </div>
+      )}
+
       {/* Fatal error screen — replaces the blank black screen */}
       {fatalError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 px-6 text-center bg-black/90">
@@ -664,7 +722,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
 
       {/* Center control cluster — always visible with the controls overlay.
           Rewind · Play/Pause · Fast-forward, big and impossible to miss on mobile. */}
-      {!isBuffering && !fatalError && (
+      {!isBuffering && !fatalError && !locked && (
         <div
           className={`absolute inset-0 z-40 flex items-center justify-center gap-8 pointer-events-none transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0'}`}
         >
@@ -700,7 +758,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
 
       {/* Controls overlay */}
       <div
-        className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls && !locked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-5 pb-10 bg-gradient-to-b from-black/80 to-transparent">
@@ -916,6 +974,21 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
               {/* Media info / A-V sync */}
               <Btn onClick={() => setSettingsTab(t => t === 'info' ? null : 'info')} title="Media Info">
                 <Info className={`w-4 h-4 ${settingsTab === 'info' ? 'text-primary' : ''}`} />
+              </Btn>
+
+              {/* Aspect ratio / zoom toggle */}
+              <button
+                onClick={cycleFitMode}
+                title={`Aspect: ${FIT_LABELS[fitMode]}`}
+                className="relative h-9 px-2 min-w-9 flex items-center justify-center gap-1 rounded-full text-white hover:bg-white/15 active:bg-white/25 transition-colors"
+              >
+                <Ratio className="w-4 h-4" />
+                <span className="text-[9px] font-semibold">{FIT_LABELS[fitMode]}</span>
+              </button>
+
+              {/* Screen lock */}
+              <Btn onClick={() => { setLocked(true); resetHideTimer(); }} title="Lock screen">
+                <Unlock className="w-4 h-4" />
               </Btn>
 
               <Btn onClick={togglePip} title="Picture in Picture">

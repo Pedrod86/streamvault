@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { X, Play, ChevronRight, Loader2, Tv } from 'lucide-react';
 import ExoPlayer from './ExoPlayer';
+import QualityBadge from './QualityBadge';
 
 export default function EmbySeriesBrowser({ item, server, onClose }) {
   const [seasons, setSeasons] = useState([]);
@@ -144,6 +145,11 @@ export default function EmbySeriesBrowser({ item, server, onClose }) {
                         <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
                       </div>
                     </div>
+                    {(ep.quality || ep.codec) && (
+                      <div className="absolute top-1 right-1">
+                        <QualityBadge quality={ep.quality} codec={ep.codec} />
+                      </div>
+                    )}
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">

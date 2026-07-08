@@ -16,6 +16,7 @@ import TvdbPanel from '../components/media/TvdbPanel';
 import TmdbCastInfo from '../components/media/TmdbCastInfo';
 import PlaySourcePicker from '../components/media/PlaySourcePicker';
 import PlexSeriesBrowser from '@/components/media/PlexSeriesBrowser';
+import MediaInfoPanel from '../components/media/MediaInfoPanel';
 import { getVodStreams, getVodStreamUrl } from '../lib/xtreamApi';
 
 export default function MediaDetail() {
@@ -177,16 +178,22 @@ export default function MediaDetail() {
         userId = me?.Id || null;
       } catch (_) {}
       const url = userId
-        ? `${base}/Users/${userId}/Items/${detailItemId}?api_key=${token}`
-        : `${base}/Items/${detailItemId}?api_key=${token}`;
+        ? `${base}/Users/${userId}/Items/${detailItemId}?api_key=${token}&Fields=MediaStreams,PremiereDate`
+        : `${base}/Items/${detailItemId}?api_key=${token}&Fields=MediaStreams,PremiereDate`;
       const item = await fetch(url, { headers: { 'X-Emby-Token': token } }).then(r => r.json());
+      const vStream = (item?.MediaStreams || []).find(s => s.Type === 'Video');
+      const h = vStream?.Height || 0;
+      const dur = item?.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null;
       return {
         overview: item?.Overview || '',
         year: item?.ProductionYear || null,
         rating: item?.CommunityRating ? parseFloat(Number(item.CommunityRating).toFixed(1)) : null,
         genres: item?.Genres || [],
-        duration: item?.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null,
+        duration: dur,
         contentRating: item?.OfficialRating || null,
+        premiereDate: (item?.PremiereDate || '').split('T')[0] || null,
+        quality: h >= 2160 ? '4K' : h >= 1080 ? '1080p' : h >= 720 ? '720p' : h >= 480 ? '480p' : null,
+        codec: vStream?.Codec ? String(vStream.Codec).toUpperCase() : null,
       };
     },
   });
@@ -500,12 +507,18 @@ export default function MediaDetail() {
         >
           {/* Poster */}
           <div className="shrink-0 hidden lg:block">
-            <div className="w-[240px] rounded-xl overflow-hidden shadow-2xl shadow-black/40 border border-border/50">
+            <div className="relative w-[240px] rounded-xl overflow-hidden shadow-2xl shadow-black/40 border border-border/50">
               {activeMedia.poster_url ? (
                 <img src={activeMedia.poster_url} alt={activeMedia.title} className="w-full aspect-[2/3] object-cover" />
               ) : (
                 <div className="w-full aspect-[2/3] bg-secondary flex items-center justify-center">
                   <Play className="w-12 h-12 text-muted-foreground" />
+                </div>
+              )}
+              {activeMedia.rating > 0 && (
+                <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md overflow-hidden bg-black/80 pr-2">
+                  <span className="bg-[#f5c518] text-black text-[9px] font-bold px-1 py-0.5">IMDb</span>
+                  <span className="text-white text-xs font-semibold">{activeMedia.rating.toFixed(1)}</span>
                 </div>
               )}
             </div>
@@ -527,6 +540,22 @@ export default function MediaDetail() {
             <h1 className="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl text-foreground mb-4">
               {activeMedia.title}
             </h1>
+
+            {/* Quality / codec badge line — e.g. "2026-06-18 · 46m · 1080p · H264" */}
+            {(() => {
+              const parts = [
+                serverItemDetail?.premiereDate,
+                activeMedia.duration_minutes ? `${activeMedia.duration_minutes}m` : null,
+                serverItemDetail?.quality,
+                serverItemDetail?.codec,
+              ].filter(Boolean);
+              if (parts.length === 0) return null;
+              return (
+                <p className="text-muted-foreground text-base sm:text-lg font-medium mb-4 tracking-wide">
+                  {parts.join('  ')}
+                </p>
+              );
+            })()}
 
             <div className="flex items-center gap-4 text-sm text-muted-foreground mb-5 flex-wrap">
               {activeMedia.rating && (
@@ -697,6 +726,13 @@ export default function MediaDetail() {
               year={activeMedia.year}
               mediaType={activeMedia.media_type}
             />
+
+            {/* Full technical Media Information (Emby movies) */}
+            {embyItem?.id && activeMedia.media_type !== 'tv_show' && (
+              <div className="mt-10">
+                <MediaInfoPanel itemId={embyItem.id} serverId={embyServer?.id} />
+              </div>
+            )}
           </div>
         </motion.div>
 

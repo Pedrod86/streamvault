@@ -98,20 +98,28 @@ Deno.serve(async (req) => {
     // Fetch all episodes
     const episodesData = await doFetch(
       `${base}/Shows/${seriesId}/Episodes?UserId=${userId}&api_key=${token}` +
-      `&Fields=Overview,ImageTags,RunTimeTicks&Limit=500`
+      `&Fields=Overview,ImageTags,RunTimeTicks,MediaStreams&Limit=500`
     );
-    const episodes = (episodesData?.Items || []).map(e => ({
-      id: e.Id,
-      name: e.Name,
-      seasonIndex: e.ParentIndexNumber || 0,
-      episodeIndex: e.IndexNumber || 0,
-      overview: e.Overview || '',
-      durationMinutes: e.RunTimeTicks ? Math.round(e.RunTimeTicks / 600000000) : null,
-      thumbUrl: e.ImageTags?.Primary
-        ? `${base}/Items/${e.Id}/Images/Primary?api_key=${token}&MaxWidth=400`
-        : null,
-      streamUrl: `${base}/Videos/${e.Id}/stream?api_key=${token}&Static=true`,
-    }));
+    const episodes = (episodesData?.Items || []).map(e => {
+      const vStream = (e.MediaStreams || []).find(s => s.Type === 'Video');
+      const h = vStream?.Height || 0;
+      const quality = h >= 2160 ? '4K' : h >= 1080 ? '1080p' : h >= 720 ? '720p' : h >= 480 ? '480p' : null;
+      const codec = vStream?.Codec ? String(vStream.Codec).toUpperCase() : null;
+      return {
+        id: e.Id,
+        name: e.Name,
+        seasonIndex: e.ParentIndexNumber || 0,
+        episodeIndex: e.IndexNumber || 0,
+        overview: e.Overview || '',
+        durationMinutes: e.RunTimeTicks ? Math.round(e.RunTimeTicks / 600000000) : null,
+        quality,
+        codec,
+        thumbUrl: e.ImageTags?.Primary
+          ? `${base}/Items/${e.Id}/Images/Primary?api_key=${token}&MaxWidth=400`
+          : null,
+        streamUrl: `${base}/Videos/${e.Id}/stream?api_key=${token}&Static=true`,
+      };
+    });
 
     return Response.json({ seasons, episodes, server: { server_url: base, api_token: token } });
   } catch (error) {
