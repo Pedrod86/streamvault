@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
 
     // Block SSRF — reject non-http(s) and private/internal addresses
     let parsedUrl;
-    try { parsedUrl = assertSafeUrl(url); } catch (e) {
+    try { parsedUrl = await assertSafeUrl(url); } catch (e) {
       return Response.json({ status: 0, ok: false, error: e.message, data: null }, { status: 400 });
     }
 
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
         const nextUrl = location.startsWith('http') ? location : new URL(location, currentUrl).toString();
 
         // Re-validate every redirect hop to prevent redirect-based SSRF
-        try { assertSafeUrl(nextUrl); } catch {
+        try { await assertSafeUrl(nextUrl); } catch {
           console.log(`[mediaProxy] Blocked unsafe redirect to ${nextUrl}`);
           break;
         }

@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     if (!url) return Response.json({ error: 'Missing url' }, { status: 400 });
 
     // Block SSRF — reject non-http(s) and private/internal addresses
-    try { assertSafeUrl(url); } catch (e) {
+    try { await assertSafeUrl(url); } catch (e) {
       return Response.json({ error: e.message }, { status: 400 });
     }
 

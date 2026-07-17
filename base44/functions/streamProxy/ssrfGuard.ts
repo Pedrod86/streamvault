@@ -40,7 +40,27 @@ function isBlockedHost(host: string): boolean {
   return false;
 }
 
-export function assertSafeUrl(rawUrl: string): URL {
+async function assertSafeResolvedIps(hostname: string): Promise<void> {
+  // If it's already an IP literal, isBlockedHost already covered it.
+  if (parseIpv4(hostname) || hostname.includes(':')) return;
+  const resolved: string[] = [];
+  for (const kind of ['A', 'AAAA'] as const) {
+    try {
+      const recs = await Deno.resolveDns(hostname, kind);
+      resolved.push(...recs);
+    } catch {
+      // Ignore per-record-type resolution failures (e.g. no AAAA record)
+    }
+  }
+  // If DNS resolves to any private/loopback/link-local/metadata IP, block it.
+  for (const ip of resolved) {
+    if (isBlockedHost(ip)) {
+      throw new Error('Access to this address is not allowed');
+    }
+  }
+}
+
+export async function assertSafeUrl(rawUrl: string): Promise<URL> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -53,5 +73,7 @@ export function assertSafeUrl(rawUrl: string): URL {
   if (isBlockedHost(parsed.hostname)) {
     throw new Error('Access to this address is not allowed');
   }
+  // Resolve the hostname and re-check the underlying IPs to defeat DNS rebinding.
+  await assertSafeResolvedIps(parsed.hostname);
   return parsed;
 }
