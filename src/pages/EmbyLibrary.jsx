@@ -9,6 +9,9 @@ import ExoPlayer from '@/components/media/ExoPlayer';
 import EmbySeriesBrowser from '@/components/media/EmbySeriesBrowser';
 import { Skeleton } from '@/components/ui/skeleton';
 import { scanState, resetScan, runScan } from '@/lib/embyScanState';
+import ServerSection from '@/components/media/ServerSection';
+import JellyfinLibraryViews from '@/components/media/JellyfinLibraryViews';
+import PlexLibraryViews from '@/components/media/PlexLibraryViews';
 
 const IS_4K = (item) =>
   !!item && (
@@ -137,6 +140,8 @@ export default function EmbyLibrary() {
     staleTime: 5 * 60 * 1000,
   });
   const embyServer = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+  const hasJellyfin = servers.some(s => s.server_type === 'jellyfin' && s.is_active !== false);
+  const hasPlex = servers.some(s => s.server_type === 'plex' && s.is_active !== false);
 
   // Primary source: in-memory scan state (populated from localStorage cache immediately,
   // then filled live from the scan). Falls back to DB query only when scan state is empty.
@@ -374,9 +379,23 @@ export default function EmbyLibrary() {
         </div>
       ) : (
         <div>
-          {sections?.map(({ title, items, badge }) => (
-            <MediaRow key={title} title={title} items={items} onPlay={handlePlay} badge={badge} />
-          ))}
+          <ServerSection name={embyServer?.server_name || 'Emby'} accentClass="text-green-500">
+            {sections?.map(({ title, items, badge }) => (
+              <MediaRow key={title} title={title} items={items} onPlay={handlePlay} badge={badge} />
+            ))}
+          </ServerSection>
+
+          {hasJellyfin && (
+            <ServerSection name="Jellyfin" accentClass="text-purple-500">
+              <JellyfinLibraryViews />
+            </ServerSection>
+          )}
+
+          {hasPlex && (
+            <ServerSection name="Plex" accentClass="text-yellow-500">
+              <PlexLibraryViews />
+            </ServerSection>
+          )}
         </div>
       )}
 
