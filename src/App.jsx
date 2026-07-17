@@ -30,7 +30,6 @@ import Discover from './pages/Discover';
 import TVGuide from './pages/TVGuide';
 import EmbyLibrary from './pages/EmbyLibrary';
 import SyncStatus from './pages/SyncStatus';
-import StreamTester from './pages/StreamTester';
 import IPTV from './pages/IPTV';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -101,7 +100,6 @@ const AuthenticatedApp = () => {
           <Route path="/tv-guide" element={<TVGuide />} />
           <Route path="/emby" element={<EmbyLibrary />} />
           <Route path="/sync-status" element={<SyncStatus />} />
-          <Route path="/stream-tester" element={<StreamTester />} />
           <Route path="/iptv" element={<IPTV />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />

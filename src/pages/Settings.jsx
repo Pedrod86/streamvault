@@ -745,13 +745,6 @@ export default function Settings() {
               <p className="text-[11px] text-muted-foreground">Live TV schedule</p>
             </div>
           </Link>
-          <Link to="/stream-tester" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
-            <FlaskConical className="w-5 h-5 text-accent shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Stream Tester</p>
-              <p className="text-[11px] text-muted-foreground">Test any stream URL</p>
-            </div>
-          </Link>
           <Link to="/connect-server" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
             <Plug className="w-5 h-5 text-accent shrink-0" />
             <div>

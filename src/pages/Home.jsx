@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
@@ -13,18 +13,11 @@ import JellyfinRecentlyAdded from '../components/media/JellyfinRecentlyAdded';
 import JellyfinContinueWatching from '../components/media/JellyfinContinueWatching';
 import JellyfinLibraryViews from '../components/media/JellyfinLibraryViews';
 import PlexLibraryViews from '../components/media/PlexLibraryViews';
-import EmbyWatchlistRow from '../components/media/EmbyWatchlistRow';
 import KidsTvRow from '../components/media/KidsTvRow';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const TABS = [
-  { id: 'All', label: 'All' },
-  { id: 'Watchlist', label: 'My List' },
-];
-
 export default function Home() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('All');
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['embyRecentlyAdded'] });
@@ -32,7 +25,6 @@ export default function Home() {
     await queryClient.invalidateQueries({ queryKey: ['jellyfinContinueWatching'] });
     await queryClient.invalidateQueries({ queryKey: ['jellyfinViews'] });
     await queryClient.invalidateQueries({ queryKey: ['plexViews'] });
-    await queryClient.invalidateQueries({ queryKey: ['watchlist'] });
     await queryClient.invalidateQueries({ queryKey: ['mediaServers'] });
   };
 
@@ -80,61 +72,38 @@ export default function Home() {
     <div>
       <HeroBanner featured={featured} />
 
-      {/* Filter tabs + arrange button */}
-      <div className="px-4 sm:px-6 mt-5 flex gap-2 overflow-x-auto items-center" style={{ scrollbarWidth: 'none' }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       <ServerStatusStrip />
 
       <LibraryCategories />
 
       <div className="mt-6 space-y-2">
 
-        {activeTab === 'All' && (
-          <>
-            {embyServers.map((server, idx) => (
-              <ServerSection
-                key={server.id}
-                name={server.server_name || (embyServers.length > 1 ? `Emby ${idx + 1}` : 'Emby')}
-                accentClass="text-green-500"
-              >
-                <EmbyContinueWatching serverId={server.id} />
-                <EmbyRecentlyAdded serverId={server.id} />
-                {idx === 0 && <KidsTvRow />}
-                <EmbyLibraryViews serverId={server.id} />
-              </ServerSection>
-            ))}
+        {embyServers.map((server, idx) => (
+          <ServerSection
+            key={server.id}
+            name={server.server_name || (embyServers.length > 1 ? `Emby ${idx + 1}` : 'Emby')}
+            accentClass="text-green-500"
+          >
+            <EmbyContinueWatching serverId={server.id} />
+            <EmbyRecentlyAdded serverId={server.id} />
+            {idx === 0 && <KidsTvRow />}
+            <EmbyLibraryViews serverId={server.id} />
+          </ServerSection>
+        ))}
 
-            {hasJellyfin && (
-              <ServerSection name="Jellyfin" accentClass="text-purple-500">
-                <JellyfinContinueWatching />
-                <JellyfinRecentlyAdded />
-                <JellyfinLibraryViews />
-              </ServerSection>
-            )}
-
-            {hasPlex && (
-              <ServerSection name="Plex" accentClass="text-yellow-500">
-                <PlexLibraryViews />
-              </ServerSection>
-            )}
-          </>
+        {hasJellyfin && (
+          <ServerSection name="Jellyfin" accentClass="text-purple-500">
+            <JellyfinContinueWatching />
+            <JellyfinRecentlyAdded />
+            <JellyfinLibraryViews />
+          </ServerSection>
         )}
 
-        {activeTab === 'Watchlist' && <EmbyWatchlistRow />}
+        {hasPlex && (
+          <ServerSection name="Plex" accentClass="text-yellow-500">
+            <PlexLibraryViews />
+          </ServerSection>
+        )}
       </div>
     </div>
     </PullToRefresh>
