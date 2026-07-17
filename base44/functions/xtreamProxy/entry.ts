@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { assertSafeUrl } from './ssrfGuard.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -10,11 +9,6 @@ Deno.serve(async (req) => {
     const { server_url, username, password, action, extra } = await req.json();
     if (!server_url || !username || !password) {
       return Response.json({ error: 'Missing server credentials' }, { status: 400 });
-    }
-
-    // Block SSRF — reject non-http(s) and private/internal addresses
-    try { await assertSafeUrl(server_url); } catch (e) {
-      return Response.json({ error: e.message }, { status: 400 });
     }
 
     const base = server_url.replace(/\/$/, '');
