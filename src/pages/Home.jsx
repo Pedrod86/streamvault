@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
+import HomeSearchBar from '../components/media/HomeSearchBar';
 import PullToRefresh from '../components/layout/PullToRefresh';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
 import ServerStatusStrip from '../components/dashboard/ServerStatusStrip';
@@ -71,6 +72,8 @@ export default function Home() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
     <div>
+      <HomeSearchBar />
+
       <HeroBanner featured={featured} />
 
       <ServerStatusStrip />
