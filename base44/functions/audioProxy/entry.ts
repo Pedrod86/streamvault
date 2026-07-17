@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { assertSafeUrl } from './ssrfGuard.ts';
+import { safeFetch } from './ssrfGuard.ts';
 
 /**
  * Audio proxy — streams Emby audio through the server to bypass CORS/network restrictions.
@@ -16,17 +16,18 @@ Deno.serve(async (req) => {
     const { url } = body;
     if (!url) return Response.json({ error: 'Missing url' }, { status: 400 });
 
-    // Block SSRF — reject non-http(s) and private/internal addresses
-    try { await assertSafeUrl(url); } catch (e) {
+    // Block SSRF (incl. DNS rebinding) — validate + pin the connection to the vetted IP
+    let upstream;
+    try {
+      upstream = await safeFetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; StreamVault/1.0)',
+          'Accept': 'audio/*,*/*',
+        },
+      });
+    } catch (e) {
       return Response.json({ error: e.message }, { status: 400 });
     }
-
-    const upstream = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; StreamVault/1.0)',
-        'Accept': 'audio/*,*/*',
-      },
-    });
 
     if (!upstream.ok) {
       return Response.json({ error: `Upstream error: ${upstream.status}` }, { status: 502 });

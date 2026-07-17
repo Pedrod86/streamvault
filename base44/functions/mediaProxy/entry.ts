@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { assertSafeUrl } from './ssrfGuard.ts';
+import { assertSafeUrl, safeFetch } from './ssrfGuard.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     try {
       // Follow up to 5 redirects manually so we can detect and break loops
       for (let i = 0; i < 5; i++) {
-        res = await fetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
+        res = await safeFetch(currentUrl, { ...fetchOptions, signal: controller.signal, redirect: 'manual' });
 
         const isRedirect = res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308;
         if (!isRedirect) break;

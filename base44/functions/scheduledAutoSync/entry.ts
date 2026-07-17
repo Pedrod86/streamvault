@@ -56,6 +56,12 @@ async function resolveUserId(base, token) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+
+    // Admin-only: block unauthenticated / non-admin callers before any service-role work
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
+
     const sr = base44.asServiceRole;
 
     // Read the user's saved interval setting
