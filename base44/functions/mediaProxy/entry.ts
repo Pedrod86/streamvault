@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { assertSafeUrl } from './ssrfGuard.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -11,9 +12,11 @@ Deno.serve(async (req) => {
 
     if (!url) return Response.json({ error: 'Missing url parameter' }, { status: 400 });
 
-    // Parse the original URL so we can build Cloudflare-bypass headers from it
+    // Block SSRF — reject non-http(s) and private/internal addresses
     let parsedUrl;
-    try { parsedUrl = new URL(url); } catch { parsedUrl = null; }
+    try { parsedUrl = assertSafeUrl(url); } catch (e) {
+      return Response.json({ status: 0, ok: false, error: e.message, data: null }, { status: 400 });
+    }
 
     // Headers that trick Cloudflare into thinking the request arrived over HTTPS
     // on the correct host, preventing it from issuing a 301 HTTP→HTTPS redirect.
@@ -58,6 +61,12 @@ Deno.serve(async (req) => {
         if (!location) break;
 
         const nextUrl = location.startsWith('http') ? location : new URL(location, currentUrl).toString();
+
+        // Re-validate every redirect hop to prevent redirect-based SSRF
+        try { assertSafeUrl(nextUrl); } catch {
+          console.log(`[mediaProxy] Blocked unsafe redirect to ${nextUrl}`);
+          break;
+        }
 
         // Break out of loops — if we've already seen this URL, stop
         if (redirectChain.includes(nextUrl)) {
