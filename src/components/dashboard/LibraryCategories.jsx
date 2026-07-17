@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Film, Tv2, Baby, Clock, PlayCircle, Sparkles, Loader2, Clapperboard, MonitorPlay, Trophy, BookOpen, Library } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { scanState, runScan } from '@/lib/embyScanState';
+import { scanState, runScan, ensureCurrentServer } from '@/lib/embyScanState';
 import { loadCounts, saveCounts } from '@/lib/embyCountsCache';
 
 
@@ -78,6 +78,7 @@ export default function LibraryCategories({ allMedia = [] }) {
     const listener = (state) => setEmbyScan({ ...state });
     scanState.listeners.add(listener);
     setEmbyScan({ ...scanState });
+    ensureCurrentServer(); // wipe + re-scan if the active Emby server changed
     runScan(); // no-op if already running/done
     return () => scanState.listeners.delete(listener);
   }, []);

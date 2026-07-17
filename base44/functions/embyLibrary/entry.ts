@@ -22,13 +22,14 @@ let _serverCache = null;
 let _serverCacheAt = 0;
 const SERVER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-async function getEmbyServer(base44) {
+async function getEmbyServer(base44, serverId) {
   const now = Date.now();
-  if (_serverCache && (now - _serverCacheAt) < SERVER_CACHE_TTL) return _serverCache;
-  const servers = await withRetry(() => base44.entities.MediaServer.list());
-  const server = servers.find(s => s.server_type === 'emby' && s.is_active !== false) || null;
-  _serverCache = server;
-  _serverCacheAt = now;
+  if (!serverId && _serverCache && (now - _serverCacheAt) < SERVER_CACHE_TTL) return _serverCache;
+  const servers = await withRetry(() => base44.entities.MediaServer.list('-created_date'));
+  const embyServers = servers.filter(s => s.server_type === 'emby' && s.is_active !== false);
+  // Prefer an explicitly requested server; otherwise the most recently added Emby.
+  const server = (serverId && embyServers.find(s => s.id === serverId)) || embyServers[0] || null;
+  if (!serverId) { _serverCache = server; _serverCacheAt = now; }
   return server;
 }
 
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
     // years filter — comma-separated list of years (e.g. for a decade)
     const yearsFilter = (body.years || '').trim();
 
-    const server = await getEmbyServer(base44);
+    const server = await getEmbyServer(base44, body.serverId);
     if (!server) return Response.json({ error: 'No active Emby server found' }, { status: 404 });
 
     const base = server.server_url.replace(/\/$/, '');

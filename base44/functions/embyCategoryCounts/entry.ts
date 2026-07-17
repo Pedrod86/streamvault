@@ -61,8 +61,11 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const servers = await base44.entities.MediaServer.list();
-    const server = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+    const body = await req.json().catch(() => ({}));
+    const servers = await base44.entities.MediaServer.list('-created_date');
+    const embyServers = servers.filter(s => s.server_type === 'emby' && s.is_active !== false);
+    // Prefer an explicitly requested server; otherwise the most recently added Emby.
+    const server = (body.serverId && embyServers.find(s => s.id === body.serverId)) || embyServers[0];
     if (!server) return Response.json({ error: 'No active Emby server found' }, { status: 404 });
 
     const base = server.server_url.replace(/\/$/, '');

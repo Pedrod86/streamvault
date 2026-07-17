@@ -175,6 +175,21 @@ export async function runScan() {
   fetchPage();
 }
 
+// If the active Emby server changed since the last scan, wipe the cache so the
+// library re-scans against the newly-imported server.
+export async function ensureCurrentServer() {
+  try {
+    const servers = await base44.entities.MediaServer.list('-created_date');
+    const current = servers.find(s => s.server_type === 'emby' && s.is_active !== false);
+    if (!current) return;
+    const cachedId = scanState.server?.id;
+    if (cachedId && cachedId !== current.id) {
+      resetScan();
+      runScan();
+    }
+  } catch (_) {}
+}
+
 // ── Full refresh (clears cache + restarts scan) ──────────────────────────────
 
 export function resetScan() {
