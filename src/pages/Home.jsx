@@ -7,6 +7,7 @@ import LibraryCategories from '../components/dashboard/LibraryCategories';
 import ServerStatusStrip from '../components/dashboard/ServerStatusStrip';
 import ServerSection from '../components/media/ServerSection';
 import EmbyLibraryViews from '../components/media/EmbyLibraryViews';
+import EmbyGenreRows from '../components/media/EmbyGenreRows';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
 import EmbyRecentlyAdded from '../components/media/EmbyRecentlyAdded';
 import JellyfinRecentlyAdded from '../components/media/JellyfinRecentlyAdded';
@@ -87,6 +88,7 @@ export default function Home() {
             <EmbyContinueWatching serverId={server.id} />
             <EmbyRecentlyAdded serverId={server.id} />
             {idx === 0 && <KidsTvRow />}
+            <EmbyGenreRows serverId={server.id} />
             <EmbyLibraryViews serverId={server.id} />
           </ServerSection>
         ))}
