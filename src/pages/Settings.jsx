@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import VideoAudioSection from '@/components/settings/VideoAudioSection';
+import StorageUsageSection from '@/components/settings/StorageUsageSection';
 import { THEMES, applyTheme } from '@/lib/themes';
 
 const INTERVALS = [
@@ -525,6 +526,9 @@ export default function Settings() {
 
       {/* ── Video & Audio ── */}
       <VideoAudioSection />
+
+      {/* ── Storage Usage ── */}
+      <StorageUsageSection />
 
       {/* ── Server Sync (Auto + Force) ── */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="space-y-4 p-5 rounded-xl bg-card border border-border">
