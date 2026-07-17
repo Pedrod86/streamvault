@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import HeroBanner from '../components/media/HeroBanner';
 import PullToRefresh from '../components/layout/PullToRefresh';
 import LibraryCategories from '../components/dashboard/LibraryCategories';
+import ServerStatusStrip from '../components/dashboard/ServerStatusStrip';
 import ServerSection from '../components/media/ServerSection';
 import EmbyLibraryViews from '../components/media/EmbyLibraryViews';
 import EmbyContinueWatching from '../components/media/EmbyContinueWatching';
@@ -95,6 +96,8 @@ export default function Home() {
           </button>
         ))}
       </div>
+
+      <ServerStatusStrip />
 
       <LibraryCategories />
 
