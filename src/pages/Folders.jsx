@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Folder, FolderPlus, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Folder, FolderPlus, Plus, Trash2, Loader2, Sparkles, ChevronRight } from 'lucide-react';
 
 export default function Folders() {
   const queryClient = useQueryClient();
@@ -49,6 +49,20 @@ export default function Folders() {
           </Button>
         )}
       </div>
+
+      <button
+        onClick={() => navigate('/recommendations')}
+        className="w-full mb-6 flex items-center gap-4 p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors text-left"
+      >
+        <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+          <Sparkles className="w-5 h-5 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-heading font-semibold text-foreground">For You</p>
+          <p className="text-xs text-muted-foreground mt-0.5">AI picks based on your Watchlist &amp; history</p>
+        </div>
+        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+      </button>
 
       {creating && (
         <div className="flex gap-2 mb-6">
