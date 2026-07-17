@@ -16,31 +16,45 @@ export default function TrailerPlayer({ media, onClose, startAt = 0, onProgress 
       return;
     }
 
-    // Otherwise look up a YouTube trailer via AI web search
+    // Otherwise fetch the official trailer from TMDB (search → details → videos)
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    base44.integrations.Core.InvokeLLM({
-      prompt: `Find the official YouTube trailer for "${media.title}" (${media.year || ''}) ${media.media_type === 'tv_show' ? 'TV show' : 'movie'}.
-Return ONLY a JSON object with a single field "youtube_id" containing the 11-character YouTube video ID.
-If you cannot find one, set youtube_id to null.`,
-      add_context_from_internet: true,
-      response_json_schema: {
-        type: 'object',
-        properties: { youtube_id: { type: ['string', 'null'] } }
+    const tmdbType = media.media_type === 'tv_show' ? 'tv' : 'movie';
+
+    (async () => {
+      try {
+        const searchRes = await base44.functions.invoke('tmdbLookup', {
+          action: 'search',
+          query: media.title,
+          media_type: tmdbType,
+        });
+        const results = searchRes.data?.results || [];
+        const match =
+          (media.year && results.find(r => String(r.year) === String(media.year))) ||
+          results.find(r => r.media_type === tmdbType) ||
+          results[0];
+        if (!match?.tmdb_id) throw new Error('not found');
+
+        const detailsRes = await base44.functions.invoke('tmdbLookup', {
+          action: 'details',
+          tmdb_id: match.tmdb_id,
+          media_type: match.media_type === 'tv' ? 'tv' : 'movie',
+        });
+        const trailers = detailsRes.data?.trailers || [];
+        const key = trailers.map(t => t.key || (t.url || '').match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/)?.[1]).find(Boolean);
+        if (cancelled) return;
+        if (key) {
+          setTrailerUrl({ type: 'youtube', id: key });
+        } else {
+          setError('No trailer found for this title.');
+        }
+        setLoading(false);
+      } catch (e) {
+        if (!cancelled) { setError('No trailer found for this title.'); setLoading(false); }
       }
-    }).then(res => {
-      if (cancelled) return;
-      if (res?.youtube_id) {
-        setTrailerUrl({ type: 'youtube', id: res.youtube_id });
-      } else {
-        setError('No trailer found for this title.');
-      }
-      setLoading(false);
-    }).catch(() => {
-      if (!cancelled) { setError('Could not load trailer.'); setLoading(false); }
-    });
+    })();
 
     return () => { cancelled = true; };
   }, [media]);
@@ -90,7 +104,7 @@ If you cannot find one, set youtube_id to null.`,
 
         <p className="text-center text-xs text-muted-foreground mt-3">
           {media.title}{media.year ? ` (${media.year})` : ''}
-          {trailerUrl?.type === 'youtube' ? ' — Official Trailer via YouTube' : ''}
+          {trailerUrl?.type === 'youtube' ? ' — Official Trailer' : ''}
         </p>
       </div>
     </div>
