@@ -63,16 +63,6 @@ export const tmdb = {
     invoke('tmdbLookup', { action: 'recommendations', tmdb_id, media_type }),
 };
 
-// ── Fanart.tv ─────────────────────────────────────────────────────────────────
-
-export const fanart = {
-  movie: (tmdb_id) =>
-    invoke('fanartLookup', { tmdb_id, media_type: 'movie' }, ARTWORK_TTL),
-
-  tv: (tmdb_id, tvdb_id) =>
-    invoke('fanartLookup', { tmdb_id, tvdb_id, media_type: 'tv' }, ARTWORK_TTL),
-};
-
 // ── TVmaze ────────────────────────────────────────────────────────────────────
 
 export const tvmaze = {

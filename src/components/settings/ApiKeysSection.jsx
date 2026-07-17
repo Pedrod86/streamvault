@@ -47,14 +47,6 @@ const API_SERVICES = [
     placeholder: 'Enter your Trakt client ID',
     docsUrl: 'https://trakt.tv/oauth/applications',
   },
-  {
-    id: 'fanart',
-    label: 'Fanart.tv',
-    description: 'High-quality fan art and artwork for media.',
-    settingsKey: 'api_key_fanart',
-    placeholder: 'Enter your Fanart.tv API key',
-    docsUrl: 'https://fanart.tv/get-an-api-key/',
-  },
 ];
 
 function ApiKeyRow({ service, currentValue, onSave }) {

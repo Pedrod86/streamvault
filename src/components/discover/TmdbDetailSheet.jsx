@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { tmdb, fanart } from '@/lib/metadataService';
+import { tmdb } from '@/lib/metadataService';
 import { X, Star, Clock, Calendar, ExternalLink, Loader2, Tv2, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TmdbWatchActions from './TmdbWatchActions';
@@ -34,18 +34,10 @@ export default function TmdbDetailSheet({ item, onClose }) {
     enabled: !!item?.tmdb_id,
   });
 
-  const { data: fanartData } = useQuery({
-    queryKey: ['fanart', item?.tmdb_id, type],
-    queryFn: () => type === 'movie' ? fanart.movie(item.tmdb_id) : fanart.tv(item.tmdb_id),
-    staleTime: 24 * 60 * 60 * 1000,
-    enabled: !!item?.tmdb_id,
-  });
-
   if (!item) return null;
 
   const backdrop = details?.backdrop || item.backdrop;
   const poster = details?.poster || item.poster;
-  const clearLogo = fanartData?.clearlogos?.[0]?.url;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
@@ -71,11 +63,7 @@ export default function TmdbDetailSheet({ item, onClose }) {
         <div className="px-4 pb-6 space-y-4">
           {/* Title */}
           <div className="pl-24 sm:pl-28 -mt-2 min-h-[52px]">
-            {clearLogo ? (
-              <img src={clearLogo} alt={details?.title || item.title} className="max-h-10 max-w-[200px] object-contain" />
-            ) : (
-              <h2 className="font-heading font-bold text-lg text-foreground leading-tight">{details?.title || item.title}</h2>
-            )}
+            <h2 className="font-heading font-bold text-lg text-foreground leading-tight">{details?.title || item.title}</h2>
           </div>
 
           {isLoading && (
@@ -139,29 +127,6 @@ export default function TmdbDetailSheet({ item, onClose }) {
                   <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                     {details.cast.map((c, i) => <CastAvatar key={i} member={c} />)}
                   </div>
-                </div>
-              )}
-
-              {/* Season posters from Fanart */}
-              {fanartData?.season_posters?.length > 0 && (
-                <div>
-                  <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">Season Art</h3>
-                  <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                    {fanartData.season_posters.filter(s => s.season !== '0').slice(0, 8).map((s, i) => (
-                      <div key={i} className="shrink-0 w-16 text-center">
-                        <img src={s.url} alt={`Season ${s.season}`} className="w-16 h-24 object-cover rounded-lg" />
-                        <p className="text-[10px] text-muted-foreground mt-1">S{s.season}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Disc art from Fanart */}
-              {fanartData?.disc_art?.[0]?.url && (
-                <div>
-                  <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">Disc Art</h3>
-                  <img src={fanartData.disc_art[0].url} alt="Disc" className="w-32 h-32 object-contain mx-auto opacity-80" />
                 </div>
               )}
 

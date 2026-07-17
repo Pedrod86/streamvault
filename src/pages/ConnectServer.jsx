@@ -10,6 +10,7 @@ import { ArrowLeft, Loader2, Server, Key, User, Globe, CheckCircle2, ExternalLin
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SyncServerButton from '@/components/server/SyncServerButton';
+import FullSyncButton from '@/components/server/FullSyncButton';
 import ServerHealthBadge from '@/components/server/ServerHealthBadge';
 import XtreamForm, { XTREAM } from '@/components/server/XtreamForm';
 import IptvConnectionTester from '@/components/server/IptvConnectionTester';
@@ -281,6 +282,7 @@ function ServerCard({ srv, allMeta, onDelete, deleting }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {!isTrakt && <SyncServerButton server={srv} />}
+        {!isTrakt && <FullSyncButton server={srv} />}
 
         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={onDelete} disabled={deleting}>
           <Trash2 className="w-4 h-4" />
