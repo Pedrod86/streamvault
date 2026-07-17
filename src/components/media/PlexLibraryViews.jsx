@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Play, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import WatchlistButton from './WatchlistButton';
 
 function PlexCard({ item, onPlay }) {
   return (
@@ -38,6 +39,7 @@ function PlexCard({ item, onPlay }) {
             {item.type === 'Series' ? 'TV' : 'Movie'}
           </Badge>
         </div>
+        <WatchlistButton mediaId={`plex:${item.id}`} title={item.title} />
       </div>
       <p className="text-xs text-foreground font-medium truncate leading-tight">{item.title}</p>
       {item.year && <p className="text-[10px] text-muted-foreground mt-0.5">{item.year}</p>}

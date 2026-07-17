@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Play, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import WatchlistButton from './WatchlistButton';
 
 function EmbyCard({ item, onPlay }) {
   return (
@@ -37,6 +38,7 @@ function EmbyCard({ item, onPlay }) {
             4K
           </div>
         )}
+        <WatchlistButton mediaId={`emby:${item.id}`} title={item.title} />
       </div>
       <p className="text-xs text-foreground font-medium truncate leading-tight">{item.title}</p>
       {item.year && <p className="text-[10px] text-muted-foreground mt-0.5">{item.year}</p>}
