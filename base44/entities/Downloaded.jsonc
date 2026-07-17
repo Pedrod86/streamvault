@@ -1,0 +1,49 @@
+{
+  "name": "Downloaded",
+  "type": "object",
+  "properties": {
+    "media_key": {
+      "type": "string",
+      "description": "Identifier of the downloaded item \u2014 a Media id, an emby:/jellyfin:/plex: prefixed id, or emby episode id"
+    },
+    "title": {
+      "type": "string",
+      "description": "Display title of the downloaded item"
+    },
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "movie",
+        "tv_show",
+        "episode"
+      ],
+      "description": "What kind of item was downloaded"
+    },
+    "poster_url": {
+      "type": "string",
+      "description": "Optional poster/thumbnail for the downloaded item"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this download",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "media_key"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

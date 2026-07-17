@@ -3,9 +3,13 @@ import { Link } from 'react-router-dom';
 import { Star, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 import MediaContextMenu from './MediaContextMenu';
+import DownloadedBadge from './DownloadedBadge';
+import { useDownloads } from '@/hooks/useDownloads';
 
 export default function MediaCard({ media, showProgress, progress, disableNavigation }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { downloadedKeys } = useDownloads();
+  const isDownloaded = downloadedKeys.has(media.id) || downloadedKeys.has(`emby:${media.id}`);
   const longPressTimer = useRef(null);
   const longPressFired = useRef(false);
 
@@ -103,10 +107,11 @@ export default function MediaCard({ media, showProgress, progress, disableNaviga
           )}
 
           {/* Type badge */}
-          <div className="absolute top-2 left-2">
+          <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider bg-primary/80 backdrop-blur-sm text-primary-foreground px-1.5 py-0.5 rounded">
               {media.media_type === 'tv_show' ? 'Series' : 'Movie'}
             </span>
+            {isDownloaded && <DownloadedBadge />}
           </div>
 
           {/* Progress bar + time remaining */}

@@ -644,7 +644,16 @@ export default function MediaDetail() {
               >
                 <FolderPlus className="w-4 h-4" /> Collections
               </Button>
-              <DownloadButton url={downloadUrl} filename={downloadName} />
+              <DownloadButton
+                url={downloadUrl}
+                filename={downloadName}
+                item={{
+                  media_key: historyKey,
+                  title: activeMedia.title,
+                  media_type: activeMedia.media_type,
+                  poster_url: activeMedia.poster_url,
+                }}
+              />
             </div>
             <AddToCollectionDialog mediaId={historyKey} open={showCollections} onOpenChange={setShowCollections} />
 

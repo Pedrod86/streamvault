@@ -2,18 +2,28 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { useDownloads } from '@/hooks/useDownloads';
 
 /**
  * Per-item download button. Given a direct file URL, it triggers the browser's
- * native "save as / choose location" dialog so the user picks where to save it.
+ * native "save as / choose location" dialog so the user picks where to save it,
+ * then records the item as downloaded so a status indicator can show it's ready
+ * for offline viewing.
  *
  * Falls back to opening the URL in a new tab if a programmatic download is
  * blocked (e.g. cross-origin without CORS on some devices).
  */
-export default function DownloadButton({ url, filename, className = '' }) {
+export default function DownloadButton({ url, filename, item, className = '' }) {
   const [status, setStatus] = useState('idle'); // idle | working | done
+  const { downloadedKeys, markDownloaded } = useDownloads();
 
   if (!url) return null;
+
+  const alreadyDownloaded = item?.media_key && downloadedKeys.has(item.media_key);
+
+  const recordDownload = () => {
+    if (item?.media_key) markDownloaded.mutate(item);
+  };
 
   const handleDownload = async () => {
     if (status === 'working') return;
@@ -32,6 +42,7 @@ export default function DownloadButton({ url, filename, className = '' }) {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+      recordDownload();
       setStatus('done');
       setTimeout(() => setStatus('idle'), 2500);
     } catch (_) {
@@ -46,6 +57,7 @@ export default function DownloadButton({ url, filename, className = '' }) {
         document.body.appendChild(a);
         a.click();
         a.remove();
+        recordDownload();
         setStatus('idle');
       } catch (e) {
         toast.error('Could not start the download for this title.');
@@ -63,8 +75,8 @@ export default function DownloadButton({ url, filename, className = '' }) {
     >
       {status === 'working' ? (
         <><Loader2 className="w-4 h-4 animate-spin" /> Preparing…</>
-      ) : status === 'done' ? (
-        <><Check className="w-4 h-4 text-green-400" /> Saved</>
+      ) : status === 'done' || alreadyDownloaded ? (
+        <><Check className="w-4 h-4 text-green-400" /> {alreadyDownloaded ? 'Downloaded' : 'Saved'}</>
       ) : (
         <><Download className="w-4 h-4" /> Download</>
       )}

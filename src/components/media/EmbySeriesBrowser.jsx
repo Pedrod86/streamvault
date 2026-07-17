@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { X, Play, ChevronRight, Loader2, Tv, Clock, CheckCircle2 } from 'lucide-react';
+import { X, Play, ChevronRight, Loader2, Tv, Clock, CheckCircle2, Download } from 'lucide-react';
 import ExoPlayer from './ExoPlayer';
 import QualityBadge from './QualityBadge';
+import DownloadedBadge from './DownloadedBadge';
+import { useDownloads } from '@/hooks/useDownloads';
 
 export default function EmbySeriesBrowser({ item, server, onClose }) {
   const [seasons, setSeasons] = useState([]);
@@ -11,6 +13,35 @@ export default function EmbySeriesBrowser({ item, server, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [playingEpisode, setPlayingEpisode] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const { downloadedKeys, markDownloaded } = useDownloads();
+
+  const downloadEpisode = async (ep, e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (downloadingId) return;
+    const base = server?.server_url?.replace(/\/$/, '');
+    const token = server?.api_token;
+    const url = `${base}/Videos/${ep.id}/stream?api_key=${token}&Static=true`;
+    const key = `emby:${ep.id}`;
+    setDownloadingId(ep.id);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `${item.title} - ${ep.name || 'Episode'}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+    } catch (_) {
+      window.open(url, '_blank');
+    }
+    markDownloaded.mutate({ media_key: key, title: `${item.title} — ${ep.name || 'Episode'}`, media_type: 'episode', poster_url: ep.thumbUrl });
+    setDownloadingId(null);
+  };
 
   // Resolve the real Emby server ID from multiple possible sources.
   // MediaDetail passes the resolved id as `item.id`, so check that first.
@@ -172,12 +203,21 @@ export default function EmbySeriesBrowser({ item, server, onClose }) {
                           <Clock className="w-2.5 h-2.5" /> {ep.remainingMinutes}m left
                         </span>
                       ) : null}
+                      {downloadedKeys.has(`emby:${ep.id}`) && <DownloadedBadge variant="inline" />}
                     </div>
                     <p className="text-sm font-medium text-foreground truncate">{ep.name}</p>
                     {ep.overview && (
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{ep.overview}</p>
                     )}
                   </div>
+                  <button
+                    onClick={(e) => downloadEpisode(ep, e)}
+                    disabled={downloadingId === ep.id}
+                    title={downloadedKeys.has(`emby:${ep.id}`) ? 'Downloaded — ready offline' : 'Download for offline'}
+                    className={`shrink-0 p-2 rounded-lg transition-colors ${downloadedKeys.has(`emby:${ep.id}`) ? 'text-green-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+                  >
+                    {downloadingId === ep.id ? <Loader2 className="w-4 h-4 animate-spin" /> : downloadedKeys.has(`emby:${ep.id}`) ? <CheckCircle2 className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                  </button>
                   <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </button>
               ))
