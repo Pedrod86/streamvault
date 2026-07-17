@@ -13,6 +13,7 @@ import EmbySeriesBrowser from '@/components/media/EmbySeriesBrowser';
 import AddToCollectionDialog from '../components/media/AddToCollectionDialog';
 import WatchProgressControls from '@/components/media/WatchProgressControls';
 import TmdbCastInfo from '../components/media/TmdbCastInfo';
+import TvdbInfo from '../components/media/TvdbInfo';
 import PlaySourcePicker from '../components/media/PlaySourcePicker';
 import PlexSeriesBrowser from '@/components/media/PlexSeriesBrowser';
 import MediaInfoPanel from '../components/media/MediaInfoPanel';
@@ -715,6 +716,13 @@ export default function MediaDetail() {
                 </div>
               )}
             </div>
+
+            {/* TVDB metadata — auto-loaded inline */}
+            <TvdbInfo
+              title={activeMedia.title}
+              year={activeMedia.year}
+              mediaType={activeMedia.media_type}
+            />
 
             {/* Rich cast & crew from TMDB */}
             <TmdbCastInfo
