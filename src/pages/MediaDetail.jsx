@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, BookmarkPlus, BookmarkCheck, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Subtitles, ChevronDown } from 'lucide-react';
+import { Play, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Subtitles, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
@@ -81,11 +81,6 @@ export default function MediaDetail() {
   });
 
   const historyEntry = watchHistory.find(h => h.media_id === historyKey && !h.completed && h.progress_seconds > 30);
-
-  const { data: watchlist = [] } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: () => base44.entities.Watchlist.list(),
-  });
 
   const { data: allMedia = [] } = useQuery({
     queryKey: ['media'],
@@ -216,44 +211,6 @@ export default function MediaDetail() {
       })
       .catch(() => {});
   }, [embyItem?.id, embyServer?.id]);
-
-  const isInWatchlist = watchlist.some(w => w.media_id === historyKey);
-
-  const addToWatchlist = useMutation({
-    mutationFn: () => base44.entities.Watchlist.create({ media_id: historyKey }),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['watchlist'] });
-      const prev = queryClient.getQueryData(['watchlist']);
-      queryClient.setQueryData(['watchlist'], (old = []) => [
-        ...old,
-        { id: '__optimistic__', media_id: historyKey },
-      ]);
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(['watchlist'], ctx.prev);
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
-  });
-
-  const removeFromWatchlist = useMutation({
-    mutationFn: async () => {
-      const item = watchlist.find(w => w.media_id === historyKey);
-      if (item) await base44.entities.Watchlist.delete(item.id);
-    },
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['watchlist'] });
-      const prev = queryClient.getQueryData(['watchlist']);
-      queryClient.setQueryData(['watchlist'], (old = []) =>
-        old.filter(w => w.media_id !== historyKey)
-      );
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(['watchlist'], ctx.prev);
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
-  });
 
   const resolveSource = (chosen) => {
     if (chosen === 'jellyfin' && hasJellyfin) return 'jellyfin';
@@ -663,17 +620,6 @@ export default function MediaDetail() {
                   onPlay={(chosen) => { setPlayerSource(resolveSource(chosen)); setStartAt(0); setShowPlayer(true); }}
                 />
               )}
-              <Button
-                variant="outline"
-                className="border-border text-foreground hover:bg-secondary gap-2 h-11 px-5 rounded-xl select-none"
-                onClick={() => isInWatchlist ? removeFromWatchlist.mutate() : addToWatchlist.mutate()}
-              >
-                {isInWatchlist ? (
-                  <><BookmarkCheck className="w-4 h-4 text-primary" /> In My List</>
-                ) : (
-                  <><BookmarkPlus className="w-4 h-4" /> Add to List</>
-                )}
-              </Button>
               <Button
                 variant="outline"
                 className="border-border text-foreground hover:bg-secondary gap-2 h-11 px-5 rounded-xl select-none"

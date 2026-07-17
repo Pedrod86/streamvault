@@ -16,7 +16,6 @@ import Dashboard from './pages/Dashboard';
 import Movies from './pages/Movies';
 import Shows from './pages/Shows';
 import MediaDetail from './pages/MediaDetail';
-import WatchlistPage from './pages/WatchlistPage';
 import SearchPage from './pages/SearchPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -91,7 +90,6 @@ const AuthenticatedApp = () => {
           <Route path="/movies" element={<Movies />} />
           <Route path="/shows" element={<Shows />} />
           <Route path="/media/:id" element={<MediaDetail />} />
-          <Route path="/watchlist" element={<WatchlistPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/connect-server" element={<ConnectServer />} />
           <Route path="/ConnectServer" element={<ConnectServer />} />

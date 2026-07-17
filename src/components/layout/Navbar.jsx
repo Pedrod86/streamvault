@@ -27,7 +27,6 @@ export default function Navbar() {
     { to: '/', label: 'Home', icon: Home },
     { to: '/emby', label: 'Library', icon: Database },
     { to: '/iptv', label: 'IPTV', icon: Radio },
-    { to: '/watchlist', label: 'My List', icon: BookmarkPlus },
     { to: '/folders', label: 'Folders', icon: Folder },
     { to: '/libraries', label: 'Libraries', icon: Library },
     { to: '/audiobooks', label: 'Audiobooks', icon: BookOpen },
