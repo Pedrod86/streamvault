@@ -670,6 +670,13 @@ export default function Settings() {
               <p className="text-[11px] text-muted-foreground">Your viewing history</p>
             </div>
           </Link>
+          <Link to="/recommendations" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <Sparkles className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">For You</p>
+              <p className="text-[11px] text-muted-foreground">AI picks from your Watchlist</p>
+            </div>
+          </Link>
           <Link to="/about" className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
             <Info className="w-5 h-5 text-accent shrink-0" />
             <div>
