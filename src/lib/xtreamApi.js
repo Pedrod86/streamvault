@@ -8,10 +8,10 @@
 import { base44 } from '@/api/base44Client';
 
 async function xtreamGet(server, action, extra = '') {
+  // Credentials are looked up server-side from the user's own MediaServer record —
+  // we only pass the server id so secrets never travel in the request body.
   const res = await base44.functions.invoke('xtreamProxy', {
-    server_url: server.server_url,
-    username: server.username,
-    password: server.password,
+    serverId: server.id,
     action,
     extra,
   });

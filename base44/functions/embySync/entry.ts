@@ -26,6 +26,11 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await withRetry(() => base44.auth.me());
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    // Syncing writes to the shared Media catalogue and triggers privileged
+    // (asServiceRole) Discord alerts — restrict to admins only.
+    if (user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden — admin role required' }, { status: 403 });
+    }
 
     const body = await req.json();
     const server = body.server;

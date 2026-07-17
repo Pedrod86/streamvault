@@ -12,6 +12,10 @@ Deno.serve(async (req) => {
 
     // ── Save a book to the library ───────────────────────────────────────────
     if (action === 'save' && bookId) {
+      // Writing to the shared Media catalogue is an admin-only operation.
+      if (user.role !== 'admin') {
+        return Response.json({ error: 'Forbidden — admin role required' }, { status: 403 });
+      }
       const { title, author, coverUrl, description, year, genres, streamUrl, chapters } = body;
 
       // Check not already saved
