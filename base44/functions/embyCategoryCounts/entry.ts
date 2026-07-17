@@ -90,6 +90,7 @@ Deno.serve(async (req) => {
     return Response.json({
       movies, shows, kids, anime, sports,
       fourkMovies, fourkShows,
+      total: movies + shows,
       server: { id: server.id, server_name: server.server_name },
     });
   } catch (error) {

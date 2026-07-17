@@ -110,6 +110,7 @@ export default function LibraryCategories({ allMedia = [] }) {
   // Prefer the real Emby totals; fall back to scanned counts when unavailable.
   const embyMovies = liveTotals?.movies ?? counts.movies;
   const embyShows = liveTotals?.shows ?? counts.shows;
+  const embyEverything = liveTotals?.total ?? (counts.movies + counts.shows);
   const embyKids = liveTotals?.kids ?? counts.kids;
   const embyAnime = liveTotals?.anime ?? counts.anime;
   const embySports = liveTotals?.sports ?? counts.sports;
@@ -134,6 +135,17 @@ export default function LibraryCategories({ allMedia = [] }) {
   const embyBorder = 'border-[#e5a00d]/25';
 
   const categories = [
+    {
+      key: 'emby-everything',
+      label: 'Everything',
+      icon: Library,
+      color: embyColor,
+      bg: embyBg,
+      border: embyBorder,
+      href: '/emby',
+      value: embyLoading ? '…' : embyEverything.toLocaleString(),
+      syncing: embySyncing,
+    },
     {
       key: 'emby-movies',
       label: 'Emby Movies',
