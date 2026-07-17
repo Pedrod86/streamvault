@@ -1,10 +1,10 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Clock, Trash2, History } from 'lucide-react';
+import { CheckCircle2, Clock, Trash2, History, Play } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 function ProgressBar({ value }) {
@@ -20,6 +20,7 @@ function ProgressBar({ value }) {
 
 export default function WatchHistory() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: history = [], isLoading: histLoading } = useQuery({
     queryKey: ['watchHistory'],
@@ -121,6 +122,18 @@ export default function WatchHistory() {
                     <ProgressBar value={pct} />
                   )}
                 </div>
+
+                {/* Resume */}
+                {!entry.completed && (
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 shrink-0"
+                    onClick={() => navigate(`/media/${entry.media_id}`)}
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    Resume
+                  </Button>
+                )}
 
                 {/* Delete */}
                 <Button
