@@ -526,12 +526,14 @@ export default function Settings() {
       {/* ── Video & Audio ── */}
       <VideoAudioSection />
 
-      {/* ── Server Auto-Sync ── */}
+      {/* ── Server Sync (Auto + Force) ── */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="space-y-4 p-5 rounded-xl bg-card border border-border">
         <div className="flex items-center gap-2 mb-1">
           <Clock className="w-4 h-4 text-primary" />
-          <h2 className="font-heading font-semibold text-foreground">Auto-Sync Interval</h2>
+          <h2 className="font-heading font-semibold text-foreground">Server Sync</h2>
         </div>
+
+        {/* Auto-Sync Interval */}
         <p className="text-xs text-muted-foreground -mt-2">Automatically sync all media servers in the background.</p>
 
         <div>
@@ -564,13 +566,14 @@ export default function Settings() {
         >
           {savedSync ? <><CheckCircle2 className="w-4 h-4" />Saved!</> : <><Save className="w-4 h-4" />{saveSyncMutation.isPending ? 'Saving…' : 'Save Interval'}</>}
         </Button>
-      </motion.section>
 
-      {/* ── Manual Server Sync ── */}
-      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-4 p-5 rounded-xl bg-card border border-border">
+        {/* Divider */}
+        <div className="border-t border-border pt-4" />
+
+        {/* Force Sync Servers */}
         <div className="flex items-center gap-2 mb-1">
           <Server className="w-4 h-4 text-primary" />
-          <h2 className="font-heading font-semibold text-foreground">Force Sync Servers</h2>
+          <h3 className="font-heading font-semibold text-foreground">Force Sync Servers</h3>
         </div>
         <p className="text-xs text-muted-foreground -mt-2">Manually trigger a full library sync for each connected server.</p>
 
