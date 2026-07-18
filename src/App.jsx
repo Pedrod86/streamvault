@@ -45,6 +45,7 @@ import LibraryDetail from './pages/LibraryDetail';
 import Recommendations from './pages/Recommendations';
 import Anime from './pages/Anime';
 import Downloads from './pages/Downloads';
+import Genres from './pages/Genres';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -117,6 +118,7 @@ const AuthenticatedApp = () => {
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/anime" element={<Anime />} />
           <Route path="/downloads" element={<Downloads />} />
+          <Route path="/genres" element={<Genres />} />
           <Route path="/server-dashboard" element={<ServerDashboard />} />
           <Route path="/ServerDashboard" element={<ServerDashboard />} />
         </Route>
