@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { Search, UserCircle2, ArrowLeft } from 'lucide-react';
-import Navbar from './Navbar';
+import FloatingSidebar from './FloatingSidebar';
 import BottomNav from './BottomNav';
 import TvSidebar from './TvSidebar';
 import PageTransition from './PageTransition';
@@ -15,7 +15,7 @@ import { runScan } from '@/lib/embyScanState';
 import OfflineBanner from './OfflineBanner';
 import { applySavedTheme } from '@/lib/themes';
 
-const ROOT_TABS = new Set(['/', '/emby', '/watchlist', '/search', '/settings', '/discover', '/iptv', '/audiobooks']);
+const ROOT_TABS = new Set(['/', '/emby', '/watchlist', '/search', '/settings', '/discover', '/iptv', '/audiobooks', '/movies', '/shows', '/anime', '/downloads']);
 
 export default function AppLayout() {
   const location = useLocation();
@@ -63,10 +63,8 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background font-body">
       <OfflineBanner />
-      {/* Top navbar — desktop only */}
-      <div className="hidden md:block">
-        <Navbar />
-      </div>
+      {/* Floating sidebar — desktop only */}
+      <FloatingSidebar />
 
       {/* Mobile header — visible only on small screens */}
       <header
@@ -110,7 +108,7 @@ export default function AppLayout() {
 
       {/* Main content */}
       <main
-        className="md:pt-16 md:[padding-bottom:0]"
+        className="md:pt-6 md:pl-24 md:[padding-bottom:0]"
         style={{
           paddingTop: 'calc(52px + env(safe-area-inset-top))',
           paddingBottom: 'calc(env(safe-area-inset-bottom) + 56px)',
