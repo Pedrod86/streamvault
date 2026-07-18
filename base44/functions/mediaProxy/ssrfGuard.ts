@@ -7,12 +7,53 @@
 // record that flips to a private IP between the check and the fetch cannot be
 // used — fetch talks to the IP we vetted, with the original Host/SNI preserved.
 
+// Parse a single IPv4 "part" that may be decimal, octal (0-prefixed) or hex
+// (0x-prefixed) — matching how OS/libc inet_aton (and thus native fetch) decode
+// them. Returns null for anything that isn't a clean numeric literal.
+function parseIpPart(part: string): number | null {
+  if (!/^(0x[0-9a-f]+|\d+)$/i.test(part)) return null;
+  let n: number;
+  if (/^0x/i.test(part)) {
+    n = parseInt(part, 16);
+  } else if (/^0[0-7]+$/.test(part)) {
+    n = parseInt(part, 8);
+  } else if (/^0[0-9]+$/.test(part)) {
+    // Leading zero but non-octal digit (e.g. 08, 09) — ambiguous, reject.
+    return null;
+  } else {
+    n = parseInt(part, 10);
+  }
+  return Number.isFinite(n) ? n : null;
+}
+
+// Robust IPv4 parser: decodes dotted, dword, octal, hex and mixed-radix forms
+// (1–4 parts) into canonical octets, mirroring inet_aton so non-standard
+// representations of loopback/private addresses cannot slip past the blocklist.
 function parseIpv4(host: string): number[] | null {
-  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (!m) return null;
-  const octets = m.slice(1).map(Number);
-  if (octets.some((o) => o < 0 || o > 255)) return null;
-  return octets;
+  if (host.length === 0) return null;
+  const parts = host.split('.');
+  if (parts.length < 1 || parts.length > 4) return null;
+
+  const nums: number[] = [];
+  for (const p of parts) {
+    const n = parseIpPart(p);
+    if (n === null || n < 0) return null;
+    nums.push(n);
+  }
+
+  // The last part fills the remaining low-order bytes (inet_aton semantics):
+  // a.b.c.d -> each 0..255; a.b.c -> c spans 2 bytes; a.b -> b spans 3; a -> 4.
+  const last = nums[nums.length - 1];
+  const leading = nums.slice(0, -1);
+  const remainingBytes = 4 - leading.length;
+  if (leading.some((o) => o > 255)) return null;
+  if (last > Math.pow(256, remainingBytes) - 1) return null;
+
+  const octets: number[] = [...leading];
+  for (let i = remainingBytes - 1; i >= 0; i--) {
+    octets.push((last >>> (i * 8)) & 0xff);
+  }
+  return octets.length === 4 ? octets : null;
 }
 
 function isPrivateIpv4(octets: number[]): boolean {
