@@ -5,7 +5,7 @@ import {
   X, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Settings, PictureInPicture2,
   ChevronLeft, ChevronRight, Wifi, Layers, AudioLines,
-  Subtitles, Info, Gauge, Lock, Unlock, Ratio
+  Subtitles, Info, Gauge, Lock, Unlock, Ratio, Minimize2, SkipForward as NextIcon
 } from 'lucide-react';
 
 // Cycle of video fit modes for the aspect/zoom toggle.
@@ -111,7 +111,7 @@ const HLS_CONFIG = {
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0, introEnd = 0 }) {
+export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0, introEnd = 0, nextEpisode = null, onPlayNext, onMinimize }) {
   const prefs = loadPrefs();
   const skipSecs = parseInt(prefs.skipSeconds || '10', 10);
   const initVol = parseFloat(prefs.defaultVolume || '1');
@@ -122,6 +122,10 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
   const [fitMode, setFitMode] = useState(prefs.fitMode || 'contain');
   // Locked state hides controls and ignores taps (child-safe / accidental-touch guard).
   const [locked, setLocked] = useState(false);
+  // Minimized mini-player: shrinks to a floating corner window that keeps playing.
+  const [minimized, setMinimized] = useState(false);
+  // Next-episode countdown after the video ends (null = not counting).
+  const [nextCountdown, setNextCountdown] = useState(null);
 
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -210,6 +214,21 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
     return () => { v.removeEventListener('enterpictureinpicture', enter); v.removeEventListener('leavepictureinpicture', leave); };
   }, []);
 
+  // ── next-episode countdown ─────────────────────────────────────────────────
+
+  // Tick the countdown down every second; auto-advance at zero.
+  useEffect(() => {
+    if (nextCountdown === null) return;
+    if (nextCountdown <= 0) {
+      onPlayNext?.();
+      return;
+    }
+    const t = setTimeout(() => setNextCountdown(c => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [nextCountdown, onPlayNext]);
+
+  const cancelNext = useCallback(() => setNextCountdown(null), []);
+
   // ── HLS.js setup ──────────────────────────────────────────────────────────
 
   // Reset fallback tracking whenever the caller passes a new source
@@ -217,6 +236,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
     triedHlsFallback.current = false;
     setFatalError(null);
     setActiveSrc(src);
+    setNextCountdown(null);
   }, [src]);
 
   useEffect(() => {
@@ -646,7 +666,11 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-black flex items-center justify-center select-none"
+      className={
+        minimized
+          ? 'fixed z-50 bg-black rounded-xl overflow-hidden shadow-2xl border border-white/15 select-none bottom-20 right-4 md:bottom-4 w-[min(340px,80vw)] aspect-video flex items-center justify-center'
+          : 'fixed inset-0 z-50 bg-black flex items-center justify-center select-none'
+      }
       onMouseMove={resetHideTimer}
     >
       <video
@@ -659,7 +683,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
         onPause={() => { setPlaying(false); saveProgress(false); }}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => { setPlaying(false); setShowControls(true); saveProgress(true); }}
+        onEnded={() => { setPlaying(false); setShowControls(true); saveProgress(true); if (nextEpisode) setNextCountdown(10); }}
         onWaiting={() => setIsBuffering(true)}
         onCanPlay={() => setIsBuffering(false)}
         onPlaying={() => setIsBuffering(false)}
@@ -668,7 +692,67 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
 
       {/* Tap-catch layer — always reliably toggles/reveals controls on touch.
           Sits above the video; the controls overlay (higher in DOM) sits above this. */}
-      <div className="absolute inset-0" onClick={handleVideoTap} />
+      {!minimized && <div className="absolute inset-0" onClick={handleVideoTap} />}
+
+      {/* ── Mini-player compact controls ── */}
+      {minimized && (
+        <div className="absolute inset-0 z-50 flex flex-col justify-between bg-gradient-to-t from-black/70 via-transparent to-black/50">
+          <div className="flex items-center justify-end gap-1 p-1.5">
+            <button
+              onClick={(e) => { e.stopPropagation(); setMinimized(false); }}
+              className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
+              title="Expand"
+            >
+              <Maximize className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); saveProgress(false); onClose(); }}
+              className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-center justify-center pb-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+              className="w-11 h-11 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white hover:bg-white/25"
+            >
+              {playing ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white ml-0.5" />}
+            </button>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+            <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Next Episode countdown card ── */}
+      {nextCountdown !== null && nextEpisode && (
+        <div className="absolute bottom-6 right-6 z-50 w-[min(340px,86vw)] rounded-xl bg-black/90 border border-white/15 shadow-2xl p-4">
+          <p className="text-[11px] uppercase tracking-widest text-white/50 mb-1">Up Next in {nextCountdown}s</p>
+          <div className="flex items-center gap-3">
+            {nextEpisode.thumbUrl && (
+              <img src={nextEpisode.thumbUrl} alt="" className="w-20 h-12 rounded object-cover shrink-0" />
+            )}
+            <p className="text-sm font-semibold text-white line-clamp-2 flex-1">{nextEpisode.name || 'Next Episode'}</p>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <button
+              onClick={(e) => { e.stopPropagation(); onPlayNext?.(); }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90"
+            >
+              <NextIcon className="w-4 h-4 fill-black" /> Play Now
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); cancelNext(); }}
+              className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Always-visible quick pause button (top-left) so users can pause even if
           the controls overlay is mid-fade. */}
@@ -752,7 +836,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
 
       {/* Center control cluster — always visible with the controls overlay.
           Rewind · Play/Pause · Fast-forward, big and impossible to miss on mobile. */}
-      {!isBuffering && !fatalError && !locked && (
+      {!isBuffering && !fatalError && !locked && !minimized && (
         <div
           className={`absolute inset-0 z-40 flex items-center justify-center gap-8 pointer-events-none transition-opacity duration-300 ${showControls || !playing ? 'opacity-100' : 'opacity-0'}`}
         >
@@ -788,7 +872,7 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
 
       {/* Controls overlay */}
       <div
-        className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls && !locked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute inset-0 flex flex-col justify-between transition-opacity duration-300 ${showControls && !locked && !minimized ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-5 pb-10 bg-gradient-to-b from-black/80 to-transparent">
@@ -810,6 +894,13 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
                 <span>{qualityLabel}</span>
               </div>
             )}
+            <button
+              onClick={() => setMinimized(true)}
+              title="Minimize"
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            >
+              <Minimize2 className="w-5 h-5 text-white" />
+            </button>
             <button
               onClick={() => { saveProgress(false); onClose(); }}
               className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
