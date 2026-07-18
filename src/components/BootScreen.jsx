@@ -18,9 +18,9 @@ export default function BootScreen() {
     <div className="fixed inset-0 flex flex-col items-center justify-center gap-5 bg-background px-6 text-center">
       <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
       <p className="text-sm text-muted-foreground">
-        {seconds < 4 ? 'Loading…' : seconds < 8 ? 'Connecting…' : 'Still working — almost there'}
+        {seconds < 3 ? 'Loading…' : seconds < 6 ? 'Connecting…' : 'Still working — almost there'}
       </p>
-      {seconds >= 6 && (
+      {seconds >= 4 && (
         <button
           onClick={() => { window.location.href = '/login'; }}
           className="mt-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground"

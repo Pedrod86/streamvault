@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
       setAuthChecked(true);
-    }, 8000);
+    }, 11000);
 
     return () => clearTimeout(failsafe);
   }, []);
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
 
         // Hard timeout so a stalled request can never block boot past the splash.
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 12000);
+        const timer = setTimeout(() => controller.abort(), 5000);
         let resp;
         try {
           resp = await fetch(settingsUrl, { headers, signal: controller.signal });
@@ -113,7 +113,14 @@ export const AuthProvider = ({ children }) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      // Guard against a hanging me() call — on a slow/offline mobile connection
+      // this could otherwise never resolve and trap the app on the splash.
+      const currentUser = await Promise.race([
+        base44.auth.me(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(Object.assign(new Error('auth timeout'), { isTimeout: true })), 5000)
+        ),
+      ]);
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
