@@ -16,6 +16,7 @@ import JellyfinContinueWatching from '../components/media/JellyfinContinueWatchi
 import JellyfinLibraryViews from '../components/media/JellyfinLibraryViews';
 import PlexLibraryViews from '../components/media/PlexLibraryViews';
 import KidsTvRow from '../components/media/KidsTvRow';
+import HomeCategoryRows from '../components/media/HomeCategoryRows';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
@@ -55,12 +56,12 @@ export default function Home() {
   const hasPlex = servers.some(s => s.server_type === 'plex' && s.is_active !== false);
 
   const featured = (recent?.items || [])
-    .filter(i => i.type === 'Movie')
-    .slice(0, 5)
+    .filter(i => i.backdropUrl || i.posterUrl)
+    .slice(0, 6)
     .map(i => ({
       id: `emby:${i.id}`,
       title: i.title,
-      media_type: 'movie',
+      media_type: i.type === 'Series' ? 'tv_show' : 'movie',
       backdrop_url: i.backdropUrl || i.posterUrl,
       poster_url: i.posterUrl,
       description: i.overview,
@@ -80,6 +81,17 @@ export default function Home() {
 
       <LibraryCategories />
 
+      {/* Continue Watching + Recently Added from the primary Emby server */}
+      {embyServers[0] && (
+        <div className="mt-6 space-y-2">
+          <EmbyContinueWatching serverId={embyServers[0].id} />
+          <EmbyRecentlyAdded serverId={embyServers[0].id} />
+        </div>
+      )}
+
+      {/* Themed rows built from the synced library */}
+      <HomeCategoryRows />
+
       <div className="mt-6 space-y-2">
 
         {embyServers.map((server, idx) => (
@@ -88,8 +100,8 @@ export default function Home() {
             name={server.server_name || (embyServers.length > 1 ? `Emby ${idx + 1}` : 'Emby')}
             accentClass="text-green-500"
           >
-            <EmbyContinueWatching serverId={server.id} />
-            <EmbyRecentlyAdded serverId={server.id} />
+            {idx > 0 && <EmbyContinueWatching serverId={server.id} />}
+            {idx > 0 && <EmbyRecentlyAdded serverId={server.id} />}
             {idx === 0 && <KidsTvRow />}
             <EmbyGenreRows serverId={server.id} />
             <EmbyLibraryViews serverId={server.id} />
