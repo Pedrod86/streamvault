@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { resolveEmbyUserId as resolveCachedUserId } from '../../shared/embyAuth.ts';
 
 async function getEmbyServer(base44, serverId) {
   const servers = await base44.entities.MediaServer.list();
@@ -59,11 +60,11 @@ async function resolveUserId(base, token) {
   throw new Error('Could not authenticate with Emby.');
 }
 
-async function resolveAuth(base, server) {
+async function resolveAuth(base, server, base44) {
   const storedToken = server.api_token;
   if (storedToken) {
     try {
-      const userId = await resolveUserId(base, storedToken);
+      const userId = await resolveCachedUserId(base44, server, base, storedToken);
       return { token: storedToken, userId };
     } catch (_) {}
   }
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
     if (!server) return Response.json({ rows: [] });
 
     const base = server.server_url.replace(/\/$/, '');
-    const { token, userId } = await resolveAuth(base, server);
+    const { token, userId } = await resolveAuth(base, server, base44);
 
     const LIMIT = 20;
 

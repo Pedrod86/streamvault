@@ -37,6 +37,10 @@
       "type": "string",
       "description": "Plex authentication token"
     },
+    "emby_user_id": {
+      "type": "string",
+      "description": "Cached Emby/Jellyfin user id, resolved once and reused to avoid repeatedly hitting the expensive /Users endpoint on every request"
+    },
     "client_id": {
       "type": "string",
       "description": "OAuth client ID (for Trakt)"

@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { resolveEmbyUserId as resolveCachedUserId } from '../../shared/embyAuth.ts';
 
 async function getEmbyServer(base44, serverId) {
   const servers = await base44.entities.MediaServer.list();
@@ -74,11 +75,13 @@ async function resolveUserId(base, token) {
 // Return a working { token, userId } for the server.
 // Tries the stored token first; if that fails and username/password exist,
 // performs a fresh AuthenticateByName login.
-async function resolveAuth(base, server) {
+async function resolveAuth(base, server, base44) {
   const storedToken = server.api_token;
   if (storedToken) {
     try {
-      const userId = await resolveUserId(base, storedToken);
+      // Uses the userId cached on the server record — avoids re-hitting /Users
+      // on every call, which is what floods the Emby server.
+      const userId = await resolveCachedUserId(base44, server, base, storedToken);
       return { token: storedToken, userId };
     } catch (_) { /* fall through to username/password */ }
   }
@@ -103,7 +106,7 @@ Deno.serve(async (req) => {
     if (!server) return Response.json({ items: [] });
 
     const base = server.server_url.replace(/\/$/, '');
-    const { token, userId } = await resolveAuth(base, server);
+    const { token, userId } = await resolveAuth(base, server, base44);
 
     const json = await doFetch(
       `${base}/Users/${userId}/Items/Latest` +
