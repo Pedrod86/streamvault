@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -17,9 +17,21 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const isTV = useTvDevice();
+  // On TV: show the logo splash first, then reveal the login box.
+  const [tvIntroDone, setTvIntroDone] = useState(false);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
   const navigate = useNavigate();
+
+  // TV intro: flash the logo, then reveal the login form and focus email.
+  useEffect(() => {
+    if (!isTV) return;
+    const t = setTimeout(() => {
+      setTvIntroDone(true);
+      setTimeout(() => emailRef.current?.focus(), 100);
+    }, 1600);
+    return () => clearTimeout(t);
+  }, [isTV]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -91,29 +103,42 @@ export default function Login() {
         className="w-full relative flex flex-col items-center justify-center overflow-hidden"
         style={{ minHeight: '100vh', minHeight: '100dvh', overflowY: 'auto', padding: '48px 48px 48px' }}
       >
-        {/* ── Cinematic full-screen background ── */}
-        <div className="absolute inset-0 -z-10">
+        {/* ── Solid dark background (no blur — Android TV WebViews don't support backdrop-filter) ── */}
+        <div className="absolute inset-0 -z-10 bg-background">
           <img
             src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=2400&auto=format&fit=crop"
             alt=""
-            className="w-full h-full object-cover scale-105 animate-[cine-pan_30s_ease-in-out_infinite_alternate]"
+            className="w-full h-full object-cover opacity-30"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20" />
-          <div className="absolute inset-0 bg-background/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-background/70" />
         </div>
 
-        <div className="flex items-center justify-center gap-2 mb-4 shrink-0 animate-logo-flash">
-          <img
-            src="https://media.base44.com/images/public/69fe35055df988e0955e5c11/6a6f0ca7a_generated_image.png"
-            alt="StreamVault"
-            className="w-8 h-8 rounded-lg object-cover ring-1 ring-primary/20"
-          />
-          <span className="font-heading font-bold text-lg text-foreground">StreamVault</span>
-        </div>
-        <div style={{ width: '100%', maxWidth: 460, padding: '24px', boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.08), 0 24px 60px hsl(240 40% 2% / 0.6)' }}
-          className="bg-card/60 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl mx-auto shrink-0">
+        {/* ── Logo splash: flashes up, then disappears to reveal the login box ── */}
+        {!tvIntroDone && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-4 animate-logo-flash">
+              <img
+                src="https://media.base44.com/images/public/69fe35055df988e0955e5c11/6a6f0ca7a_generated_image.png"
+                alt="StreamVault"
+                className="w-24 h-24 rounded-2xl object-cover ring-2 ring-primary/40"
+              />
+              <span className="font-heading font-bold text-3xl text-foreground">StreamVault</span>
+            </div>
+          </div>
+        )}
+
+        {tvIntroDone && (
+        <div style={{ width: '100%', maxWidth: 460, padding: '24px' }}
+          className="bg-card rounded-2xl border border-border shadow-2xl mx-auto shrink-0">
           <div className="text-center mb-5">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <img
+                src="https://media.base44.com/images/public/69fe35055df988e0955e5c11/6a6f0ca7a_generated_image.png"
+                alt="StreamVault"
+                className="w-8 h-8 rounded-lg object-cover ring-1 ring-primary/20"
+              />
+              <span className="font-heading font-bold text-lg text-foreground">StreamVault</span>
+            </div>
             <h1 className="font-heading font-bold text-2xl text-foreground">Sign In</h1>
             <p className="text-muted-foreground text-sm mt-1">Use your remote to navigate</p>
           </div>
@@ -137,10 +162,9 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onInput={(e) => setEmail(e.target.value)}
-                className="bg-secondary border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
+                className="bg-input border-border h-12 text-base px-4 focus:ring-2 focus:ring-primary tv-focusable"
                 tabIndex={1}
                 autoComplete="email"
-                autoFocus
                 required
               />
             </div>
@@ -157,7 +181,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onInput={(e) => setPassword(e.target.value)}
-                  className="bg-secondary border-border h-12 text-base px-4 pr-12 focus:ring-2 focus:ring-primary tv-focusable"
+                  className="bg-input border-border h-12 text-base px-4 pr-12 focus:ring-2 focus:ring-primary tv-focusable"
                   tabIndex={2}
                   autoComplete="current-password"
                   required
@@ -209,6 +233,7 @@ export default function Login() {
             Continue with Google
           </Button>
         </div>
+        )}
       </div>
     );
   }
