@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { SlidersHorizontal } from 'lucide-react';
+import HomeOrderEditor, { loadHomeOrder, saveHomeOrder } from '../components/layout/HomeOrderEditor';
 import HeroBanner from '../components/media/HeroBanner';
 import HomeSearchBar from '../components/media/HomeSearchBar';
 import PullToRefresh from '../components/layout/PullToRefresh';
@@ -22,6 +24,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   const queryClient = useQueryClient();
+
+  const [showOrderEditor, setShowOrderEditor] = useState(false);
+  const [sections, setSections] = useState(() => loadHomeOrder());
+
+  const isVisible = (id) => {
+    const s = sections.find(sec => sec.id === id);
+    return s ? !s.hidden : true;
+  };
+  const orderOf = (id) => {
+    const idx = sections.findIndex(sec => sec.id === id);
+    return idx === -1 ? 999 : idx;
+  };
+
+  const handleOrderChange = (updated) => {
+    setSections(updated);
+    saveHomeOrder(updated);
+  };
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['embyRecentlyAdded'] });
@@ -80,51 +99,98 @@ export default function Home() {
 
       <ServerStatusStrip />
 
+      <div className="flex items-center justify-end px-4 sm:px-6 mt-3">
+        <button
+          onClick={() => setShowOrderEditor(true)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Rearrange
+        </button>
+      </div>
+
       <LibraryCategories />
 
-      {/* Continue Watching + Recently Added from the primary Emby server */}
-      {embyServers[0] && (
-        <div className="mt-6 space-y-2">
-          <EmbyContinueWatching serverId={embyServers[0].id} />
-          <EmbyRecentlyAdded serverId={embyServers[0].id} />
-        </div>
+      {(() => {
+        // The three reorderable top-level blocks, rendered in the saved order.
+        const blocks = [];
+
+        // Continue Watching + Recently Added from the primary Emby server
+        if (embyServers[0] && (isVisible('continue_watching') || isVisible('local_recent'))) {
+          blocks.push({
+            id: 'continue_watching',
+            order: orderOf('continue_watching'),
+            node: (
+              <div key="cw" className="mt-6 space-y-2">
+                {isVisible('continue_watching') && <EmbyContinueWatching serverId={embyServers[0].id} />}
+                {isVisible('local_recent') && <EmbyRecentlyAdded serverId={embyServers[0].id} />}
+              </div>
+            ),
+          });
+        }
+
+        // Themed rows built from the synced library
+        if (isVisible('tmdb_trending') || isVisible('anime') || isVisible('kids') || isVisible('genres') || isVisible('recommendations')) {
+          blocks.push({
+            id: 'tmdb_trending',
+            order: orderOf('tmdb_trending'),
+            node: (
+              <LazyMount key="themed" minHeight={360}>
+                <HomeCategoryRows />
+              </LazyMount>
+            ),
+          });
+        }
+
+        // Per-server library rows
+        if (isVisible('emby_rows')) {
+          blocks.push({
+            id: 'emby_rows',
+            order: orderOf('emby_rows'),
+            node: (
+              <div key="servers" className="mt-6 space-y-2">
+                {embyServers.map((server, idx) => (
+                  <ServerSection
+                    key={server.id}
+                    name={server.server_name || (embyServers.length > 1 ? `Emby ${idx + 1}` : 'Emby')}
+                    accentClass="text-green-500"
+                  >
+                    {idx > 0 && <LazyMount><EmbyContinueWatching serverId={server.id} /></LazyMount>}
+                    {idx > 0 && <LazyMount><EmbyRecentlyAdded serverId={server.id} /></LazyMount>}
+                    {idx === 0 && <LazyMount minHeight={280}><KidsTvRow /></LazyMount>}
+                    <LazyMount minHeight={640}><EmbyGenreRows serverId={server.id} /></LazyMount>
+                    <LazyMount minHeight={640}><EmbyLibraryViews serverId={server.id} /></LazyMount>
+                  </ServerSection>
+                ))}
+
+                {hasJellyfin && (
+                  <ServerSection name="Jellyfin" accentClass="text-purple-500">
+                    <LazyMount><JellyfinContinueWatching /></LazyMount>
+                    <LazyMount><JellyfinRecentlyAdded /></LazyMount>
+                    <LazyMount minHeight={640}><JellyfinLibraryViews /></LazyMount>
+                  </ServerSection>
+                )}
+
+                {hasPlex && (
+                  <ServerSection name="Plex" accentClass="text-yellow-500">
+                    <LazyMount minHeight={640}><PlexLibraryViews /></LazyMount>
+                  </ServerSection>
+                )}
+              </div>
+            ),
+          });
+        }
+
+        return blocks.sort((a, b) => a.order - b.order).map(b => b.node);
+      })()}
+
+      {showOrderEditor && (
+        <HomeOrderEditor
+          sections={sections}
+          onChange={handleOrderChange}
+          onClose={() => setShowOrderEditor(false)}
+        />
       )}
-
-      {/* Themed rows built from the synced library */}
-      <LazyMount minHeight={360}>
-        <HomeCategoryRows />
-      </LazyMount>
-
-      <div className="mt-6 space-y-2">
-
-        {embyServers.map((server, idx) => (
-          <ServerSection
-            key={server.id}
-            name={server.server_name || (embyServers.length > 1 ? `Emby ${idx + 1}` : 'Emby')}
-            accentClass="text-green-500"
-          >
-            {idx > 0 && <LazyMount><EmbyContinueWatching serverId={server.id} /></LazyMount>}
-            {idx > 0 && <LazyMount><EmbyRecentlyAdded serverId={server.id} /></LazyMount>}
-            {idx === 0 && <LazyMount minHeight={280}><KidsTvRow /></LazyMount>}
-            <LazyMount minHeight={640}><EmbyGenreRows serverId={server.id} /></LazyMount>
-            <LazyMount minHeight={640}><EmbyLibraryViews serverId={server.id} /></LazyMount>
-          </ServerSection>
-        ))}
-
-        {hasJellyfin && (
-          <ServerSection name="Jellyfin" accentClass="text-purple-500">
-            <LazyMount><JellyfinContinueWatching /></LazyMount>
-            <LazyMount><JellyfinRecentlyAdded /></LazyMount>
-            <LazyMount minHeight={640}><JellyfinLibraryViews /></LazyMount>
-          </ServerSection>
-        )}
-
-        {hasPlex && (
-          <ServerSection name="Plex" accentClass="text-yellow-500">
-            <LazyMount minHeight={640}><PlexLibraryViews /></LazyMount>
-          </ServerSection>
-        )}
-      </div>
     </div>
     </PullToRefresh>
   );

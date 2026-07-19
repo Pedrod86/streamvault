@@ -129,10 +129,10 @@ export default function LibraryCategories({ allMedia = [] }) {
   const embyTotal = embyScan.library.length;
   const hasEmby = embyTotal > 0 || embySyncing;
 
-  // Plex brand amber/gold for every box
-  const embyColor = 'text-[#e5a00d]';
-  const embyBg = 'bg-[#e5a00d]/10';
-  const embyBorder = 'border-[#e5a00d]/25';
+  // Emby brand green for every box
+  const embyColor = 'text-[#52b54b]';
+  const embyBg = 'bg-[#52b54b]/10';
+  const embyBorder = 'border-[#52b54b]/25';
 
   const categories = [
     {
@@ -148,7 +148,7 @@ export default function LibraryCategories({ allMedia = [] }) {
     },
     {
       key: 'emby-movies',
-      label: 'Emby Movies',
+      label: 'Movies',
       icon: Film,
       color: embyColor,
       bg: embyBg,
@@ -159,7 +159,7 @@ export default function LibraryCategories({ allMedia = [] }) {
     },
     {
       key: 'emby-shows',
-      label: 'Emby TV Shows',
+      label: 'TV Shows',
       icon: Tv2,
       color: embyColor,
       bg: embyBg,
@@ -192,7 +192,7 @@ export default function LibraryCategories({ allMedia = [] }) {
     },
     {
       key: 'kids',
-      label: 'Emby Kids TV',
+      label: 'Kids TV',
       icon: Baby,
       color: embyColor,
       bg: embyBg,
@@ -203,7 +203,7 @@ export default function LibraryCategories({ allMedia = [] }) {
     },
     {
       key: 'anime',
-      label: 'Emby Anime',
+      label: 'Anime',
       icon: Sparkles,
       color: embyColor,
       bg: embyBg,
@@ -260,7 +260,7 @@ export default function LibraryCategories({ allMedia = [] }) {
     <div className="px-4 sm:px-6 mt-6">
       <div className="flex items-center justify-between mb-3">
         <h2 className="flex items-center gap-1.5 font-heading font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-          <Library className="w-4 h-4 text-[#e5a00d]" />
+          <Library className="w-4 h-4 text-[#52b54b]" />
           Library
         </h2>
         <div className="flex items-center gap-2 ml-auto">
