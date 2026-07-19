@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Database, Search, Play, Star, X, RefreshCw, Loader2, Clapperboard, MonitorPlay, Trophy, Sparkles } from 'lucide-react';
@@ -97,9 +98,17 @@ export default function EmbyLibrary() {
   const [playingItem, setPlayingItem] = useState(null);
   const [browsingItem, setBrowsingItem] = useState(null);
 
+  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState(
     () => new URLSearchParams(window.location.search).get('filter') || 'All'
   );
+
+  // Keep the active filter in sync with the ?filter= param so tapping a
+  // category box while already on this page switches the view.
+  useEffect(() => {
+    const param = new URLSearchParams(location.search).get('filter') || 'All';
+    setActiveFilter(param);
+  }, [location.search]);
   const [scanProgress, setScanProgress] = useState({ loading: scanState.loading, done: scanState.done, total: scanState.total, count: scanState.library.length });
 
   // Build a title→embyId lookup from the in-memory scan state
