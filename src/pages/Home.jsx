@@ -109,21 +109,27 @@ export default function Home() {
         </button>
       </div>
 
+      {embyServers[0] && isVisible('continue_watching') && (
+        <div className="mt-4">
+          <EmbyContinueWatching serverId={embyServers[0].id} />
+        </div>
+      )}
+
       <LibraryCategories />
 
       {(() => {
         // The three reorderable top-level blocks, rendered in the saved order.
         const blocks = [];
 
-        // Continue Watching + Recently Added from the primary Emby server
-        if (embyServers[0] && (isVisible('continue_watching') || isVisible('local_recent'))) {
+        // Recently Added from the primary Emby server (Continue Watching now
+        // renders above, directly under the hero as the first library row)
+        if (embyServers[0] && isVisible('local_recent')) {
           blocks.push({
             id: 'continue_watching',
             order: orderOf('continue_watching'),
             node: (
               <div key="cw" className="mt-6 space-y-2">
-                {isVisible('continue_watching') && <EmbyContinueWatching serverId={embyServers[0].id} />}
-                {isVisible('local_recent') && <EmbyRecentlyAdded serverId={embyServers[0].id} />}
+                <EmbyRecentlyAdded serverId={embyServers[0].id} />
               </div>
             ),
           });
