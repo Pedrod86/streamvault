@@ -220,8 +220,10 @@ async function fetchEmbyLibrary(server, onProgress) {
   );
   const totalCount = countJson?.TotalRecordCount || 0;
 
-  // Step 3: fetch all items via proxy with pacing to avoid overloading the server
-  const PAGE = 200;
+  // Step 3: fetch all items via proxy with light pacing.
+  // Larger pages + a short pause = far fewer round-trips and much less
+  // sustained load on Emby, so it stays responsive while syncing quickly.
+  const PAGE = 500;
   let startIndex = 0;
   const allItems = [];
 
@@ -241,7 +243,7 @@ async function fetchEmbyLibrary(server, onProgress) {
     if (onProgress) onProgress(fetched, total);
     if (items.length < PAGE) break;
     startIndex += PAGE;
-    await sleep(800);
+    await sleep(250);
   }
 
   return allItems;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 /**
  * Pings a media server and shows a live health badge.
@@ -32,17 +33,20 @@ export default function ServerHealthBadge({ server }) {
         url = `${base}/System/Info/Public`;
       }
 
-      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Ping through the backend proxy (same path the rest of the app uses).
+      // A direct browser fetch gets blocked by CORS on most Emby servers,
+      // which would falsely report a perfectly healthy server as "offline".
+      const res = await base44.functions.invoke('mediaProxy', { url });
+      if (res.data?.error) throw new Error(res.data.error);
+      if (!res.data?.ok) throw new Error(`HTTP ${res.data?.status || '???'}`);
       setStatus('ok');
     } catch (err) {
       setStatus('error');
-      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      const msg = err?.message || 'Unreachable';
+      if (/timed out|timeout/i.test(msg)) {
         setErrorMsg('Timed out — server unreachable');
-      } else if (err.message === 'Failed to fetch' || err instanceof TypeError) {
-        setErrorMsg('Cannot reach server (CORS or network)');
       } else {
-        setErrorMsg(err.message || 'Unreachable');
+        setErrorMsg(msg);
       }
     }
   };
