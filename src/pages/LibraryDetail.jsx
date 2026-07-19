@@ -30,10 +30,34 @@ export default function LibraryDetail() {
     queryKey: ['userLibraryMedia', mediaIds.join(',')],
     enabled: mediaIds.length > 0,
     queryFn: async () => {
-      const results = await Promise.all(
-        mediaIds.map(id => base44.entities.Media.filter({ id }).then(r => r[0]).catch(() => null))
+      // media_ids can hold local Media ids OR emby:<id> keys (items added
+      // straight from a live Emby detail page that have no local record).
+      const embyIds = mediaIds.filter(id => id.startsWith('emby:')).map(id => id.slice(5));
+      const localIds = mediaIds.filter(id => !id.startsWith('emby:'));
+
+      const localResults = await Promise.all(
+        localIds.map(id => base44.entities.Media.filter({ id }).then(r => r[0]).catch(() => null))
       );
-      return results.filter(Boolean);
+
+      // Resolve emby: keys through the Emby library function, mapping to the
+      // display shape MediaCard expects (id stays emby:<id> so it links right).
+      let embyResults = [];
+      if (embyIds.length > 0) {
+        try {
+          const res = await base44.functions.invoke('embyLibrary', { ids: embyIds, pageSize: embyIds.length });
+          embyResults = (res.data?.items || []).map(it => ({
+            id: `emby:${it.id}`,
+            title: it.title,
+            media_type: it.type === 'Series' ? 'tv_show' : 'movie',
+            poster_url: it.posterUrl,
+            year: it.year,
+            rating: it.rating,
+            genre: it.genres || [],
+          }));
+        } catch (_) { /* skip emby items we can't read */ }
+      }
+
+      return [...localResults.filter(Boolean), ...embyResults];
     },
   });
 
