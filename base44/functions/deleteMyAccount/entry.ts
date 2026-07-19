@@ -27,8 +27,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Finally remove the user record itself.
-    await base44.asServiceRole.entities.User.delete(user.id);
+    // Finally remove the user record itself. The app owner cannot be deleted,
+    // so surface a clear message rather than a generic 500 — their records were
+    // still wiped above.
+    try {
+      await base44.asServiceRole.entities.User.delete(user.id);
+    } catch (delErr) {
+      const msg = delErr?.message || '';
+      if (/owner of the app/i.test(msg)) {
+        return Response.json({
+          error: "You're the app owner, so this account can't be deleted. Your personal data has been cleared instead.",
+        }, { status: 400 });
+      }
+      throw delErr;
+    }
 
     return Response.json({ success: true });
   } catch (error) {
