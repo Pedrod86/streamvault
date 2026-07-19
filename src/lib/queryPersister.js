@@ -7,12 +7,26 @@
 const CACHE_KEY = 'streamvault_query_cache';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// Queries that must NEVER be persisted/restored from localStorage.
+// These are cheap, authoritative database reads. Persisting them means a stale
+// or transiently-empty snapshot can be restored on launch — which is exactly
+// what made connected servers "disappear" until a full refetch succeeded.
+// Always let these load fresh from the database instead.
+const NEVER_PERSIST = ['mediaServers'];
+
+const isPersistable = (queryKey) => {
+  const root = Array.isArray(queryKey) ? queryKey[0] : queryKey;
+  return !NEVER_PERSIST.includes(root);
+};
+
 export function saveQueryCache(queryClient) {
   try {
-    const cache = queryClient.getQueryCache().getAll().map(query => ({
-      queryKey: query.queryKey,
-      state: query.state,
-    }));
+    const cache = queryClient.getQueryCache().getAll()
+      .filter(query => isPersistable(query.queryKey))
+      .map(query => ({
+        queryKey: query.queryKey,
+        state: query.state,
+      }));
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       timestamp: Date.now(),
       cache,
@@ -32,6 +46,7 @@ export function restoreQueryCache(queryClient) {
       return;
     }
     cache.forEach(({ queryKey, state }) => {
+      if (!isPersistable(queryKey)) return;
       if (state?.data !== undefined) {
         // Restore for instant display, but mark as stale (updatedAt: 0) so
         // React Query refetches fresh data in the background on launch.
