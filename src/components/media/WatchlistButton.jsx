@@ -31,11 +31,26 @@ export default function WatchlistButton({ mediaId, title }) {
         await base44.entities.Watchlist.create({ media_id: mediaId });
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      toast.success(inList ? `Removed "${title}" from watchlist` : `Added "${title}" to watchlist`);
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['watchlist'] });
+      const previous = queryClient.getQueryData(['watchlist']);
+      const wasInList = inList;
+      queryClient.setQueryData(['watchlist'], (old = []) => {
+        if (entry) {
+          return old.filter(w => w.id !== entry.id);
+        }
+        return [{ id: `optimistic-${mediaId}`, media_id: mediaId }, ...old];
+      });
+      toast.success(wasInList ? `Removed "${title}" from watchlist` : `Added "${title}" to watchlist`);
+      return { previous };
     },
-    onError: () => toast.error('Could not update watchlist'),
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(['watchlist'], context.previous);
+      toast.error('Could not update watchlist');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+    },
   });
 
   const handleClick = (e) => {

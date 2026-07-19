@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 
 export default function DeleteAccountDialog({ open, onOpenChange }) {
@@ -20,9 +21,12 @@ export default function DeleteAccountDialog({ open, onOpenChange }) {
   const handleDelete = async () => {
     setLoading(true);
     try {
-      // Log out — actual account deletion requires backend support
+      // Permanently delete the account and all owned data, then log out.
+      const res = await base44.functions.invoke('deleteMyAccount', {});
+      if (res.data?.error) throw new Error(res.data.error);
       await base44.auth.logout('/login');
-    } finally {
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete your account. Please try again.');
       setLoading(false);
       onOpenChange(false);
     }

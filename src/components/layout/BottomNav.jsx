@@ -13,6 +13,19 @@ const TABS = [
 
 const TAB_PATHS = new Set(TABS.map(t => t.to));
 const SCROLL_KEY = (path) => `sv_scroll_${path}`;
+const SUBPATH_KEY = (tab) => `sv_subpath_${tab}`;
+
+// Which tab "owns" a given pathname (longest matching tab root wins).
+const tabForPath = (pathname) => {
+  let match = null;
+  for (const tab of TABS) {
+    if (tab.to === '/') continue;
+    if (pathname === tab.to || pathname.startsWith(tab.to + '/')) {
+      if (!match || tab.to.length > match.length) match = tab.to;
+    }
+  }
+  return match;
+};
 
 export default function BottomNav() {
   const location = useLocation();
@@ -23,6 +36,18 @@ export default function BottomNav() {
   useEffect(() => {
     base44.auth.isAuthenticated().then(setIsAuthed).catch(() => setIsAuthed(false));
   }, []);
+
+  // Remember the last active sub-path (including search) for the current tab
+  // category, so returning to that tab restores where the user left off.
+  useEffect(() => {
+    const owner = tabForPath(location.pathname);
+    if (owner && owner !== location.pathname) {
+      sessionStorage.setItem(SUBPATH_KEY(owner), location.pathname + location.search);
+    } else if (owner) {
+      // At the tab root — clear any stored sub-path.
+      sessionStorage.removeItem(SUBPATH_KEY(owner));
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const prev = prevPathRef.current;
@@ -41,14 +66,25 @@ export default function BottomNav() {
   }, [location.pathname]);
 
   const handleTabPress = useCallback((e, to) => {
-    if (location.pathname === to) {
+    const currentOwner = tabForPath(location.pathname);
+
+    // Re-tapping the tab you're already inside → go to its root and scroll up.
+    if (location.pathname === to || currentOwner === to) {
       e.preventDefault();
       sessionStorage.removeItem(SCROLL_KEY(to));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (!TAB_PATHS.has(location.pathname)) {
-      e.preventDefault();
-      navigate(to);
+      sessionStorage.removeItem(SUBPATH_KEY(to));
+      if (location.pathname !== to) {
+        navigate(to);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
     }
+
+    // Tapping a different tab → restore its last sub-path if we have one.
+    e.preventDefault();
+    const saved = to !== '/' ? sessionStorage.getItem(SUBPATH_KEY(to)) : null;
+    navigate(saved || to);
   }, [location.pathname, navigate]);
 
   if (isAuthed === null) return null;
@@ -80,7 +116,9 @@ export default function BottomNav() {
       <div className="flex items-stretch">
         {TABS.map((tab) => {
           const { to, label, icon: Icon } = tab;
-          const active = location.pathname === to;
+          const active = to === '/'
+            ? location.pathname === '/'
+            : (location.pathname === to || tabForPath(location.pathname) === to);
           return (
             <Link
               key={to}
