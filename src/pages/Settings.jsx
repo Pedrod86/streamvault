@@ -13,6 +13,7 @@ import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import VideoAudioSection from '@/components/settings/VideoAudioSection';
 import StorageUsageSection from '@/components/settings/StorageUsageSection';
 import { THEMES, applyTheme } from '@/lib/themes';
+import { APP_VERSION, isNewerVersion } from '@/lib/appVersion';
 
 const INTERVALS = [
   { label: 'Disabled', value: 0 },
@@ -206,7 +207,7 @@ function CategorySyncSection() {
   );
 }
 
-const CURRENT_VERSION = '1.0.0';
+const CURRENT_VERSION = APP_VERSION.replace(/^v/, '');
 
 function CheckForUpdatesSection() {
   const [status, setStatus] = useState('idle'); // idle | checking | uptodate | update-available | error
@@ -233,7 +234,7 @@ function CheckForUpdatesSection() {
       setReleaseUrl(data.html_url || null);
       setReleaseNotes(data.body ? data.body.slice(0, 300) : null);
       setApk(data.apk || null);
-      setStatus(tag && tag !== CURRENT_VERSION ? 'update-available' : 'uptodate');
+      setStatus(tag && isNewerVersion(tag, CURRENT_VERSION) ? 'update-available' : 'uptodate');
     } catch (e) {
       setStatus('error');
     }
