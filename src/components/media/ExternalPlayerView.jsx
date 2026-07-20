@@ -2,22 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, Layers } from 'lucide-react';
 import PlayerPicker, { PLAYERS } from './PlayerPicker';
 
-export default function ExternalPlayerView({ item, server, playerId, onClose, onSwitchPlayer }) {
-  const base = server.server_url.replace(/\/$/, '');
-  const token = server.api_token;
-  const streamUrl = `${base}/Videos/${item.id}/stream?api_key=${token}&Static=true`;
-  const hdrStreamUrl = `${base}/Videos/${item.id}/master.m3u8?api_key=${token}&VideoCodec=hevc,av1,h264&AudioCodec=aac,ac3,eac3,flac,opus&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&SubtitleMethod=Encode&EnableAdaptiveBitrateStreaming=true`;
-  const encodedUrl = encodeURIComponent(hdrStreamUrl);
-  const encodedStreamUrl = encodeURIComponent(streamUrl);
+/**
+ * Launches a stream in an external player app (VLC / MX Player / Infuse / mpv / web).
+ *
+ * Pass EITHER:
+ *  - `streamUrl` (+ `title`) — a ready-to-play direct URL (IPTV, Plex, or any source), OR
+ *  - `item` (+ `server`)     — an Emby/Jellyfin item; the stream URL is built from it.
+ */
+export default function ExternalPlayerView({ item, server, streamUrl: directUrl, title: directTitle, playerId, onClose, onSwitchPlayer }) {
+  // Resolve the stream URL — prefer an explicitly passed one, else build the Emby/Jellyfin URL.
+  const embyUrl = item && server
+    ? `${server.server_url.replace(/\/$/, '')}/Videos/${item.id}/stream?api_key=${server.api_token}&Static=true`
+    : null;
+  const streamUrl = directUrl || embyUrl || '';
+  const title = directTitle || item?.title || '';
+
+  // For Emby/Jellyfin we can also build an HDR-capable HLS URL some players prefer.
+  const hdrStreamUrl = item && server
+    ? `${server.server_url.replace(/\/$/, '')}/Videos/${item.id}/master.m3u8?api_key=${server.api_token}&VideoCodec=hevc,av1,h264&AudioCodec=aac,ac3,eac3,flac,opus&AllowVideoStreamCopy=true&AllowAudioStreamCopy=true&VideoBitDepth=10&SubtitleMethod=Encode&EnableAdaptiveBitrateStreaming=true`
+    : streamUrl;
 
   // MX Player intent: try pro first, fall back to free, then open web fallback
-  const mxIntent = `intent:${streamUrl}#Intent;type=video/*;package=com.mxtech.videoplayer.pro;S.title=${encodeURIComponent(item.title || '')};end`;
-  const mxIntentFree = `intent:${streamUrl}#Intent;type=video/*;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(item.title || '')};end`;
+  const mxIntent = `intent:${streamUrl}#Intent;type=video/*;package=com.mxtech.videoplayer.pro;S.title=${encodeURIComponent(title)};end`;
+  const mxIntentFree = `intent:${streamUrl}#Intent;type=video/*;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(title)};end`;
 
   const schemeMap = {
     mpv: `mpv://${hdrStreamUrl}`,
     vlc: `vlc://${hdrStreamUrl}`,
-    infuse: `infuse://x-callback-url/play?url=${encodedUrl}`,
+    infuse: `infuse://x-callback-url/play?url=${encodeURIComponent(hdrStreamUrl)}`,
     mx: mxIntent,
     moviplayer: `https://moviplayer.com/?src=${encodeURIComponent(hdrStreamUrl)}`,
     onlineplayer: `https://onlineplayer.app/en?autoload=${encodeURIComponent(hdrStreamUrl)}&theme=dark`,
@@ -43,6 +55,7 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
   }, [playerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isWebPlayer = ['moviplayer', 'onlineplayer'].includes(playerId);
+  const shownUrl = ['mpv', 'vlc'].includes(playerId) ? hdrStreamUrl : streamUrl;
 
   const handleLaunch = () => {
     if (isWebPlayer) {
@@ -69,13 +82,13 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
       )}
       <ExternalLink className="w-14 h-14 text-primary" />
       <div className="text-center space-y-2 max-w-sm">
-        <h2 className="text-white text-xl font-bold">{item.title}</h2>
+        <h2 className="text-white text-xl font-bold">{title}</h2>
         {playerId === 'mx' && launched ? (
           <p className="text-white/60 text-sm">Launching <span className="text-primary font-semibold">MX Player</span>…</p>
         ) : (
           <p className="text-white/60 text-sm">Ready to open in <span className="text-primary font-semibold">{playerLabel}</span></p>
         )}
-        <p className="text-white/30 text-xs mt-2 break-all">{['mpv','vlc'].includes(playerId) ? hdrStreamUrl : streamUrl}</p>
+        <p className="text-white/30 text-xs mt-2 break-all">{shownUrl}</p>
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <button
@@ -85,7 +98,7 @@ export default function ExternalPlayerView({ item, server, playerId, onClose, on
           <ExternalLink className="w-4 h-4" /> {launched && playerId === 'mx' ? 'Re-launch MX Player' : `Open in ${playerLabel}`}
         </button>
         <button
-          onClick={() => navigator.clipboard.writeText(['mpv','vlc'].includes(playerId) ? hdrStreamUrl : streamUrl)}
+          onClick={() => navigator.clipboard.writeText(shownUrl)}
           className="w-full py-3 rounded-xl bg-white/10 text-white font-medium text-sm"
         >
           Copy Stream URL

@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Subtitles, ChevronDown, ExternalLink } from 'lucide-react';
+import { Play, Star, Clock, Calendar, Users, Clapperboard, Tv, ArrowLeft, FolderPlus, RotateCcw, Subtitles, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import MediaRow from '../components/media/MediaRow';
@@ -15,8 +15,7 @@ import WatchProgressControls from '@/components/media/WatchProgressControls';
 import TmdbCastInfo from '../components/media/TmdbCastInfo';
 import TvdbInfo from '../components/media/TvdbInfo';
 import PlaySourcePicker from '../components/media/PlaySourcePicker';
-import ExternalPlayerView from '@/components/media/ExternalPlayerView';
-import { PLAYERS } from '@/components/media/PlayerPicker';
+import ExternalPlayerButton from '@/components/media/ExternalPlayerButton';
 import PlexSeriesBrowser from '@/components/media/PlexSeriesBrowser';
 import MediaInfoPanel from '../components/media/MediaInfoPanel';
 import DownloadButton from '../components/media/DownloadButton';
@@ -43,8 +42,6 @@ export default function MediaDetail() {
   const [embySubtitles, setEmbySubtitles] = useState([]); // loaded from Emby PlaybackInfo
   const [selectedSubIndex, setSelectedSubIndex] = useState(-1);
   const [showSubPicker, setShowSubPicker] = useState(false);
-  const [externalPlayerId, setExternalPlayerId] = useState(null); // when set, launch in external app
-  const [showExternalPicker, setShowExternalPicker] = useState(false);
 
   // Key used for Watchlist / WatchHistory. For live Emby items we key on the
   // Emby item id (prefixed) so saved state survives without a DB record.
@@ -315,13 +312,14 @@ export default function MediaDetail() {
 
   const downloadName = `${activeMedia.title}${activeMedia.year ? ` (${activeMedia.year})` : ''}.mp4`;
 
-  // External players (VLC / MX / Infuse …) need a direct stream URL, available for
-  // Emby & Jellyfin movies. Resolve the server + item to hand to ExternalPlayerView.
+  // External players (VLC / MX / Infuse …) need a direct stream URL. Available for
+  // Emby & Jellyfin movies (built from the item) and Plex movies (resolved URL).
   const externalServer = embyItem && embyServer ? embyServer : (hasJellyfin && jellyfinServer ? jellyfinServer : null);
   const externalItem = embyItem && embyServer
     ? { id: embyItem.id, title: activeMedia.title }
     : (hasJellyfin && jellyfinServer ? { id: jellyfinId, title: activeMedia.title } : null);
-  const canExternalPlay = !!(externalServer && externalItem && activeMedia.media_type !== 'tv_show');
+  const externalPlexUrl = isPlexDirect && !isPlexShow && plexStreamUrl ? plexStreamUrl : null;
+  const canExternalPlay = activeMedia.media_type !== 'tv_show' && (!!(externalServer && externalItem) || !!externalPlexUrl);
 
   // Similar media
   const similar = allMedia.filter(m =>
@@ -442,17 +440,6 @@ export default function MediaDetail() {
             </div>
           );
         })()}
-
-        {/* External player launcher (VLC / MX Player / Infuse / …) */}
-        {externalPlayerId && canExternalPlay && (
-          <ExternalPlayerView
-            item={externalItem}
-            server={externalServer}
-            playerId={externalPlayerId}
-            onClose={() => setExternalPlayerId(null)}
-            onSwitchPlayer={(p) => setExternalPlayerId(p)}
-          />
-        )}
 
         {/* Resume prompt */}
         <AnimatePresence>
@@ -661,44 +648,9 @@ export default function MediaDetail() {
                 />
               )}
               {canExternalPlay && (
-                <div className="relative">
-                  <Button
-                    variant="outline"
-                    className="border-border text-foreground hover:bg-secondary gap-2 h-11 px-5 rounded-xl select-none"
-                    onClick={() => setShowExternalPicker(o => !o)}
-                  >
-                    <ExternalLink className="w-4 h-4" /> External Player
-                    <ChevronDown className="w-4 h-4" />
-                  </Button>
-                  {showExternalPicker && (
-                    <>
-                      <div className="fixed inset-0 z-20" onClick={() => setShowExternalPicker(false)} />
-                      <div className="absolute top-12 left-0 w-72 max-h-[60vh] overflow-y-auto bg-card border border-border rounded-xl shadow-2xl z-30">
-                        <div className="px-4 py-2.5 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-card">
-                          Open in external app
-                        </div>
-                        <div className="p-1.5 space-y-0.5">
-                          {PLAYERS.filter(p => p.external).map(p => {
-                            const Icon = p.icon;
-                            return (
-                              <button
-                                key={p.id}
-                                onClick={() => { setShowExternalPicker(false); setExternalPlayerId(p.id); }}
-                                className="w-full flex items-start gap-3 px-3 py-2 rounded-lg text-left text-foreground hover:bg-secondary transition-colors"
-                              >
-                                <Icon className="w-4 h-4 mt-0.5 shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-semibold">{p.label}</div>
-                                  <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">{p.description}</div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                externalPlexUrl
+                  ? <ExternalPlayerButton streamUrl={externalPlexUrl} title={activeMedia.title} />
+                  : <ExternalPlayerButton item={externalItem} server={externalServer} title={activeMedia.title} />
               )}
               <Button
                 variant="outline"

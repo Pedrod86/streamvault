@@ -12,6 +12,7 @@ import {
   getLiveStreams, getLiveCategories,
   getLiveStreamUrl,
 } from '@/lib/xtreamApi';
+import ExternalPlayerButton from '@/components/media/ExternalPlayerButton';
 
 const TABS = [
   { id: 'live', label: 'Live TV', icon: Radio },
@@ -150,9 +151,11 @@ export default function IPTV() {
   }, [streams, categories, search, activeCat]);
 
   const handlePlay = (item) => {
-    // Use m3u8 (HLS) for live streams — better compatibility than .ts
+    // Use m3u8 (HLS) for the in-app player — better compatibility than .ts.
+    // Keep the raw .ts URL for external players (VLC/MX etc. handle it directly).
     const url = getLiveStreamUrl(xtreamServer, item.stream_id, 'm3u8');
-    setPlaying({ url, name: item.name, id: item.stream_id });
+    const externalUrl = getLiveStreamUrl(xtreamServer, item.stream_id, 'ts');
+    setPlaying({ url, externalUrl, name: item.name, id: item.stream_id });
   };
 
   if (!xtreamServer) {
@@ -307,22 +310,39 @@ export default function IPTV() {
       {/* Up Next tab — chronological upcoming programmes across channels */}
       {tab === 'upnext' && (
         <UpNextGuide server={xtreamServer} onPlayChannel={(ch) => {
-          const url = getLiveStreamUrl(xtreamServer, ch.stream_id, 'm3u8');
-          setPlaying({ url, name: ch.name, id: ch.stream_id });
+          setPlaying({
+            url: getLiveStreamUrl(xtreamServer, ch.stream_id, 'm3u8'),
+            externalUrl: getLiveStreamUrl(xtreamServer, ch.stream_id, 'ts'),
+            name: ch.name, id: ch.stream_id,
+          });
         }} />
       )}
 
       {/* EPG Guide tab */}
       {tab === 'epg' && (
         <EpgGuide server={xtreamServer} onPlayChannel={(ch) => {
-          const url = getLiveStreamUrl(xtreamServer, ch.stream_id, 'm3u8');
-          setPlaying({ url, name: ch.name, id: ch.stream_id });
+          setPlaying({
+            url: getLiveStreamUrl(xtreamServer, ch.stream_id, 'm3u8'),
+            externalUrl: getLiveStreamUrl(xtreamServer, ch.stream_id, 'ts'),
+            name: ch.name, id: ch.stream_id,
+          });
         }} />
       )}
 
       {/* Player */}
       {playing && (
-        <ExoPlayer src={playing.url} title={playing.name} onClose={() => setPlaying(null)} />
+        <>
+          <ExoPlayer src={playing.url} title={playing.name} onClose={() => setPlaying(null)} />
+          {/* External-player launcher — floats above the in-app player */}
+          <div className="fixed top-4 right-16 z-[60]">
+            <ExternalPlayerButton
+              streamUrl={playing.externalUrl || playing.url}
+              title={playing.name}
+              variant="icon"
+              className="bg-black/50 backdrop-blur-sm"
+            />
+          </div>
+        </>
       )}
     </div>
   );
