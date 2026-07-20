@@ -126,6 +126,8 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
   const [minimized, setMinimized] = useState(false);
   // Next-episode countdown after the video ends (null = not counting).
   const [nextCountdown, setNextCountdown] = useState(null);
+  // Brief "now playing" info card shown when a stream starts (auto-hides).
+  const [showStartInfo, setShowStartInfo] = useState(false);
 
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -237,6 +239,10 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
     setFatalError(null);
     setActiveSrc(src);
     setNextCountdown(null);
+    // Reveal the start-up info card, then auto-hide it after 5s.
+    setShowStartInfo(true);
+    const t = setTimeout(() => setShowStartInfo(false), 5000);
+    return () => clearTimeout(t);
   }, [src]);
 
   useEffect(() => {
@@ -762,6 +768,35 @@ export default function ExoPlayer({ src, title, onClose, onProgress, startAt = 0
       >
         {playing ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white ml-0.5" />}
       </button>
+
+      {/* ── Start-up "now playing" info card — brief, auto-hides ── */}
+      {showStartInfo && !minimized && !fatalError && (
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 max-w-[90vw] rounded-xl bg-black/80 backdrop-blur-md border border-white/15 shadow-2xl px-4 py-3 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-300">
+          <p className="text-white font-semibold text-sm truncate max-w-[70vw]">{title || 'Now Playing'}</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[11px] text-white/70">
+            <span className="flex items-center gap-1">
+              <Play className="w-3 h-3" />
+              {isHls ? 'HLS Player (hls.js)' : 'Native Player'}
+            </span>
+            <span className="flex items-center gap-1">
+              <AudioLines className="w-3 h-3" />
+              Audio: {codecInfo?.audio || 'Auto'}
+            </span>
+            {codecInfo?.video && (
+              <span className="flex items-center gap-1">
+                <Layers className="w-3 h-3" />
+                Video: {codecInfo.video}
+              </span>
+            )}
+            {codecInfo?.resolution && (
+              <span className="flex items-center gap-1">
+                <Ratio className="w-3 h-3" />
+                {codecInfo.resolution}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* PiP error toast */}
       {pipError && (
