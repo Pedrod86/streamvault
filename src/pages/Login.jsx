@@ -264,9 +264,10 @@ export default function Login() {
           <p className="text-muted-foreground text-sm mt-1.5">Sign in to continue streaming</p>
         </div>
 
-        {/* ── Glass login card ── */}
-        <div className="rounded-2xl border border-white/10 bg-card/60 backdrop-blur-2xl shadow-2xl p-6 sm:p-8"
-          style={{ boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.08), 0 24px 60px hsl(240 40% 2% / 0.6)' }}>
+        {/* ── Login card — solid fill so it stays visible on Android WebViews that
+             don't support backdrop-filter (blur is a progressive enhancement) ── */}
+        <div className="rounded-2xl border border-white/10 backdrop-blur-2xl shadow-2xl p-6 sm:p-8"
+          style={{ backgroundColor: 'hsl(217 33% 17% / 0.97)', boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.08), 0 24px 60px hsl(240 40% 2% / 0.6)' }}>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
@@ -284,7 +285,7 @@ export default function Login() {
                 spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 bg-secondary/60 border-white/10 h-11"
+                className="mt-1 bg-secondary border-white/10 h-11"
                 autoComplete="email"
                 required
               />
@@ -297,7 +298,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 bg-secondary/60 border-white/10 h-11 pr-11"
+                  className="mt-1 bg-secondary border-white/10 h-11 pr-11"
                   autoComplete="current-password"
                   required
                 />
