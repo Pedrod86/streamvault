@@ -128,8 +128,8 @@ export default function Login() {
         )}
 
         {tvIntroDone && (
-        <div style={{ width: '100%', maxWidth: 460, padding: '24px' }}
-          className="bg-card rounded-2xl border border-border shadow-2xl mx-auto shrink-0">
+        <div style={{ width: '100%', maxWidth: 460, padding: '24px', backgroundColor: 'hsl(217 33% 17%)' }}
+          className="rounded-2xl border border-border shadow-2xl mx-auto shrink-0">
           <div className="text-center mb-5">
             <div className="flex items-center justify-center gap-2 mb-4">
               <img
@@ -220,7 +220,7 @@ export default function Login() {
 
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">or</span></div>
+            <div className="relative flex justify-center text-xs"><span className="px-2 text-muted-foreground" style={{ backgroundColor: 'hsl(217 33% 17%)' }}>or</span></div>
           </div>
 
           <Button
