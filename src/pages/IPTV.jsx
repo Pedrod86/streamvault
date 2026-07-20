@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Radio, Search, Play, X, AlertCircle, CalendarDays } from 'lucide-react';
+import { Radio, Search, Play, X, AlertCircle, CalendarDays, CalendarClock } from 'lucide-react';
 import ExoPlayer from '@/components/media/ExoPlayer';
 import EpgGuide from '@/components/iptv/EpgGuide';
+import UpNextGuide from '@/components/iptv/UpNextGuide';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
@@ -14,6 +15,7 @@ import {
 
 const TABS = [
   { id: 'live', label: 'Live TV', icon: Radio },
+  { id: 'upnext', label: 'Up Next', icon: CalendarClock },
   { id: 'epg', label: 'EPG Guide', icon: CalendarDays },
 ];
 
@@ -208,7 +210,7 @@ export default function IPTV() {
         </div>
       )}
 
-      {tab !== 'epg' && (
+      {tab === 'live' && (
       <div>
 
       {/* Search */}
@@ -300,7 +302,15 @@ export default function IPTV() {
       )}
 
       </div>
-      )}{/* end tab !== epg */}
+      )}{/* end tab === live */}
+
+      {/* Up Next tab — chronological upcoming programmes across channels */}
+      {tab === 'upnext' && (
+        <UpNextGuide server={xtreamServer} onPlayChannel={(ch) => {
+          const url = getLiveStreamUrl(xtreamServer, ch.stream_id, 'm3u8');
+          setPlaying({ url, name: ch.name, id: ch.stream_id });
+        }} />
+      )}
 
       {/* EPG Guide tab */}
       {tab === 'epg' && (
