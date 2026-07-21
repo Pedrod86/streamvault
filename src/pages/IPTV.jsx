@@ -271,9 +271,14 @@ export default function IPTV() {
 
       {/* Error */}
       {error && !loading && (
-        <div className="mx-4 sm:mx-6 flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-sm text-destructive">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <span>{error}</span>
+        <div className="mx-4 sm:mx-6 flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-sm text-amber-300">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-semibold">Couldn't load the channel list</p>
+            <p className="text-amber-300/80 text-xs leading-relaxed">
+              Your IPTV provider is blocking connections from the app's servers. You can still watch — open individual streams with the <span className="font-semibold">External Player</span> (VLC/MX), which connects directly from your device.
+            </p>
+          </div>
         </div>
       )}
 

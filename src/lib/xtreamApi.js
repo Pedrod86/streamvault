@@ -7,16 +7,41 @@
 
 import { base44 } from '@/api/base44Client';
 
+// Direct browser fetch to the Xtream API — used as a fallback when the backend
+// proxy is blocked by the provider's IP filtering. On the user's own residential
+// IP this frequently succeeds where the shared cloud IP is refused.
+async function xtreamGetDirect(server, action, extra = '') {
+  const base = xtreamBase(server);
+  const u = encodeURIComponent(server.username || '');
+  const p = encodeURIComponent(server.password || '');
+  let url = `${base}/player_api.php?username=${u}&password=${p}`;
+  if (action) url += `&action=${encodeURIComponent(action)}`;
+  if (extra) url += `&${extra}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Direct fetch failed: ${res.status}`);
+  return await res.json();
+}
+
 async function xtreamGet(server, action, extra = '') {
   // Credentials are looked up server-side from the user's own MediaServer record —
   // we only pass the server id so secrets never travel in the request body.
-  const res = await base44.functions.invoke('xtreamProxy', {
-    serverId: server.id,
-    action,
-    extra,
-  });
-  const data = res?.data?.data;
-  return data ?? null;
+  try {
+    const res = await base44.functions.invoke('xtreamProxy', {
+      serverId: server.id,
+      action,
+      extra,
+    });
+    const data = res?.data?.data;
+    return data ?? null;
+  } catch (proxyErr) {
+    // Backend proxy blocked (e.g. 502 from provider IP block) — try directly from
+    // the browser, which uses the user's own IP.
+    try {
+      return await xtreamGetDirect(server, action, extra);
+    } catch (_) {
+      throw proxyErr;
+    }
+  }
 }
 
 export function xtreamBase(server) {
