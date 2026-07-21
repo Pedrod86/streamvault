@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { getDiscordWebhookUrl } from '../../shared/discordWebhook.ts';
 
 // Scheduled function: posts a Discord message when a new episode of a show on the
 // user's Watchlist is added to the Emby library. De-dupes via NotifiedEpisode records.
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
 
-    const webhookUrl = Deno.env.get('DISCORD_WEBHOOK_URL');
+    const webhookUrl = await getDiscordWebhookUrl(base44);
     if (!webhookUrl) return Response.json({ ok: true, reason: 'no webhook configured' });
 
     const server = await getEmbyServer(base44);

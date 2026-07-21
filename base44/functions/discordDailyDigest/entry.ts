@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { getDiscordWebhookUrl } from '../../shared/discordWebhook.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -6,7 +7,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me().catch(() => null);
     if (user?.role !== 'admin') return new Response('Forbidden', { status: 403 });
 
-    const webhookUrl = Deno.env.get('DISCORD_WEBHOOK_URL');
+    const webhookUrl = await getDiscordWebhookUrl(base44);
     if (!webhookUrl) return Response.json({ ok: true, skipped: 'no_webhook' });
 
     // Everything added in the last 24 hours

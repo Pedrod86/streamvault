@@ -10,6 +10,7 @@ import { RefreshCw, CheckCircle2, AlertCircle, Palette, Server, Clock, Save, Tra
 import { motion } from 'framer-motion';
 import DeleteAccountDialog from '@/components/layout/DeleteAccountDialog';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
+import DiscordWebhookSection from '@/components/settings/DiscordWebhookSection';
 import VideoAudioSection from '@/components/settings/VideoAudioSection';
 import StorageUsageSection from '@/components/settings/StorageUsageSection';
 import { THEMES, applyTheme } from '@/lib/themes';
@@ -631,6 +632,9 @@ export default function Settings() {
 
       {/* ── API Keys ── */}
       <ApiKeysSection />
+
+      {/* ── Discord Notifications ── */}
+      <DiscordWebhookSection />
 
       {/* ── Check for Updates ── */}
       <CheckForUpdatesSection />

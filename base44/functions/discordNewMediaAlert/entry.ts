@@ -1,11 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { getDiscordWebhookUrl } from '../../shared/discordWebhook.ts';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
 
-    const webhookUrl = Deno.env.get('DISCORD_WEBHOOK_URL');
+    const webhookUrl = await getDiscordWebhookUrl(base44);
     if (!webhookUrl) return Response.json({ ok: true }); // silently skip if not configured
 
     // Only handle 'create' events

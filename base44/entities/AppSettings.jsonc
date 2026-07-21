@@ -21,6 +21,10 @@
       "description": "Auto-sync interval in minutes (0 = disabled)",
       "default": 0
     },
+    "discord_webhook_url": {
+      "type": "string",
+      "description": "Discord webhook URL used for all StreamVault notifications. Overrides the server-side default when set."
+    },
     "api_key_opensubtitles": {
       "type": "string",
       "description": "OpenSubtitles API key"

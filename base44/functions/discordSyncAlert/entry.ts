@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { getDiscordWebhookUrl } from '../../shared/discordWebhook.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -9,10 +10,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
 
     const { data } = body;
-    const webhookUrl = Deno.env.get('DISCORD_WEBHOOK_URL');
+    const webhookUrl = await getDiscordWebhookUrl(base44);
 
     if (!webhookUrl) {
-      return Response.json({ error: 'DISCORD_WEBHOOK_URL not set' }, { status: 500 });
+      return Response.json({ error: 'No Discord webhook configured' }, { status: 500 });
     }
 
     const serverName = data?.server_name || 'Unknown Server';
