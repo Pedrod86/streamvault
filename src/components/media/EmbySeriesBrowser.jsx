@@ -76,12 +76,10 @@ export default function EmbySeriesBrowser({ item, server, onClose }) {
   if (playingEpisode) {
     const base = server?.server_url?.replace(/\/$/, '');
     const token = server?.api_token;
-    // Use an HLS transcode URL so the Android WebView can always decode episodes
-    // (most series are MKV/H.265, which direct-play <video> can't handle in WebView).
-    const buildSrc = (id) => `${base}/Videos/${id}/master.m3u8?api_key=${token}` +
-      `&MediaSourceId=mediasource_${id}&DeviceId=streamvault-web&PlaySessionId=${Date.now()}` +
-      `&VideoCodec=h264&AudioCodec=aac,mp3&TranscodingContainer=ts&TranscodingProtocol=hls` +
-      `&EnableAdaptiveBitrateStreaming=true`;
+    // Play episodes the same way movies do — a direct static stream. This is the
+    // most reliable path; ExoPlayer automatically falls back to HLS transcoding if
+    // the WebView can't decode the direct file.
+    const buildSrc = (id) => `${base}/Videos/${id}/stream?api_key=${token}&Static=true`;
 
     // Find the next episode in the full play order (across seasons).
     const idx = episodes.findIndex(e => e.id === playingEpisode.id);
