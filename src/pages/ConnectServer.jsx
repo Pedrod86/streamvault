@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, Server, Key, User, Globe, CheckCircle2, ExternalLink, Plus, Trash2, Wifi, LayoutDashboard } from 'lucide-react';
+import { ArrowLeft, Loader2, Server, Key, User, Globe, CheckCircle2, ExternalLink, Plus, Trash2, Wifi, LayoutDashboard, Pencil } from 'lucide-react';
+import EditServerDialog from '@/components/server/EditServerDialog';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SyncServerButton from '@/components/server/SyncServerButton';
@@ -248,6 +249,7 @@ function ServerCard({ srv, allMeta, onDelete, deleting }) {
   const meta = allMeta.find(s => s.id === srv.server_type) || allMeta[0];
   const isTrakt = srv.server_type === 'trakt';
   const isXtream = srv.server_type === 'xtream';
+  const [editing, setEditing] = useState(false);
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -284,6 +286,10 @@ function ServerCard({ srv, allMeta, onDelete, deleting }) {
         {!isTrakt && <SyncServerButton server={srv} />}
         {!isTrakt && <FullSyncButton server={srv} />}
 
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => setEditing(true)} title="Edit">
+          <Pencil className="w-4 h-4" />
+        </Button>
+
         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={onDelete} disabled={deleting}>
           <Trash2 className="w-4 h-4" />
         </Button>
@@ -294,6 +300,8 @@ function ServerCard({ srv, allMeta, onDelete, deleting }) {
           <IptvConnectionTester server={srv} />
         </div>
       )}
+
+      {editing && <EditServerDialog server={srv} open={editing} onOpenChange={setEditing} />}
     </motion.div>
   );
 }
