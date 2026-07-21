@@ -89,9 +89,22 @@ Deno.serve(async (req) => {
     // SSRF guard: block private/loopback/link-local/metadata destinations
     await assertSafeUrl(url);
 
-    const res = await fetch(url);
+    // Many Xtream providers reject requests that don't look like a real IPTV
+    // player and return 403. Send a common player User-Agent so the upstream
+    // treats us like VLC / a set-top box.
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
+        'Accept': '*/*',
+      },
+    });
     if (!res.ok) {
-      return Response.json({ error: `Xtream API error (${res.status})` }, { status: 502 });
+      // 403 from an Xtream provider almost always means the provider blocked the
+      // request by IP/region rather than a bad credential — surface a clearer hint.
+      const msg = res.status === 403
+        ? 'Your IPTV provider blocked this request (403). Many providers only allow connections from approved IPs/regions and reject cloud servers. Try opening the stream in an external player (VLC/MX).'
+        : `Xtream API error (${res.status})`;
+      return Response.json({ error: msg }, { status: 502 });
     }
     const text = await res.text();
     let data;
