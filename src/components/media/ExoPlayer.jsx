@@ -74,12 +74,18 @@ function Btn({ children, onClick, title: tip }) {
 }
 
 // ── HLS config tuned for reliable relay / mobile playback ─────────────────────
+// Buffer sizes are kept conservative on purpose: on phones/TVs an over-large
+// buffer (especially with 4K streams) balloons RAM until Android force-kills the
+// app — which on stressed devices can reboot the phone. These values give a
+// smooth buffer without exhausting memory.
 const HLS_CONFIG = {
-  // Larger forward buffer so brief network dips during relay don't cause stalls
-  maxBufferLength: 60,
-  maxMaxBufferLength: 180,
-  maxBufferSize: 80 * 1000 * 1000, // 80 MB
+  // Forward buffer — enough to ride out network dips without hoarding memory
+  maxBufferLength: 30,
+  maxMaxBufferLength: 60,
+  maxBufferSize: 30 * 1000 * 1000, // 30 MB
   maxBufferHole: 0.5,
+  // Aggressively drop already-played data so memory doesn't grow over a long watch
+  backBufferLength: 30,
   // Jump small gaps automatically instead of stalling
   nudgeOffset: 0.2,
   nudgeMaxRetry: 8,
