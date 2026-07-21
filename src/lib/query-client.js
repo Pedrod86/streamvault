@@ -34,7 +34,20 @@ export const queryClientInstance = new QueryClient({
 // Restore persisted cache immediately on load
 restoreQueryCache(queryClientInstance);
 
-// Save cache to localStorage whenever it changes
-queryClientInstance.getQueryCache().subscribe(() => {
-  saveQueryCache(queryClientInstance);
-});
+// Persist the cache on change — but DEBOUNCED. Serializing the whole query cache
+// to localStorage runs JSON.stringify on the main thread; doing it on every cache
+// event (dozens fire during load) pins the CPU and spikes memory hard enough to
+// hang/crash the WebView. Coalesce bursts into one write every few seconds, and
+// run it when the browser is idle so it never blocks the load.
+let saveTimer = null;
+const scheduleSave = () => {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    const run = () => saveQueryCache(queryClientInstance);
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 2000 });
+    else run();
+  }, 4000);
+};
+
+queryClientInstance.getQueryCache().subscribe(scheduleSave);

@@ -19,6 +19,11 @@ const isPersistable = (queryKey) => {
   return !NEVER_PERSIST.includes(root);
 };
 
+// Hard ceiling on the serialized cache. A runaway cache serialized to a
+// multi-megabyte string on the main thread can hang/crash a mobile WebView, so
+// if we exceed this we simply skip the write rather than risk the device.
+const MAX_CACHE_BYTES = 3 * 1024 * 1024; // 3 MB
+
 export function saveQueryCache(queryClient) {
   try {
     const cache = queryClient.getQueryCache().getAll()
@@ -27,10 +32,12 @@ export function saveQueryCache(queryClient) {
         queryKey: query.queryKey,
         state: query.state,
       }));
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
+    const payload = JSON.stringify({
       timestamp: Date.now(),
       cache,
-    }));
+    });
+    if (payload.length > MAX_CACHE_BYTES) return; // too big — skip this write
+    localStorage.setItem(CACHE_KEY, payload);
   } catch (e) {
     // localStorage full or unavailable — ignore
   }
