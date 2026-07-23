@@ -126,7 +126,7 @@ export default function Home() {
         if (embyServers[0] && isVisible('local_recent')) {
           blocks.push({
             id: 'continue_watching',
-            order: orderOf('continue_watching'),
+            order: -1,
             node: (
               <div key="cw" className="mt-6 space-y-2">
                 <EmbyRecentlyAdded serverId={embyServers[0].id} />
